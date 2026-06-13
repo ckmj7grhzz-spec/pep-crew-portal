@@ -526,5 +526,14 @@ a { color: #1d4ed8; font-weight: 700; }
 
   .eventCard {
     padding: 22px;
-  }
+  } 
+
+/* Force active admin tab to green */
+.tabs button.active,
+.tabs button.active:hover,
+.tabs button[class="active"] {
+  background-color: #16a34a !important;
+  color: #ffffff !important;
+  border-color: #16a34a !important;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25) !important;
 }
