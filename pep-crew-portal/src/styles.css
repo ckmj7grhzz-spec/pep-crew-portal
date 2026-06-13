@@ -581,3 +581,58 @@ th {
   object-fit: contain;
   display: block;
 }
+
+
+/* ===== Final PEP Header Styling ===== */
+.hero {
+  background: linear-gradient(
+    180deg,
+    #050505 0%,
+    #111111 100%
+  );
+  color: #ffffff;
+  border-radius: 22px;
+  padding: 32px;
+  display: flex;
+  gap: 28px;
+  align-items: center;
+  box-shadow:
+    0 12px 35px rgba(0,0,0,0.28),
+    0 0 20px rgba(7,20,38,0.12);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.eyebrow {
+  color: rgba(255,255,255,0.75);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: none;
+}
+
+.hero h1 {
+  color: #ffffff;
+  font-size: 42px;
+  margin-top: 6px;
+}
+
+.pepLogo {
+  width: 180px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+@media (max-width: 720px) {
+  .hero {
+    padding: 22px;
+    gap: 18px;
+  }
+
+  .hero h1 {
+    font-size: 30px;
+  }
+
+  .pepLogo {
+    width: 140px;
+  }
+}
