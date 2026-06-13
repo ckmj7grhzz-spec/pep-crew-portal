@@ -263,6 +263,7 @@ function EventManagerPage() {
   const [hotels, setHotels] = useState([])
   const [transfers, setTransfers] = useState([])
   const [scheduleItems, setScheduleItems] = useState([])
+  const [documents, setDocuments] = useState([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -321,6 +322,13 @@ function EventManagerPage() {
     end_time: '',
     location: '',
     assigned_crew: '',
+    notes: '',
+  })
+
+  const [documentForm, setDocumentForm] = useState({
+    document_name: '',
+    category: '',
+    file_url: '',
     notes: '',
   })
 
@@ -391,6 +399,15 @@ function EventManagerPage() {
     if (scheduleError) setMessage(`Could not load schedule: ${scheduleError.message}`)
     else setScheduleItems(scheduleData || [])
 
+    const { data: documentData, error: documentError } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('event_id', eventData.id)
+      .order('created_at', { ascending: true })
+
+    if (documentError) setMessage(`Could not load documents: ${documentError.message}`)
+    else setDocuments(documentData || [])
+
     setLoading(false)
   }
 
@@ -412,6 +429,10 @@ function EventManagerPage() {
 
   function updateScheduleField(field, value) {
     setScheduleForm({ ...scheduleForm, [field]: value })
+  }
+
+  function updateDocumentField(field, value) {
+    setDocumentForm({ ...documentForm, [field]: value })
   }
 
   async function addCrewMember(e) {
@@ -673,6 +694,48 @@ function EventManagerPage() {
     }
 
     setMessage('Schedule item deleted.')
+    loadEventManager()
+  }
+
+  async function addDocument(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!event) return
+    if (!documentForm.document_name) {
+      setMessage('Document name is required.')
+      return
+    }
+
+    const { error } = await supabase
+      .from('documents')
+      .insert([{ ...documentForm, event_id: event.id }])
+
+    if (error) {
+      setMessage(`Could not add document: ${error.message}`)
+      return
+    }
+
+    setDocumentForm({
+      document_name: '',
+      category: '',
+      file_url: '',
+      notes: '',
+    })
+
+    setMessage('Document added.')
+    loadEventManager()
+  }
+
+  async function deleteDocument(id) {
+    const { error } = await supabase.from('documents').delete().eq('id', id)
+
+    if (error) {
+      setMessage(`Could not delete document: ${error.message}`)
+      return
+    }
+
+    setMessage('Document deleted.')
     loadEventManager()
   }
 
@@ -1185,6 +1248,62 @@ function EventManagerPage() {
           </div>
         ) : (
           <Empty text="No schedule added yet." />
+        )}
+      </section>
+
+      <section className="eventCard">
+        <h2>Add Document</h2>
+        <p>Add links to RAMS, venue packs, floor plans, power plans, call sheets or Current RMS documents.</p>
+
+        <form onSubmit={addDocument} className="adminForm">
+          <label>
+            Document Name
+            <input value={documentForm.document_name} onChange={e => updateDocumentField('document_name', e.target.value)} placeholder="RAMS" />
+          </label>
+
+          <label>
+            Category
+            <input value={documentForm.category} onChange={e => updateDocumentField('category', e.target.value)} placeholder="Health & Safety" />
+          </label>
+
+          <label>
+            File URL
+            <input value={documentForm.file_url} onChange={e => updateDocumentField('file_url', e.target.value)} placeholder="https://..." />
+          </label>
+
+          <label>
+            Notes
+            <input value={documentForm.notes} onChange={e => updateDocumentField('notes', e.target.value)} placeholder="Optional" />
+          </label>
+
+          <button className="primaryButton" type="submit">
+            <Plus size={18} /> Add Document
+          </button>
+        </form>
+      </section>
+
+      <section className="eventCard">
+        <h2>Documents</h2>
+
+        {documents.length ? (
+          <div className="adminList">
+            {documents.map(document => (
+              <div className="adminListItem" key={document.id}>
+                <div>
+                  <strong>{document.document_name}</strong>
+                  <p>{document.category}</p>
+                  {document.file_url && <a href={document.file_url} target="_blank" rel="noreferrer">Open document</a>}
+                  {document.notes && <p>{document.notes}</p>}
+                </div>
+
+                <div className="adminActions">
+                  <button type="button" onClick={() => deleteDocument(document.id)}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty text="No documents added yet." />
         )}
       </section>
     </main>
