@@ -143,6 +143,18 @@ a { color: #1d4ed8; font-weight: 700; }
   .adminActions {
     justify-content: flex-start;
   }
+
+  
+.managerTopActions {
+  margin-top: 18px;
 }
 
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  color: #1d4ed8;
+  text-decoration: none;
+  margin-bottom: 12px;
 }
