@@ -341,6 +341,7 @@ function EventManagerPage() {
   const [documents, setDocuments] = useState([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('overview')
 
   const [crewForm, setCrewForm] = useState({
     name: '',
@@ -850,6 +851,42 @@ function EventManagerPage() {
       </section>
 
       <section className="eventCard">
+        <div className="statsGrid">
+          <div><strong>{crew.length}</strong><span>Crew</span></div>
+          <div><strong>{flights.length}</strong><span>Flights</span></div>
+          <div><strong>{hotels.length}</strong><span>Hotels</span></div>
+          <div><strong>{transfers.length}</strong><span>Transfers</span></div>
+          <div><strong>{scheduleItems.length}</strong><span>Schedule</span></div>
+          <div><strong>{documents.length}</strong><span>Documents</span></div>
+        </div>
+
+        <div className="tabs">
+          <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>Overview</button>
+          <button className={activeTab === 'crew' ? 'active' : ''} onClick={() => setActiveTab('crew')}>Crew</button>
+          <button className={activeTab === 'flights' ? 'active' : ''} onClick={() => setActiveTab('flights')}>Flights</button>
+          <button className={activeTab === 'hotels' ? 'active' : ''} onClick={() => setActiveTab('hotels')}>Hotels</button>
+          <button className={activeTab === 'transfers' ? 'active' : ''} onClick={() => setActiveTab('transfers')}>Transfers</button>
+          <button className={activeTab === 'schedule' ? 'active' : ''} onClick={() => setActiveTab('schedule')}>Schedule</button>
+          <button className={activeTab === 'documents' ? 'active' : ''} onClick={() => setActiveTab('documents')}>Documents</button>
+        </div>
+      </section>
+
+      {activeTab === 'overview' && (
+        <section className="eventCard">
+          <h2>Overview</h2>
+          <p>This is the admin overview for this PEP crew sheet.</p>
+          <div className="overviewGrid">
+            <div><strong>Public Link</strong><a href={`/${event.public_slug}`} target="_blank" rel="noreferrer">/{event.public_slug}</a></div>
+            <div><strong>Current RMS ID</strong><span>{event.current_rms_id || 'Not linked yet'}</span></div>
+            <div><strong>Project Manager</strong><span>{event.project_manager || 'Not set'}</span></div>
+            <div><strong>Venue</strong><span>{event.venue || 'Not set'}</span></div>
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'crew' && (
+      <>
+      <section className="eventCard">
         <h2>Add Crew Member</h2>
 
         <form onSubmit={addCrewMember} className="adminForm">
@@ -928,6 +965,11 @@ function EventManagerPage() {
         )}
       </section>
 
+      </>
+      )}
+
+      {activeTab === 'flights' && (
+      <>
       <section className="eventCard">
         <h2>Add Flight</h2>
         <p>Assign each flight to an existing crew member.</p>
@@ -1026,6 +1068,11 @@ function EventManagerPage() {
         )}
       </section>
 
+      </>
+      )}
+
+      {activeTab === 'hotels' && (
+      <>
       <section className="eventCard">
         <h2>Add Hotel</h2>
         <p>Assign each hotel booking to an existing crew member.</p>
@@ -1137,6 +1184,11 @@ function EventManagerPage() {
         )}
       </section>
 
+      </>
+      )}
+
+      {activeTab === 'transfers' && (
+      <>
       <section className="eventCard">
         <h2>Add Transfer</h2>
         <p>Add airport transfers, taxis, hotel shuttles or venue transport.</p>
@@ -1245,6 +1297,11 @@ function EventManagerPage() {
         )}
       </section>
 
+      </>
+      )}
+
+      {activeTab === 'schedule' && (
+      <>
       <section className="eventCard">
         <h2>Add Schedule Item</h2>
         <p>Add crew calls, build timings, show timings, breaks and load-out information.</p>
@@ -1326,6 +1383,11 @@ function EventManagerPage() {
         )}
       </section>
 
+      </>
+      )}
+
+      {activeTab === 'documents' && (
+      <>
       <section className="eventCard">
         <h2>Add Document</h2>
         <p>Add links to RAMS, venue packs, floor plans, power plans, call sheets or Current RMS documents.</p>
@@ -1381,6 +1443,8 @@ function EventManagerPage() {
           <Empty text="No documents added yet." />
         )}
       </section>
+      </>
+      )}
     </main>
   )
 }
