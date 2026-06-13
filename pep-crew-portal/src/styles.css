@@ -295,4 +295,236 @@ a { color: #1d4ed8; font-weight: 700; }
   .tabs button {
     flex: 1;
   }
+
+  /* ==========================================
+   PEP Admin UI Improvements
+   ========================================== */
+
+.page {
+  padding-top: 32px;
+  padding-bottom: 48px;
+}
+
+.eventCard {
+  margin-bottom: 28px;
+  padding: 32px;
+  border-radius: 18px;
+}
+
+.eventCard h2 {
+  margin-bottom: 10px;
+}
+
+.eventCard p {
+  line-height: 1.6;
+}
+
+/* ==========================================
+   Forms
+   ========================================== */
+
+.adminForm {
+  gap: 20px;
+  margin-top: 26px;
+}
+
+.adminForm label {
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.adminForm input,
+.adminForm select,
+.adminForm textarea {
+  padding: 14px 16px;
+  min-height: 48px;
+  border-radius: 12px;
+}
+
+/* ==========================================
+   Lists & Cards
+   ========================================== */
+
+.adminList {
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.adminListItem {
+  padding: 22px;
+  border-radius: 14px;
+  align-items: flex-start;
+}
+
+.adminListItem strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 18px;
+}
+
+.adminListItem p {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.adminListItem small {
+  line-height: 1.6;
+}
+
+.adminActions {
+  gap: 10px;
+}
+
+.adminActions a,
+.adminActions button {
+  padding: 11px 14px;
+  border-radius: 10px;
+}
+
+/* ==========================================
+   Tabs
+   ========================================== */
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.tabs button {
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tabs button:hover {
+  border-color: #16a34a;
+  transform: translateY(-1px);
+}
+
+/* ACTIVE TAB = GREEN */
+
+.tabs button.active {
+  background: #16a34a;
+  color: white;
+  border-color: #16a34a;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
+  transform: translateY(-1px);
+}
+
+/* ==========================================
+   Dashboard Stats
+   ========================================== */
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+}
+
+.statsGrid div {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 20px;
+  display: grid;
+  gap: 4px;
+}
+
+.statsGrid strong {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.statsGrid span {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ==========================================
+   Overview Cards
+   ========================================== */
+
+.overviewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.overviewGrid div {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 20px;
+  display: grid;
+  gap: 6px;
+}
+
+.overviewGrid strong {
+  color: #64748b;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.overviewGrid a {
+  color: #16a34a;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+/* ==========================================
+   Buttons
+   ========================================== */
+
+.primaryButton {
+  min-height: 48px;
+  padding: 14px 20px;
+  border-radius: 12px;
+}
+
+/* Green Add Buttons */
+
+.primaryButton {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+.primaryButton:hover {
+  background: #15803d;
+  border-color: #15803d;
+}
+
+/* ==========================================
+   Mobile
+   ========================================== */
+
+@media (max-width: 900px) {
+  .statsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .statsGrid,
+  .overviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tabs button {
+    flex: 1;
+  }
+
+  .eventCard {
+    padding: 22px;
+  }
 }
