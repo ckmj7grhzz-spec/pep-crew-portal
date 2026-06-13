@@ -204,4 +204,95 @@ a { color: #1d4ed8; font-weight: 700; }
   .adminLogoutBar {
     padding: 0 14px;
   }
+
+  
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.tabs button {
+  border: 1px solid #cbd5e1;
+  background: white;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+  color: #0f172a;
+}
+
+.tabs button.active {
+  background: #071426;
+  color: white;
+  border-color: #071426;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+}
+
+.statsGrid div {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.statsGrid strong {
+  font-size: 26px;
+}
+
+.statsGrid span {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.overviewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.overviewGrid div {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.overviewGrid strong {
+  color: #64748b;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.overviewGrid a {
+  color: #1d4ed8;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .statsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .statsGrid,
+  .overviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tabs button {
+    flex: 1;
+  }
 }
