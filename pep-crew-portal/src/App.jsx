@@ -861,33 +861,34 @@ function EventManagerPage() {
         </div>
 
         <div className="tabs">
-  {[
-    ['overview', 'Overview'],
-    ['crew', 'Crew'],
-    ['flights', 'Flights'],
-    ['hotels', 'Hotels'],
-    ['transfers', 'Transfers'],
-    ['schedule', 'Schedule'],
-    ['documents', 'Documents']
-  ].map(([key, label]) => (
-    <button
-      key={key}
-      onClick={() => setActiveTab(key)}
-      style={{
-        backgroundColor: activeTab === key ? '#16a34a' : 'white',
-        color: activeTab === key ? 'white' : '#0f172a',
-        borderColor: activeTab === key ? '#16a34a' : '#cbd5e1',
-        border: '1px solid',
-        borderRadius: '999px',
-        padding: '12px 18px',
-        fontWeight: '800',
-        cursor: 'pointer'
-      }}
-    >
-      {label}
-    </button>
-  ))}
-</div>
+          {[
+            ['overview', 'Overview'],
+            ['crew', 'Crew'],
+            ['flights', 'Flights'],
+            ['hotels', 'Hotels'],
+            ['transfers', 'Transfers'],
+            ['schedule', 'Schedule'],
+            ['documents', 'Documents'],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              style={{
+                backgroundColor: activeTab === key ? '#16a34a' : 'white',
+                color: activeTab === key ? 'white' : '#0f172a',
+                borderColor: activeTab === key ? '#16a34a' : '#cbd5e1',
+                border: '1px solid',
+                borderRadius: '999px',
+                padding: '12px 18px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                boxShadow: activeTab === key ? '0 4px 12px rgba(22, 163, 74, 0.25)' : 'none',
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </section>
 
       {activeTab === 'overview' && (
