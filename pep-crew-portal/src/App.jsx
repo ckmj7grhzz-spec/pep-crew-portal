@@ -262,6 +262,7 @@ function EventManagerPage() {
   const [flights, setFlights] = useState([])
   const [hotels, setHotels] = useState([])
   const [transfers, setTransfers] = useState([])
+  const [scheduleItems, setScheduleItems] = useState([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -310,6 +311,16 @@ function EventManagerPage() {
     driver_name: '',
     driver_phone: '',
     vehicle: '',
+    notes: '',
+  })
+
+  const [scheduleForm, setScheduleForm] = useState({
+    activity: '',
+    date: '',
+    start_time: '',
+    end_time: '',
+    location: '',
+    assigned_crew: '',
     notes: '',
   })
 
@@ -370,6 +381,16 @@ function EventManagerPage() {
     if (transferError) setMessage(`Could not load transfers: ${transferError.message}`)
     else setTransfers(transferData || [])
 
+    const { data: scheduleData, error: scheduleError } = await supabase
+      .from('schedule_items')
+      .select('*')
+      .eq('event_id', eventData.id)
+      .order('date', { ascending: true })
+      .order('start_time', { ascending: true })
+
+    if (scheduleError) setMessage(`Could not load schedule: ${scheduleError.message}`)
+    else setScheduleItems(scheduleData || [])
+
     setLoading(false)
   }
 
@@ -387,6 +408,10 @@ function EventManagerPage() {
 
   function updateTransferField(field, value) {
     setTransferForm({ ...transferForm, [field]: value })
+  }
+
+  function updateScheduleField(field, value) {
+    setScheduleForm({ ...scheduleForm, [field]: value })
   }
 
   async function addCrewMember(e) {
@@ -595,6 +620,59 @@ function EventManagerPage() {
     }
 
     setMessage('Transfer deleted.')
+    loadEventManager()
+  }
+
+  async function addScheduleItem(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!event) return
+    if (!scheduleForm.activity) {
+      setMessage('Schedule activity is required.')
+      return
+    }
+
+    const cleanScheduleItem = {
+      ...scheduleForm,
+      event_id: event.id,
+      date: scheduleForm.date || null,
+      start_time: scheduleForm.start_time || null,
+      end_time: scheduleForm.end_time || null,
+    }
+
+    const { error } = await supabase
+      .from('schedule_items')
+      .insert([cleanScheduleItem])
+
+    if (error) {
+      setMessage(`Could not add schedule item: ${error.message}`)
+      return
+    }
+
+    setScheduleForm({
+      activity: '',
+      date: '',
+      start_time: '',
+      end_time: '',
+      location: '',
+      assigned_crew: '',
+      notes: '',
+    })
+
+    setMessage('Schedule item added.')
+    loadEventManager()
+  }
+
+  async function deleteScheduleItem(id) {
+    const { error } = await supabase.from('schedule_items').delete().eq('id', id)
+
+    if (error) {
+      setMessage(`Could not delete schedule item: ${error.message}`)
+      return
+    }
+
+    setMessage('Schedule item deleted.')
     loadEventManager()
   }
 
@@ -1026,6 +1104,87 @@ function EventManagerPage() {
           </div>
         ) : (
           <Empty text="No transfers added yet." />
+        )}
+      </section>
+
+      <section className="eventCard">
+        <h2>Add Schedule Item</h2>
+        <p>Add crew calls, build timings, show timings, breaks and load-out information.</p>
+
+        <form onSubmit={addScheduleItem} className="adminForm">
+          <label>
+            Activity
+            <input value={scheduleForm.activity} onChange={e => updateScheduleField('activity', e.target.value)} placeholder="Crew Call" />
+          </label>
+
+          <label>
+            Date
+            <input type="date" value={scheduleForm.date} onChange={e => updateScheduleField('date', e.target.value)} />
+          </label>
+
+          <label>
+            Start Time
+            <input type="time" value={scheduleForm.start_time} onChange={e => updateScheduleField('start_time', e.target.value)} />
+          </label>
+
+          <label>
+            End Time
+            <input type="time" value={scheduleForm.end_time} onChange={e => updateScheduleField('end_time', e.target.value)} />
+          </label>
+
+          <label>
+            Location
+            <input value={scheduleForm.location} onChange={e => updateScheduleField('location', e.target.value)} placeholder="Hall A / Stand 42" />
+          </label>
+
+          <label>
+            Assigned Crew
+            <input value={scheduleForm.assigned_crew} onChange={e => updateScheduleField('assigned_crew', e.target.value)} placeholder="All Crew / LED Team / Video Team" />
+          </label>
+
+          <label>
+            Notes
+            <input value={scheduleForm.notes} onChange={e => updateScheduleField('notes', e.target.value)} placeholder="Optional" />
+          </label>
+
+          <button className="primaryButton" type="submit">
+            <Plus size={18} /> Add Schedule Item
+          </button>
+        </form>
+      </section>
+
+      <section className="eventCard">
+        <h2>Schedule</h2>
+
+        {scheduleItems.length ? (
+          <div className="adminList">
+            {scheduleItems.map(item => (
+              <div className="adminListItem" key={item.id}>
+                <div>
+                  <strong>{item.activity}</strong>
+                  <p>{item.location}</p>
+                  <small>
+                    {formatDate(item.date)}
+                    {item.start_time && ` | ${formatTime(item.start_time)}`}
+                    {item.end_time && ` - ${formatTime(item.end_time)}`}
+                  </small>
+                  {item.assigned_crew && (
+                    <small>
+                      <br />
+                      Assigned Crew: {item.assigned_crew}
+                    </small>
+                  )}
+                  {item.notes && <p>{item.notes}</p>}
+                </div>
+
+                <div className="adminActions">
+                  <button type="button" onClick={() => deleteScheduleItem(item.id)}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty text="No schedule added yet." />
         )}
       </section>
     </main>
