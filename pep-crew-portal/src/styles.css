@@ -550,3 +550,23 @@ a { color: #1d4ed8; font-weight: 700; }
   align-items: center;
   gap: 28px;
 }
+
+  /* PEP logo header */
+.pepLogo {
+  width: 240px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.hero {
+  align-items: center;
+  gap: 28px;
+}
+
+@media (max-width: 720px) {
+  .pepLogo {
+    width: 170px;
+  }
+}
