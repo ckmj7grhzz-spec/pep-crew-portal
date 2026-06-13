@@ -36,4 +36,113 @@ a { color: #1d4ed8; font-weight: 700; }
   table, thead, tbody, tr, td, th { display: block; }
   th { display: none; }
   td { padding: 8px 0; }
+  
+.adminForm {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.adminForm label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.adminForm input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 15px;
+}
+
+.checkboxRow {
+  display: flex !important;
+  align-items: center;
+  gap: 10px !important;
+}
+
+.checkboxRow input {
+  width: auto;
+}
+
+.primaryButton {
+  border: 0;
+  border-radius: 12px;
+  padding: 13px 18px;
+  background: #071426;
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.adminMessage {
+  margin-top: 16px;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.adminList {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.adminListItem {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.adminListItem p {
+  margin: 4px 0;
+}
+
+.adminActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.adminActions a,
+.adminActions button {
+  border: 1px solid #cbd5e1;
+  background: white;
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: #0f172a;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 720px) {
+  .adminForm {
+    grid-template-columns: 1fr;
+  }
+
+  .adminListItem {
+    display: grid;
+  }
+
+  .adminActions {
+    justify-content: flex-start;
+  }
+}
+
 }
