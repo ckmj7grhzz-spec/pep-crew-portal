@@ -90,10 +90,10 @@ function LoginPage({ onLogin }) {
     <main className="page">
       <header className="hero">
         <img
-  src={pepLogo}
-  alt="Premium Event Productions"
-  className="pepLogo"
-/>
+          src={pepLogo}
+          alt="Premium Event Productions"
+          className="pepLogo"
+        />
         <div>
           <p className="eyebrow">Premium Event Productions</p>
           <h1>PEP Admin Login</h1>
@@ -236,10 +236,10 @@ function AdminPage() {
     <main className="page">
       <header className="hero">
         <img
-  src={pepLogo}
-  alt="Premium Event Productions"
-  className="pepLogo"
-/>
+          src={pepLogo}
+          alt="Premium Event Productions"
+          className="pepLogo"
+        />
         <div>
           <p className="eyebrow">Premium Event Productions</p>
           <h1>PEP Admin</h1>
