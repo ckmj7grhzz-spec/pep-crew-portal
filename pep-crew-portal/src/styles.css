@@ -540,10 +540,10 @@ a { color: #1d4ed8; font-weight: 700; }
 }
 
   .pepLogo {
-  width: 240px;
+  width: 140px;
   height: auto;
-  display: block;
   object-fit: contain;
+  display: block;
 }
 
 .hero {
