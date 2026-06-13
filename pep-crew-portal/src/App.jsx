@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDown } from 'lucide-react'
+import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDown, Plus, Copy } from 'lucide-react'
 import { supabase } from './supabase'
 import './styles.css'
 
@@ -28,13 +28,18 @@ function formatDateTime(dateString) {
 
 function formatTime(timeString) {
   if (!timeString) return ''
-
-  // Handles Supabase time fields like "08:00:00" or "08:00"
   if (typeof timeString === 'string' && /^\d{2}:\d{2}/.test(timeString)) {
     return timeString.slice(0, 5)
   }
-
   return timeString
+}
+
+function slugify(text) {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
 }
 
 function Accordion({ title, subtitle, icon: Icon, children }) {
@@ -59,7 +64,208 @@ function Empty({ text }) {
   return <p className="empty">{text}</p>
 }
 
-function App() {
+function AdminPage() {
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState('')
+  const [form, setForm] = useState({
+    show_name: '',
+    venue: '',
+    start_date: '',
+    end_date: '',
+    project_manager: '',
+    public_slug: '',
+    share_enabled: true,
+    current_rms_id: '',
+  })
+
+  useEffect(() => {
+    loadEvents()
+  }, [])
+
+  async function loadEvents() {
+    setLoading(true)
+
+    const { data, error } = await supabase
+      .from('Events')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      setMessage(`Could not load events: ${error.message}`)
+    } else {
+      setEvents(data || [])
+    }
+
+    setLoading(false)
+  }
+
+  function updateField(field, value) {
+    const next = { ...form, [field]: value }
+
+    if (field === 'show_name' && !form.public_slug) {
+      next.public_slug = slugify(value)
+    }
+
+    setForm(next)
+  }
+
+  async function createEvent(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!form.show_name || !form.public_slug) {
+      setMessage('Show name and public slug are required.')
+      return
+    }
+
+    const { error } = await supabase
+      .from('Events')
+      .insert([form])
+
+    if (error) {
+      setMessage(`Could not create event: ${error.message}`)
+      return
+    }
+
+    setForm({
+      show_name: '',
+      venue: '',
+      start_date: '',
+      end_date: '',
+      project_manager: '',
+      public_slug: '',
+      share_enabled: true,
+      current_rms_id: '',
+    })
+
+    setMessage('Event created.')
+    loadEvents()
+  }
+
+  async function togglePublished(eventRecord) {
+    const { error } = await supabase
+      .from('Events')
+      .update({ share_enabled: !eventRecord.share_enabled })
+      .eq('id', eventRecord.id)
+
+    if (error) {
+      setMessage(`Could not update event: ${error.message}`)
+      return
+    }
+
+    loadEvents()
+  }
+
+  function copyLink(publicSlug) {
+    const url = `${window.location.origin}/${publicSlug}`
+    navigator.clipboard.writeText(url)
+    setMessage(`Copied: ${url}`)
+  }
+
+  return (
+    <main className="page">
+      <header className="hero">
+        <div className="brand">PEP</div>
+        <div>
+          <p className="eyebrow">Premium Event Productions</p>
+          <h1>PEP Admin</h1>
+        </div>
+      </header>
+
+      <section className="eventCard">
+        <h2>Create New Crew Sheet</h2>
+        <p>Add the event header information. Crew, flights, transfers and hotels will be added in the next admin phase.</p>
+
+        <form onSubmit={createEvent} className="adminForm">
+          <label>
+            Show Name
+            <input value={form.show_name} onChange={e => updateField('show_name', e.target.value)} placeholder="EHA Congress 2026" />
+          </label>
+
+          <label>
+            Venue
+            <input value={form.venue} onChange={e => updateField('venue', e.target.value)} placeholder="Bella Center Copenhagen" />
+          </label>
+
+          <label>
+            Start Date
+            <input type="date" value={form.start_date} onChange={e => updateField('start_date', e.target.value)} />
+          </label>
+
+          <label>
+            End Date
+            <input type="date" value={form.end_date} onChange={e => updateField('end_date', e.target.value)} />
+          </label>
+
+          <label>
+            Project Manager
+            <input value={form.project_manager} onChange={e => updateField('project_manager', e.target.value)} placeholder="Liam Howard" />
+          </label>
+
+          <label>
+            Public Slug
+            <input value={form.public_slug} onChange={e => updateField('public_slug', e.target.value)} placeholder="eha-2026" />
+          </label>
+
+          <label>
+            Current RMS ID
+            <input value={form.current_rms_id} onChange={e => updateField('current_rms_id', e.target.value)} placeholder="Optional for now" />
+          </label>
+
+          <label className="checkboxRow">
+            <input type="checkbox" checked={form.share_enabled} onChange={e => updateField('share_enabled', e.target.checked)} />
+            Published / share link active
+          </label>
+
+          <button className="primaryButton" type="submit">
+            <Plus size={18} /> Create Crew Sheet
+          </button>
+        </form>
+
+        {message && <p className="adminMessage">{message}</p>}
+      </section>
+
+      <section className="eventCard">
+        <h2>Existing Crew Sheets</h2>
+
+        {loading ? (
+          <p>Loading events...</p>
+        ) : events.length ? (
+          <div className="adminList">
+            {events.map(eventRecord => (
+              <div className="adminListItem" key={eventRecord.id}>
+                <div>
+                  <strong>{eventRecord.show_name}</strong>
+                  <p>{eventRecord.venue}</p>
+                  <small>
+                    {formatDate(eventRecord.start_date)} → {formatDate(eventRecord.end_date)}
+                  </small>
+                  <br />
+                  <small>Slug: /{eventRecord.public_slug}</small>
+                </div>
+
+                <div className="adminActions">
+                  <a href={`/${eventRecord.public_slug}`} target="_blank" rel="noreferrer">Open</a>
+                  <button type="button" onClick={() => copyLink(eventRecord.public_slug)}>
+                    <Copy size={16} /> Copy Link
+                  </button>
+                  <button type="button" onClick={() => togglePublished(eventRecord)}>
+                    {eventRecord.share_enabled ? 'Unpublish' : 'Publish'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty text="No crew sheets created yet." />
+        )}
+      </section>
+    </main>
+  )
+}
+
+function PublicCrewSheet() {
   const slug = window.location.pathname.replace('/', '') || 'test-pep-show'
 
   const [event, setEvent] = useState(null)
@@ -169,15 +375,9 @@ function App() {
             data.flights.map(x => (
               <div className="item" key={x.id}>
                 <strong>{x.crew_name}</strong>
-                <p>
-                  {x.airline} {x.flight_number}: {x.departure_airport} → {x.arrival_airport}
-                </p>
+                <p>{x.airline} {x.flight_number}: {x.departure_airport} → {x.arrival_airport}</p>
 
-                {x.departure_time && (
-                  <small>
-                    Departure: {formatDateTime(x.departure_time)}
-                  </small>
-                )}
+                {x.departure_time && <small>Departure: {formatDateTime(x.departure_time)}</small>}
 
                 {x.arrival_time && (
                   <small>
@@ -330,6 +530,16 @@ function App() {
       </div>
     </main>
   )
+}
+
+function App() {
+  const path = window.location.pathname
+
+  if (path === '/admin') {
+    return <AdminPage />
+  }
+
+  return <PublicCrewSheet />
 }
 
 createRoot(document.getElementById('root')).render(<App />)
