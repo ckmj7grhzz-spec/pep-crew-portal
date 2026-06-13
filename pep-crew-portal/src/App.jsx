@@ -4,6 +4,28 @@ import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDo
 import { supabase } from './supabase'
 import './styles.css'
 
+function formatDate(dateString) {
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+function formatDateTime(dateString) {
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 function Accordion({ title, subtitle, icon: Icon, children }) {
   const [open, setOpen] = useState(false)
   return (
@@ -91,8 +113,8 @@ function App() {
         <h2>{event.show_name}</h2>
         <p>{event.venue}</p>
         <div className="eventGrid">
-          <span><strong>Start:</strong> {event.start_date}</span>
-          <span><strong>End:</strong> {event.end_date}</span>
+          <span><strong>Start:</strong> {formatDate(event.start_date)}</span>
+          <span><strong>End:</strong> {formatDate(event.end_date)}</span>
           <span><strong>Project Manager:</strong> {event.project_manager}</span>
         </div>
       </section>
@@ -105,7 +127,7 @@ function App() {
         </Accordion>
 
         <Accordion title="Flights" subtitle={`${data.flights.length} flight records`} icon={Plane}>
-          {data.flights.length ? data.flights.map(x => <div className="item" key={x.id}><strong>{x.crew_name}</strong><p>{x.airline} {x.flight_number}: {x.departure_airport} → {x.arrival_airport}</p><small>{x.departure_time} → {x.arrival_time}</small></div>) : <Empty text="No flights added yet." />}
+          {data.flights.length ? data.flights.map(x => <div className="item" key={x.id}><strong>{x.crew_name}</strong><p>{x.airline} {x.flight_number}: {x.departure_airport} → {x.arrival_airport}</p><small>{formatDateTime(x.departure_time)} → {formatDateTime(x.arrival_time)}</small></div>) : <Empty text="No flights added yet." />}
         </Accordion>
 
         <Accordion title="Transfers" subtitle={`${data.transfers.length} transfer records`} icon={Car}>
