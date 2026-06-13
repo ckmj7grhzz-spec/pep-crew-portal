@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDown, Plus, Copy, Settings, ArrowLeft } from 'lucide-react'
+import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDown, Plus, Copy, Settings, ArrowLeft, LogOut } from 'lucide-react'
 import { supabase } from './supabase'
 import './styles.css'
 
@@ -60,6 +60,81 @@ function Accordion({ title, subtitle, icon: Icon, children }) {
 
 function Empty({ text }) {
   return <p className="empty">{text}</p>
+}
+
+
+function LoginPage({ onLogin }) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [message, setMessage] = useState('')
+
+  async function login(e) {
+    e.preventDefault()
+    setMessage('')
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      setMessage(`Login failed: ${error.message}`)
+      return
+    }
+
+    onLogin()
+  }
+
+  return (
+    <main className="page">
+      <header className="hero">
+        <div className="brand">PEP</div>
+        <div>
+          <p className="eyebrow">Premium Event Productions</p>
+          <h1>PEP Admin Login</h1>
+        </div>
+      </header>
+
+      <section className="eventCard loginCard">
+        <h2>Admin Access</h2>
+        <p>Sign in to manage PEP crew sheets.</p>
+
+        <form onSubmit={login} className="adminForm loginForm">
+          <label>
+            Email
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@pepled.com" />
+          </label>
+
+          <label>
+            Password
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
+          </label>
+
+          <button className="primaryButton" type="submit">Login</button>
+        </form>
+
+        {message && <p className="adminMessage">{message}</p>}
+      </section>
+    </main>
+  )
+}
+
+function AdminShell({ children }) {
+  async function logout() {
+    await supabase.auth.signOut()
+    window.location.href = '/admin'
+  }
+
+  return (
+    <>
+      <div className="adminLogoutBar">
+        <button type="button" onClick={logout}>
+          <LogOut size={16} /> Logout
+        </button>
+      </div>
+      {children}
+    </>
+  )
 }
 
 function AdminPage() {
@@ -1579,9 +1654,48 @@ function PublicCrewSheet() {
 
 function App() {
   const path = window.location.pathname
+  const isAdminRoute = path === '/admin' || path.startsWith('/admin/event/')
 
-  if (path === '/admin') return <AdminPage />
-  if (path.startsWith('/admin/event/')) return <EventManagerPage />
+  const [session, setSession] = useState(null)
+  const [checkingAuth, setCheckingAuth] = useState(isAdminRoute)
+
+  useEffect(() => {
+    if (!isAdminRoute) return
+
+    async function checkSession() {
+      const { data } = await supabase.auth.getSession()
+      setSession(data.session)
+      setCheckingAuth(false)
+    }
+
+    checkSession()
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession)
+    })
+
+    return () => {
+      listener.subscription.unsubscribe()
+    }
+  }, [isAdminRoute])
+
+  if (!isAdminRoute) return <PublicCrewSheet />
+
+  if (checkingAuth) {
+    return <main className="page"><p>Checking admin access...</p></main>
+  }
+
+  if (!session) {
+    return <LoginPage onLogin={() => window.location.reload()} />
+  }
+
+  if (path === '/admin') {
+    return <AdminShell><AdminPage /></AdminShell>
+  }
+
+  if (path.startsWith('/admin/event/')) {
+    return <AdminShell><EventManagerPage /></AdminShell>
+  }
 
   return <PublicCrewSheet />
 }
