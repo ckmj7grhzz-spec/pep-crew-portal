@@ -861,14 +861,33 @@ function EventManagerPage() {
         </div>
 
         <div className="tabs">
-          <button className={activeTab === 'overview' ? 'active' : ''} onClick={() => setActiveTab('overview')}>Overview</button>
-          <button className={activeTab === 'crew' ? 'active' : ''} onClick={() => setActiveTab('crew')}>Crew</button>
-          <button className={activeTab === 'flights' ? 'active' : ''} onClick={() => setActiveTab('flights')}>Flights</button>
-          <button className={activeTab === 'hotels' ? 'active' : ''} onClick={() => setActiveTab('hotels')}>Hotels</button>
-          <button className={activeTab === 'transfers' ? 'active' : ''} onClick={() => setActiveTab('transfers')}>Transfers</button>
-          <button className={activeTab === 'schedule' ? 'active' : ''} onClick={() => setActiveTab('schedule')}>Schedule</button>
-          <button className={activeTab === 'documents' ? 'active' : ''} onClick={() => setActiveTab('documents')}>Documents</button>
-        </div>
+  {[
+    ['overview', 'Overview'],
+    ['crew', 'Crew'],
+    ['flights', 'Flights'],
+    ['hotels', 'Hotels'],
+    ['transfers', 'Transfers'],
+    ['schedule', 'Schedule'],
+    ['documents', 'Documents']
+  ].map(([key, label]) => (
+    <button
+      key={key}
+      onClick={() => setActiveTab(key)}
+      style={{
+        backgroundColor: activeTab === key ? '#16a34a' : 'white',
+        color: activeTab === key ? 'white' : '#0f172a',
+        borderColor: activeTab === key ? '#16a34a' : '#cbd5e1',
+        border: '1px solid',
+        borderRadius: '999px',
+        padding: '12px 18px',
+        fontWeight: '800',
+        cursor: 'pointer'
+      }}
+    >
+      {label}
+    </button>
+  ))}
+</div>
       </section>
 
       {activeTab === 'overview' && (
