@@ -41,7 +41,7 @@ function App() {
       setLoading(true)
 
       const { data: eventData, error: eventError } = await supabase
-        .from('events')
+        .from('Events')
         .select('*')
         .eq('public_slug', slug)
         .eq('share_enabled', true)
