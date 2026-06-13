@@ -259,8 +259,10 @@ function EventManagerPage() {
   const slug = window.location.pathname.replace('/admin/event/', '')
   const [event, setEvent] = useState(null)
   const [crew, setCrew] = useState([])
+  const [flights, setFlights] = useState([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
+
   const [crewForm, setCrewForm] = useState({
     name: '',
     role: '',
@@ -269,6 +271,18 @@ function EventManagerPage() {
     email: '',
     hotel: '',
     room_number: '',
+    notes: '',
+  })
+
+  const [flightForm, setFlightForm] = useState({
+    crew_name: '',
+    airline: '',
+    flight_number: '',
+    departure_airport: '',
+    arrival_airport: '',
+    departure_time: '',
+    arrival_time: '',
+    booking_reference: '',
     notes: '',
   })
 
@@ -302,11 +316,24 @@ function EventManagerPage() {
     if (crewError) setMessage(`Could not load crew: ${crewError.message}`)
     else setCrew(crewData || [])
 
+    const { data: flightData, error: flightError } = await supabase
+      .from('flights')
+      .select('*')
+      .eq('event_id', eventData.id)
+      .order('created_at', { ascending: true })
+
+    if (flightError) setMessage(`Could not load flights: ${flightError.message}`)
+    else setFlights(flightData || [])
+
     setLoading(false)
   }
 
   function updateCrewField(field, value) {
     setCrewForm({ ...crewForm, [field]: value })
+  }
+
+  function updateFlightField(field, value) {
+    setFlightForm({ ...flightForm, [field]: value })
   }
 
   async function addCrewMember(e) {
@@ -352,6 +379,60 @@ function EventManagerPage() {
     }
 
     setMessage('Crew member deleted.')
+    loadEventManager()
+  }
+
+  async function addFlight(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!event) return
+    if (!flightForm.crew_name) {
+      setMessage('Select a crew member for this flight.')
+      return
+    }
+
+    const cleanFlight = {
+      ...flightForm,
+      event_id: event.id,
+      arrival_time: flightForm.arrival_time || null,
+      departure_time: flightForm.departure_time || null,
+    }
+
+    const { error } = await supabase
+      .from('flights')
+      .insert([cleanFlight])
+
+    if (error) {
+      setMessage(`Could not add flight: ${error.message}`)
+      return
+    }
+
+    setFlightForm({
+      crew_name: '',
+      airline: '',
+      flight_number: '',
+      departure_airport: '',
+      arrival_airport: '',
+      departure_time: '',
+      arrival_time: '',
+      booking_reference: '',
+      notes: '',
+    })
+
+    setMessage('Flight added.')
+    loadEventManager()
+  }
+
+  async function deleteFlight(id) {
+    const { error } = await supabase.from('flights').delete().eq('id', id)
+
+    if (error) {
+      setMessage(`Could not delete flight: ${error.message}`)
+      return
+    }
+
+    setMessage('Flight deleted.')
     loadEventManager()
   }
 
@@ -466,6 +547,104 @@ function EventManagerPage() {
           </div>
         ) : (
           <Empty text="No crew added yet." />
+        )}
+      </section>
+
+      <section className="eventCard">
+        <h2>Add Flight</h2>
+        <p>Assign each flight to an existing crew member.</p>
+
+        <form onSubmit={addFlight} className="adminForm">
+          <label>
+            Crew Member
+            <select value={flightForm.crew_name} onChange={e => updateFlightField('crew_name', e.target.value)}>
+              <option value="">Select crew member</option>
+              {crew.map(member => (
+                <option key={member.id} value={member.name}>{member.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Airline
+            <input value={flightForm.airline} onChange={e => updateFlightField('airline', e.target.value)} placeholder="British Airways" />
+          </label>
+
+          <label>
+            Flight Number
+            <input value={flightForm.flight_number} onChange={e => updateFlightField('flight_number', e.target.value)} placeholder="BA812" />
+          </label>
+
+          <label>
+            Departure Airport
+            <input value={flightForm.departure_airport} onChange={e => updateFlightField('departure_airport', e.target.value)} placeholder="LHR T2" />
+          </label>
+
+          <label>
+            Arrival Airport
+            <input value={flightForm.arrival_airport} onChange={e => updateFlightField('arrival_airport', e.target.value)} placeholder="CPH T2" />
+          </label>
+
+          <label>
+            Departure Date / Time
+            <input type="datetime-local" value={flightForm.departure_time} onChange={e => updateFlightField('departure_time', e.target.value)} />
+          </label>
+
+          <label>
+            Arrival Date / Time
+            <input type="datetime-local" value={flightForm.arrival_time} onChange={e => updateFlightField('arrival_time', e.target.value)} />
+          </label>
+
+          <label>
+            Booking Reference
+            <input value={flightForm.booking_reference} onChange={e => updateFlightField('booking_reference', e.target.value)} placeholder="ABC123" />
+          </label>
+
+          <label>
+            Notes
+            <input value={flightForm.notes} onChange={e => updateFlightField('notes', e.target.value)} placeholder="Optional" />
+          </label>
+
+          <button className="primaryButton" type="submit">
+            <Plus size={18} /> Add Flight
+          </button>
+        </form>
+      </section>
+
+      <section className="eventCard">
+        <h2>Flights</h2>
+
+        {flights.length ? (
+          <div className="adminList">
+            {flights.map(flight => (
+              <div className="adminListItem" key={flight.id}>
+                <div>
+                  <strong>{flight.crew_name}</strong>
+                  <p>{flight.airline} {flight.flight_number}: {flight.departure_airport} → {flight.arrival_airport}</p>
+                  {flight.departure_time && <small>Departure: {formatDateTime(flight.departure_time)}</small>}
+                  {flight.arrival_time && (
+                    <small>
+                      <br />
+                      Arrival: {formatDateTime(flight.arrival_time)}
+                    </small>
+                  )}
+                  {flight.booking_reference && (
+                    <small>
+                      <br />
+                      Booking Ref: {flight.booking_reference}
+                    </small>
+                  )}
+                  {flight.notes && <p>{flight.notes}</p>}
+                </div>
+
+                <div className="adminActions">
+                  <button type="button" onClick={() => deleteFlight(flight.id)}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty text="No flights added yet." />
         )}
       </section>
     </main>
