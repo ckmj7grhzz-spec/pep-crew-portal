@@ -167,3 +167,41 @@ a { color: #1d4ed8; font-weight: 700; }
   font-size: 15px;
   background: white;
 }
+
+  
+.loginCard {
+  max-width: 620px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.loginForm {
+  grid-template-columns: 1fr;
+}
+
+.adminLogoutBar {
+  max-width: 1100px;
+  margin: 16px auto 0;
+  padding: 0 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.adminLogoutBar button {
+  border: 1px solid #cbd5e1;
+  background: white;
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: #0f172a;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 720px) {
+  .adminLogoutBar {
+    padding: 0 14px;
+  }
+}
