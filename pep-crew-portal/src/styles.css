@@ -538,3 +538,15 @@ a { color: #1d4ed8; font-weight: 700; }
   border-color: #16a34a !important;
   box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25) !important;
 }
+
+  .pepLogo {
+  width: 240px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.hero {
+  align-items: center;
+  gap: 28px;
+}
