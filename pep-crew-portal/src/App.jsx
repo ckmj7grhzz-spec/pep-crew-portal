@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDown, Plus, Copy, Settings, ArrowLeft, LogOut } from 'lucide-react'
 import { supabase } from './supabase'
 import './styles.css'
+import pepLogo from './assets/BW Logo_Pep_With bg.png'
 
 function formatDate(dateString) {
   if (!dateString) return ''
@@ -230,7 +231,11 @@ function AdminPage() {
   return (
     <main className="page">
       <header className="hero">
-        <div className="brand">PEP</div>
+        <img
+  src={pepLogo}
+  alt="Premium Event Productions"
+  className="pepLogo"
+/>
         <div>
           <p className="eyebrow">Premium Event Productions</p>
           <h1>PEP Admin</h1>
