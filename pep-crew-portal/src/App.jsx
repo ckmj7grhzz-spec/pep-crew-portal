@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDown, Plus, Copy } from 'lucide-react'
+import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDown, Plus, Copy, Settings, ArrowLeft } from 'lucide-react'
 import { supabase } from './supabase'
 import './styles.css'
 
@@ -28,9 +28,7 @@ function formatDateTime(dateString) {
 
 function formatTime(timeString) {
   if (!timeString) return ''
-  if (typeof timeString === 'string' && /^\d{2}:\d{2}/.test(timeString)) {
-    return timeString.slice(0, 5)
-  }
+  if (typeof timeString === 'string' && /^\d{2}:\d{2}/.test(timeString)) return timeString.slice(0, 5)
   return timeString
 }
 
@@ -91,22 +89,15 @@ function AdminPage() {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (error) {
-      setMessage(`Could not load events: ${error.message}`)
-    } else {
-      setEvents(data || [])
-    }
+    if (error) setMessage(`Could not load events: ${error.message}`)
+    else setEvents(data || [])
 
     setLoading(false)
   }
 
   function updateField(field, value) {
     const next = { ...form, [field]: value }
-
-    if (field === 'show_name' && !form.public_slug) {
-      next.public_slug = slugify(value)
-    }
-
+    if (field === 'show_name' && !form.public_slug) next.public_slug = slugify(value)
     setForm(next)
   }
 
@@ -119,9 +110,7 @@ function AdminPage() {
       return
     }
 
-    const { error } = await supabase
-      .from('Events')
-      .insert([form])
+    const { error } = await supabase.from('Events').insert([form])
 
     if (error) {
       setMessage(`Could not create event: ${error.message}`)
@@ -175,7 +164,7 @@ function AdminPage() {
 
       <section className="eventCard">
         <h2>Create New Crew Sheet</h2>
-        <p>Add the event header information. Crew, flights, transfers and hotels will be added in the next admin phase.</p>
+        <p>Add the event header information. Crew, flights, transfers and hotels are managed from each event.</p>
 
         <form onSubmit={createEvent} className="adminForm">
           <label>
@@ -238,14 +227,15 @@ function AdminPage() {
                 <div>
                   <strong>{eventRecord.show_name}</strong>
                   <p>{eventRecord.venue}</p>
-                  <small>
-                    {formatDate(eventRecord.start_date)} → {formatDate(eventRecord.end_date)}
-                  </small>
+                  <small>{formatDate(eventRecord.start_date)} → {formatDate(eventRecord.end_date)}</small>
                   <br />
                   <small>Slug: /{eventRecord.public_slug}</small>
                 </div>
 
                 <div className="adminActions">
+                  <a href={`/admin/event/${eventRecord.public_slug}`}>
+                    <Settings size={16} /> Manage
+                  </a>
                   <a href={`/${eventRecord.public_slug}`} target="_blank" rel="noreferrer">Open</a>
                   <button type="button" onClick={() => copyLink(eventRecord.public_slug)}>
                     <Copy size={16} /> Copy Link
@@ -259,6 +249,223 @@ function AdminPage() {
           </div>
         ) : (
           <Empty text="No crew sheets created yet." />
+        )}
+      </section>
+    </main>
+  )
+}
+
+function EventManagerPage() {
+  const slug = window.location.pathname.replace('/admin/event/', '')
+  const [event, setEvent] = useState(null)
+  const [crew, setCrew] = useState([])
+  const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [crewForm, setCrewForm] = useState({
+    name: '',
+    role: '',
+    department: '',
+    mobile: '',
+    email: '',
+    hotel: '',
+    room_number: '',
+    notes: '',
+  })
+
+  useEffect(() => {
+    loadEventManager()
+  }, [slug])
+
+  async function loadEventManager() {
+    setLoading(true)
+
+    const { data: eventData, error: eventError } = await supabase
+      .from('Events')
+      .select('*')
+      .eq('public_slug', slug)
+      .single()
+
+    if (eventError || !eventData) {
+      setMessage('Event not found.')
+      setLoading(false)
+      return
+    }
+
+    setEvent(eventData)
+
+    const { data: crewData, error: crewError } = await supabase
+      .from('crew')
+      .select('*')
+      .eq('event_id', eventData.id)
+      .order('created_at', { ascending: true })
+
+    if (crewError) setMessage(`Could not load crew: ${crewError.message}`)
+    else setCrew(crewData || [])
+
+    setLoading(false)
+  }
+
+  function updateCrewField(field, value) {
+    setCrewForm({ ...crewForm, [field]: value })
+  }
+
+  async function addCrewMember(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!event) return
+    if (!crewForm.name) {
+      setMessage('Crew member name is required.')
+      return
+    }
+
+    const { error } = await supabase
+      .from('crew')
+      .insert([{ ...crewForm, event_id: event.id }])
+
+    if (error) {
+      setMessage(`Could not add crew member: ${error.message}`)
+      return
+    }
+
+    setCrewForm({
+      name: '',
+      role: '',
+      department: '',
+      mobile: '',
+      email: '',
+      hotel: '',
+      room_number: '',
+      notes: '',
+    })
+
+    setMessage('Crew member added.')
+    loadEventManager()
+  }
+
+  async function deleteCrewMember(id) {
+    const { error } = await supabase.from('crew').delete().eq('id', id)
+
+    if (error) {
+      setMessage(`Could not delete crew member: ${error.message}`)
+      return
+    }
+
+    setMessage('Crew member deleted.')
+    loadEventManager()
+  }
+
+  if (loading) return <main className="page"><p>Loading event manager...</p></main>
+
+  if (!event) {
+    return (
+      <main className="page">
+        <p>{message || 'Event not found.'}</p>
+        <a href="/admin">Back to Admin</a>
+      </main>
+    )
+  }
+
+  return (
+    <main className="page">
+      <header className="hero">
+        <div className="brand">PEP</div>
+        <div>
+          <p className="eyebrow">Premium Event Productions</p>
+          <h1>Manage Crew Sheet</h1>
+        </div>
+      </header>
+
+      <section className="eventCard">
+        <a href="/admin" className="backLink"><ArrowLeft size={16} /> Back to Admin</a>
+        <h2>{event.show_name}</h2>
+        <p>{event.venue}</p>
+        <div className="eventGrid">
+          <span><strong>Start:</strong> {formatDate(event.start_date)}</span>
+          <span><strong>End:</strong> {formatDate(event.end_date)}</span>
+          <span><strong>Project Manager:</strong> {event.project_manager}</span>
+        </div>
+        <div className="adminActions managerTopActions">
+          <a href={`/${event.public_slug}`} target="_blank" rel="noreferrer">Open Public Sheet</a>
+        </div>
+      </section>
+
+      <section className="eventCard">
+        <h2>Add Crew Member</h2>
+
+        <form onSubmit={addCrewMember} className="adminForm">
+          <label>
+            Name
+            <input value={crewForm.name} onChange={e => updateCrewField('name', e.target.value)} placeholder="Liam Howard" />
+          </label>
+
+          <label>
+            Role
+            <input value={crewForm.role} onChange={e => updateCrewField('role', e.target.value)} placeholder="Project Manager" />
+          </label>
+
+          <label>
+            Department
+            <input value={crewForm.department} onChange={e => updateCrewField('department', e.target.value)} placeholder="Production" />
+          </label>
+
+          <label>
+            Mobile
+            <input value={crewForm.mobile} onChange={e => updateCrewField('mobile', e.target.value)} placeholder="+44..." />
+          </label>
+
+          <label>
+            Email
+            <input value={crewForm.email} onChange={e => updateCrewField('email', e.target.value)} placeholder="name@pepled.com" />
+          </label>
+
+          <label>
+            Hotel
+            <input value={crewForm.hotel} onChange={e => updateCrewField('hotel', e.target.value)} placeholder="Hilton ExCeL" />
+          </label>
+
+          <label>
+            Room Number
+            <input value={crewForm.room_number} onChange={e => updateCrewField('room_number', e.target.value)} placeholder="401" />
+          </label>
+
+          <label>
+            Notes
+            <input value={crewForm.notes} onChange={e => updateCrewField('notes', e.target.value)} placeholder="Optional" />
+          </label>
+
+          <button className="primaryButton" type="submit">
+            <Plus size={18} /> Add Crew Member
+          </button>
+        </form>
+
+        {message && <p className="adminMessage">{message}</p>}
+      </section>
+
+      <section className="eventCard">
+        <h2>Crew Members</h2>
+
+        {crew.length ? (
+          <div className="adminList">
+            {crew.map(member => (
+              <div className="adminListItem" key={member.id}>
+                <div>
+                  <strong>{member.name}</strong>
+                  <p>{member.role} {member.department && `| ${member.department}`}</p>
+                  <small>{member.mobile} {member.email && `| ${member.email}`}</small>
+                  <br />
+                  <small>{member.hotel} {member.room_number && `Room ${member.room_number}`}</small>
+                  {member.notes && <p>{member.notes}</p>}
+                </div>
+
+                <div className="adminActions">
+                  <button type="button" onClick={() => deleteCrewMember(member.id)}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty text="No crew added yet." />
         )}
       </section>
     </main>
@@ -535,9 +742,8 @@ function PublicCrewSheet() {
 function App() {
   const path = window.location.pathname
 
-  if (path === '/admin') {
-    return <AdminPage />
-  }
+  if (path === '/admin') return <AdminPage />
+  if (path.startsWith('/admin/event/')) return <EventManagerPage />
 
   return <PublicCrewSheet />
 }
