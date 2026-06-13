@@ -127,7 +127,7 @@ function App() {
         </Accordion>
 
         <Accordion title="Flights" subtitle={`${data.flights.length} flight records`} icon={Plane}>
-          {data.flights.length ? data.flights.map(x => <div className="item" key={x.id}><strong>{x.crew_name}</strong><p>{x.airline} {x.flight_number}: {x.departure_airport} → {x.arrival_airport}<div>
+          {data.flights.length ? data.flights.map(x => <div className="item" key={x.id}><strong>{x.crew_name}</strong><p>{x.airline} {x.flight_number}: {x.departure_airport} {x.arrival_airport}<div>
   <small>
     Departure: {formatDateTime(x.departure_time)}
   </small>
