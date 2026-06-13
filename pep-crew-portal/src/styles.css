@@ -224,9 +224,10 @@ a { color: #1d4ed8; font-weight: 700; }
 }
 
 .tabs button.active {
-  background: #071426;
-  color: white;
-  border-color: #071426;
+  background: #16a34a !important;
+  color: white !important;
+  border-color: #16a34a !important;
+}
 }
 
 .statsGrid {
