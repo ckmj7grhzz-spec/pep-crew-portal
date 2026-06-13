@@ -261,6 +261,7 @@ function EventManagerPage() {
   const [crew, setCrew] = useState([])
   const [flights, setFlights] = useState([])
   const [hotels, setHotels] = useState([])
+  const [transfers, setTransfers] = useState([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -296,6 +297,19 @@ function EventManagerPage() {
     room_number: '',
     booking_reference: '',
     hotel_contact: '',
+    notes: '',
+  })
+
+  const [transferForm, setTransferForm] = useState({
+    passenger: '',
+    transfer_type: '',
+    pickup_location: '',
+    destination: '',
+    date: '',
+    time: '',
+    driver_name: '',
+    driver_phone: '',
+    vehicle: '',
     notes: '',
   })
 
@@ -347,6 +361,15 @@ function EventManagerPage() {
     if (hotelError) setMessage(`Could not load hotels: ${hotelError.message}`)
     else setHotels(hotelData || [])
 
+    const { data: transferData, error: transferError } = await supabase
+      .from('transfers')
+      .select('*')
+      .eq('event_id', eventData.id)
+      .order('created_at', { ascending: true })
+
+    if (transferError) setMessage(`Could not load transfers: ${transferError.message}`)
+    else setTransfers(transferData || [])
+
     setLoading(false)
   }
 
@@ -360,6 +383,10 @@ function EventManagerPage() {
 
   function updateHotelField(field, value) {
     setHotelForm({ ...hotelForm, [field]: value })
+  }
+
+  function updateTransferField(field, value) {
+    setTransferForm({ ...transferForm, [field]: value })
   }
 
   async function addCrewMember(e) {
@@ -513,6 +540,61 @@ function EventManagerPage() {
     }
 
     setMessage('Hotel booking deleted.')
+    loadEventManager()
+  }
+
+  async function addTransfer(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!event) return
+    if (!transferForm.passenger) {
+      setMessage('Select a passenger for this transfer.')
+      return
+    }
+
+    const cleanTransfer = {
+      ...transferForm,
+      event_id: event.id,
+      date: transferForm.date || null,
+      time: transferForm.time || null,
+    }
+
+    const { error } = await supabase
+      .from('transfers')
+      .insert([cleanTransfer])
+
+    if (error) {
+      setMessage(`Could not add transfer: ${error.message}`)
+      return
+    }
+
+    setTransferForm({
+      passenger: '',
+      transfer_type: '',
+      pickup_location: '',
+      destination: '',
+      date: '',
+      time: '',
+      driver_name: '',
+      driver_phone: '',
+      vehicle: '',
+      notes: '',
+    })
+
+    setMessage('Transfer added.')
+    loadEventManager()
+  }
+
+  async function deleteTransfer(id) {
+    const { error } = await supabase.from('transfers').delete().eq('id', id)
+
+    if (error) {
+      setMessage(`Could not delete transfer: ${error.message}`)
+      return
+    }
+
+    setMessage('Transfer deleted.')
     loadEventManager()
   }
 
@@ -838,6 +920,114 @@ function EventManagerPage() {
           <Empty text="No hotels added yet." />
         )}
       </section>
+
+      <section className="eventCard">
+        <h2>Add Transfer</h2>
+        <p>Add airport transfers, taxis, hotel shuttles or venue transport.</p>
+
+        <form onSubmit={addTransfer} className="adminForm">
+          <label>
+            Passenger
+            <select value={transferForm.passenger} onChange={e => updateTransferField('passenger', e.target.value)}>
+              <option value="">Select passenger</option>
+              {crew.map(member => (
+                <option key={member.id} value={member.name}>{member.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Transfer Type
+            <input value={transferForm.transfer_type} onChange={e => updateTransferField('transfer_type', e.target.value)} placeholder="Airport Transfer" />
+          </label>
+
+          <label>
+            Pickup Location
+            <input value={transferForm.pickup_location} onChange={e => updateTransferField('pickup_location', e.target.value)} placeholder="Copenhagen Airport" />
+          </label>
+
+          <label>
+            Destination
+            <input value={transferForm.destination} onChange={e => updateTransferField('destination', e.target.value)} placeholder="AC Bella Sky Copenhagen" />
+          </label>
+
+          <label>
+            Date
+            <input type="date" value={transferForm.date} onChange={e => updateTransferField('date', e.target.value)} />
+          </label>
+
+          <label>
+            Time
+            <input type="time" value={transferForm.time} onChange={e => updateTransferField('time', e.target.value)} />
+          </label>
+
+          <label>
+            Driver Name
+            <input value={transferForm.driver_name} onChange={e => updateTransferField('driver_name', e.target.value)} placeholder="Peter Jensen" />
+          </label>
+
+          <label>
+            Driver Phone
+            <input value={transferForm.driver_phone} onChange={e => updateTransferField('driver_phone', e.target.value)} placeholder="+45..." />
+          </label>
+
+          <label>
+            Vehicle
+            <input value={transferForm.vehicle} onChange={e => updateTransferField('vehicle', e.target.value)} placeholder="Mercedes V-Class" />
+          </label>
+
+          <label>
+            Notes
+            <input value={transferForm.notes} onChange={e => updateTransferField('notes', e.target.value)} placeholder="Meet driver at arrivals" />
+          </label>
+
+          <button className="primaryButton" type="submit">
+            <Plus size={18} /> Add Transfer
+          </button>
+        </form>
+      </section>
+
+      <section className="eventCard">
+        <h2>Transfers</h2>
+
+        {transfers.length ? (
+          <div className="adminList">
+            {transfers.map(transfer => (
+              <div className="adminListItem" key={transfer.id}>
+                <div>
+                  <strong>{transfer.passenger || transfer.passengers}</strong>
+                  <p>{transfer.transfer_type}</p>
+                  <p>{transfer.pickup_location} → {transfer.destination}</p>
+                  <small>
+                    {formatDate(transfer.date)}
+                    {transfer.time && ` at ${formatTime(transfer.time)}`}
+                  </small>
+                  {transfer.driver_name && (
+                    <small>
+                      <br />
+                      Driver: {transfer.driver_name}
+                      {transfer.driver_phone && ` | ${transfer.driver_phone}`}
+                    </small>
+                  )}
+                  {transfer.vehicle && (
+                    <small>
+                      <br />
+                      Vehicle: {transfer.vehicle}
+                    </small>
+                  )}
+                  {transfer.notes && <p>{transfer.notes}</p>}
+                </div>
+
+                <div className="adminActions">
+                  <button type="button" onClick={() => deleteTransfer(transfer.id)}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty text="No transfers added yet." />
+        )}
+      </section>
     </main>
   )
 }
@@ -987,7 +1177,7 @@ function PublicCrewSheet() {
                 <small>
                   {formatDate(x.date)}
                   {x.time && ` at ${formatTime(x.time)}`}
-                  {x.passengers && ` | ${x.passengers}`}
+                  {(x.passenger || x.passengers) && ` | ${x.passenger || x.passengers}`}
                 </small>
                 {x.driver_name && (
                   <small>
