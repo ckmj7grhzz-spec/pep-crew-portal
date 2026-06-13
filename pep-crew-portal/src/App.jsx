@@ -260,6 +260,7 @@ function EventManagerPage() {
   const [event, setEvent] = useState(null)
   const [crew, setCrew] = useState([])
   const [flights, setFlights] = useState([])
+  const [hotels, setHotels] = useState([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -283,6 +284,18 @@ function EventManagerPage() {
     departure_time: '',
     arrival_time: '',
     booking_reference: '',
+    notes: '',
+  })
+
+  const [hotelForm, setHotelForm] = useState({
+    guest_name: '',
+    hotel_name: '',
+    address: '',
+    check_in: '',
+    check_out: '',
+    room_number: '',
+    booking_reference: '',
+    hotel_contact: '',
     notes: '',
   })
 
@@ -325,6 +338,15 @@ function EventManagerPage() {
     if (flightError) setMessage(`Could not load flights: ${flightError.message}`)
     else setFlights(flightData || [])
 
+    const { data: hotelData, error: hotelError } = await supabase
+      .from('hotels')
+      .select('*')
+      .eq('event_id', eventData.id)
+      .order('created_at', { ascending: true })
+
+    if (hotelError) setMessage(`Could not load hotels: ${hotelError.message}`)
+    else setHotels(hotelData || [])
+
     setLoading(false)
   }
 
@@ -334,6 +356,10 @@ function EventManagerPage() {
 
   function updateFlightField(field, value) {
     setFlightForm({ ...flightForm, [field]: value })
+  }
+
+  function updateHotelField(field, value) {
+    setHotelForm({ ...hotelForm, [field]: value })
   }
 
   async function addCrewMember(e) {
@@ -433,6 +459,60 @@ function EventManagerPage() {
     }
 
     setMessage('Flight deleted.')
+    loadEventManager()
+  }
+
+  async function addHotel(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!event) return
+    if (!hotelForm.guest_name) {
+      setMessage('Select a guest for this hotel booking.')
+      return
+    }
+
+    const cleanHotel = {
+      ...hotelForm,
+      event_id: event.id,
+      check_in: hotelForm.check_in || null,
+      check_out: hotelForm.check_out || null,
+    }
+
+    const { error } = await supabase
+      .from('hotels')
+      .insert([cleanHotel])
+
+    if (error) {
+      setMessage(`Could not add hotel: ${error.message}`)
+      return
+    }
+
+    setHotelForm({
+      guest_name: '',
+      hotel_name: '',
+      address: '',
+      check_in: '',
+      check_out: '',
+      room_number: '',
+      booking_reference: '',
+      hotel_contact: '',
+      notes: '',
+    })
+
+    setMessage('Hotel booking added.')
+    loadEventManager()
+  }
+
+  async function deleteHotel(id) {
+    const { error } = await supabase.from('hotels').delete().eq('id', id)
+
+    if (error) {
+      setMessage(`Could not delete hotel booking: ${error.message}`)
+      return
+    }
+
+    setMessage('Hotel booking deleted.')
     loadEventManager()
   }
 
@@ -645,6 +725,117 @@ function EventManagerPage() {
           </div>
         ) : (
           <Empty text="No flights added yet." />
+        )}
+      </section>
+
+      <section className="eventCard">
+        <h2>Add Hotel</h2>
+        <p>Assign each hotel booking to an existing crew member.</p>
+
+        <form onSubmit={addHotel} className="adminForm">
+          <label>
+            Guest
+            <select value={hotelForm.guest_name} onChange={e => updateHotelField('guest_name', e.target.value)}>
+              <option value="">Select guest</option>
+              {crew.map(member => (
+                <option key={member.id} value={member.name}>{member.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Hotel Name
+            <input value={hotelForm.hotel_name} onChange={e => updateHotelField('hotel_name', e.target.value)} placeholder="AC Bella Sky Copenhagen" />
+          </label>
+
+          <label>
+            Address
+            <input value={hotelForm.address} onChange={e => updateHotelField('address', e.target.value)} placeholder="Center Blvd. 5, Copenhagen" />
+          </label>
+
+          <label>
+            Check In
+            <input type="date" value={hotelForm.check_in} onChange={e => updateHotelField('check_in', e.target.value)} />
+          </label>
+
+          <label>
+            Check Out
+            <input type="date" value={hotelForm.check_out} onChange={e => updateHotelField('check_out', e.target.value)} />
+          </label>
+
+          <label>
+            Room Number
+            <input value={hotelForm.room_number} onChange={e => updateHotelField('room_number', e.target.value)} placeholder="1205" />
+          </label>
+
+          <label>
+            Booking Reference
+            <input value={hotelForm.booking_reference} onChange={e => updateHotelField('booking_reference', e.target.value)} placeholder="HOTEL123" />
+          </label>
+
+          <label>
+            Hotel Contact
+            <input value={hotelForm.hotel_contact} onChange={e => updateHotelField('hotel_contact', e.target.value)} placeholder="+45..." />
+          </label>
+
+          <label>
+            Notes
+            <input value={hotelForm.notes} onChange={e => updateHotelField('notes', e.target.value)} placeholder="Optional" />
+          </label>
+
+          <button className="primaryButton" type="submit">
+            <Plus size={18} /> Add Hotel
+          </button>
+        </form>
+      </section>
+
+      <section className="eventCard">
+        <h2>Hotels</h2>
+
+        {hotels.length ? (
+          <div className="adminList">
+            {hotels.map(hotel => (
+              <div className="adminListItem" key={hotel.id}>
+                <div>
+                  <strong>{hotel.guest_name}</strong>
+                  <p>{hotel.hotel_name}</p>
+                  {hotel.address && <p>{hotel.address}</p>}
+                  {hotel.check_in && <small>Check-in: {formatDate(hotel.check_in)}</small>}
+                  {hotel.check_out && (
+                    <small>
+                      <br />
+                      Check-out: {formatDate(hotel.check_out)}
+                    </small>
+                  )}
+                  {hotel.room_number && (
+                    <small>
+                      <br />
+                      Room: {hotel.room_number}
+                    </small>
+                  )}
+                  {hotel.booking_reference && (
+                    <small>
+                      <br />
+                      Booking Ref: {hotel.booking_reference}
+                    </small>
+                  )}
+                  {hotel.hotel_contact && (
+                    <small>
+                      <br />
+                      Hotel Contact: {hotel.hotel_contact}
+                    </small>
+                  )}
+                  {hotel.notes && <p>{hotel.notes}</p>}
+                </div>
+
+                <div className="adminActions">
+                  <button type="button" onClick={() => deleteHotel(hotel.id)}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty text="No hotels added yet." />
         )}
       </section>
     </main>
