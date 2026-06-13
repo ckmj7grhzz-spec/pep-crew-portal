@@ -4,6 +4,7 @@ import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDo
 import { supabase } from './supabase'
 import './styles.css'
 import pepLogo from './assets/BW Logo_Pep_With bg.png'
+import pepLogo from './BW Logo_Pep_With bg.png'
 
 function formatDate(dateString) {
   if (!dateString) return ''
