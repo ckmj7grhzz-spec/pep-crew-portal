@@ -838,7 +838,11 @@ function EventManagerPage() {
   return (
     <main className="page">
       <header className="hero">
-        <div className="brand">PEP</div>
+        <img
+          src={pepLogo}
+          alt="Premium Event Productions"
+          className="pepLogo"
+        />
         <div>
           <p className="eyebrow">Premium Event Productions</p>
           <h1>Manage Crew Sheet</h1>
@@ -1538,7 +1542,11 @@ function PublicCrewSheet() {
   return (
     <main className="page">
       <header className="hero">
-        <div className="brand">PEP</div>
+        <img
+          src={pepLogo}
+          alt="Premium Event Productions"
+          className="pepLogo"
+        />
         <div>
           <p className="eyebrow">Premium Event Productions</p>
           <h1>PEP Crew Sheet</h1>
