@@ -1186,32 +1186,33 @@ function EventManagerPage() {
             <p>These are the crew records that still need travel, accommodation or transfer details.</p>
 
             <div className="missingGrid">
-              <div className={missingFlights.length ? 'statusRed' : 'statusGreen'}>
-                <h3>Missing Flights</h3>
-                {missingFlights.length ? (
-                  missingFlights.map(member => <p key={member.id}>⚠ {member.name}</p>)
-                ) : (
-                  <p className="allGood">✓ All crew have flights</p>
-                )}
-              </div>
+              {missingFlights.length > 0 && (
+                <div className="statusRed">
+                  <h3>Missing Flights</h3>
+                  {missingFlights.map(member => <p key={member.id}>⚠ {member.name}</p>)}
+                </div>
+              )}
 
-              <div className={missingHotels.length ? 'statusRed' : 'statusGreen'}>
-                <h3>Missing Hotels</h3>
-                {missingHotels.length ? (
-                  missingHotels.map(member => <p key={member.id}>⚠ {member.name}</p>)
-                ) : (
-                  <p className="allGood">✓ All crew have hotels</p>
-                )}
-              </div>
+              {missingHotels.length > 0 && (
+                <div className="statusRed">
+                  <h3>Missing Hotels</h3>
+                  {missingHotels.map(member => <p key={member.id}>⚠ {member.name}</p>)}
+                </div>
+              )}
 
-              <div className={missingTransfers.length ? 'statusRed' : 'statusGreen'}>
-                <h3>Missing Transfers</h3>
-                {missingTransfers.length ? (
-                  missingTransfers.map(member => <p key={member.id}>⚠ {member.name}</p>)
-                ) : (
-                  <p className="allGood">✓ All crew have transfers</p>
-                )}
-              </div>
+              {missingTransfers.length > 0 && (
+                <div className="statusRed">
+                  <h3>Missing Transfers</h3>
+                  {missingTransfers.map(member => <p key={member.id}>⚠ {member.name}</p>)}
+                </div>
+              )}
+
+              {missingFlights.length === 0 && missingHotels.length === 0 && missingTransfers.length === 0 && (
+                <div className="statusGreen completeInfoCard">
+                  <h3>All Information Complete</h3>
+                  <p>All crew have flights, hotels and transfers assigned.</p>
+                </div>
+              )}
             </div>
           </section>
         </>
