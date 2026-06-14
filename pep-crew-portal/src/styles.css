@@ -746,3 +746,145 @@ table a:hover {
 .statusGreen {
   background: green !important;
 }
+
+/* Slim event-manager header */
+.slimHero {
+  padding: 18px 24px !important;
+  min-height: auto !important;
+  justify-content: flex-start;
+}
+
+.slimHero .pepLogo {
+  width: 150px;
+}
+
+/* Compact traffic-light dashboard */
+.compactDashboard {
+  padding: 22px !important;
+  gap: 14px !important;
+}
+
+.readinessTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.readinessTop h2 {
+  font-size: 42px !important;
+  margin: 0 !important;
+}
+
+.readinessBadge {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(15,23,42,0.08);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.compactKpis {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.compactKpis div {
+  padding: 14px !important;
+}
+
+.compactKpis strong {
+  font-size: 26px !important;
+}
+
+.compactKpis span,
+.compactKpis small {
+  display: block;
+}
+
+/* Strong traffic-light colours for KPI/stat/missing cards */
+.statsGrid div.statusRed,
+.dashboardSummary div.statusRed,
+.missingGrid div.statusRed,
+.dashboardHero.statusRed {
+  background: #fef2f2 !important;
+  border-color: #dc2626 !important;
+}
+
+.statsGrid div.statusRed strong,
+.statsGrid div.statusRed span,
+.statsGrid div.statusRed small,
+.dashboardSummary div.statusRed strong,
+.dashboardSummary div.statusRed span,
+.dashboardSummary div.statusRed small,
+.missingGrid div.statusRed,
+.missingGrid div.statusRed h3,
+.missingGrid div.statusRed p,
+.dashboardHero.statusRed h2,
+.dashboardHero.statusRed p,
+.dashboardHero.statusRed strong {
+  color: #991b1b !important;
+}
+
+.statsGrid div.statusOrange,
+.dashboardSummary div.statusOrange,
+.dashboardHero.statusOrange {
+  background: #fff7ed !important;
+  border-color: #f97316 !important;
+}
+
+.statsGrid div.statusOrange strong,
+.statsGrid div.statusOrange span,
+.statsGrid div.statusOrange small,
+.dashboardSummary div.statusOrange strong,
+.dashboardSummary div.statusOrange span,
+.dashboardSummary div.statusOrange small,
+.dashboardHero.statusOrange h2,
+.dashboardHero.statusOrange p,
+.dashboardHero.statusOrange strong {
+  color: #9a3412 !important;
+}
+
+.statsGrid div.statusGreen,
+.dashboardSummary div.statusGreen,
+.missingGrid div.statusGreen,
+.dashboardHero.statusGreen {
+  background: #f0fdf4 !important;
+  border-color: #16a34a !important;
+}
+
+.statsGrid div.statusGreen strong,
+.statsGrid div.statusGreen span,
+.statsGrid div.statusGreen small,
+.dashboardSummary div.statusGreen strong,
+.dashboardSummary div.statusGreen span,
+.dashboardSummary div.statusGreen small,
+.missingGrid div.statusGreen,
+.missingGrid div.statusGreen h3,
+.missingGrid div.statusGreen p,
+.dashboardHero.statusGreen h2,
+.dashboardHero.statusGreen p,
+.dashboardHero.statusGreen strong {
+  color: #166534 !important;
+}
+
+.statsGrid small,
+.dashboardSummary small {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .readinessTop {
+    display: grid;
+  }
+
+  .compactKpis {
+    grid-template-columns: 1fr;
+  }
+
+  .slimHero .pepLogo {
+    width: 130px;
+  }
+}  
