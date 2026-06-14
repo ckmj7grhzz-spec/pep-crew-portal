@@ -352,6 +352,11 @@ function EventManagerPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [editingCrewId, setEditingCrewId] = useState(null)
+  const [editingFlightId, setEditingFlightId] = useState(null)
+  const [editingHotelId, setEditingHotelId] = useState(null)
+  const [editingTransferId, setEditingTransferId] = useState(null)
+  const [editingScheduleId, setEditingScheduleId] = useState(null)
+  const [editingDocumentId, setEditingDocumentId] = useState(null)
 
   const [crewForm, setCrewForm] = useState({
     name: '',
@@ -521,6 +526,164 @@ function EventManagerPage() {
     setDocumentForm({ ...documentForm, [field]: value })
   }
 
+
+  function scrollToForm(id) {
+    setTimeout(() => {
+      const form = document.getElementById(id)
+      if (form) {
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
+  }
+
+  function resetFlightForm() {
+    setEditingFlightId(null)
+    setFlightForm({
+      crew_name: '',
+      airline: '',
+      flight_number: '',
+      departure_airport: '',
+      arrival_airport: '',
+      departure_time: '',
+      arrival_time: '',
+      booking_reference: '',
+      notes: '',
+    })
+  }
+
+  function startEditFlight(flight) {
+    setActiveTab('flights')
+    setEditingFlightId(flight.id)
+    setFlightForm({
+      crew_name: flight.crew_name || '',
+      airline: flight.airline || '',
+      flight_number: flight.flight_number || '',
+      departure_airport: flight.departure_airport || '',
+      arrival_airport: flight.arrival_airport || '',
+      departure_time: flight.departure_time ? String(flight.departure_time).slice(0, 16) : '',
+      arrival_time: flight.arrival_time ? String(flight.arrival_time).slice(0, 16) : '',
+      booking_reference: flight.booking_reference || '',
+      notes: flight.notes || '',
+    })
+    scrollToForm('flight-form')
+  }
+
+  function resetHotelForm() {
+    setEditingHotelId(null)
+    setHotelForm({
+      guest_name: '',
+      hotel_name: '',
+      address: '',
+      check_in: '',
+      check_out: '',
+      room_number: '',
+      booking_reference: '',
+      hotel_contact: '',
+      notes: '',
+    })
+  }
+
+  function startEditHotel(hotel) {
+    setActiveTab('hotels')
+    setEditingHotelId(hotel.id)
+    setHotelForm({
+      guest_name: hotel.guest_name || '',
+      hotel_name: hotel.hotel_name || '',
+      address: hotel.address || '',
+      check_in: hotel.check_in || '',
+      check_out: hotel.check_out || '',
+      room_number: hotel.room_number || '',
+      booking_reference: hotel.booking_reference || '',
+      hotel_contact: hotel.hotel_contact || '',
+      notes: hotel.notes || '',
+    })
+    scrollToForm('hotel-form')
+  }
+
+  function resetTransferForm() {
+    setEditingTransferId(null)
+    setTransferForm({
+      passenger: '',
+      transfer_type: '',
+      pickup_location: '',
+      destination: '',
+      date: '',
+      time: '',
+      driver_name: '',
+      driver_phone: '',
+      vehicle: '',
+      notes: '',
+    })
+  }
+
+  function startEditTransfer(transfer) {
+    setActiveTab('transfers')
+    setEditingTransferId(transfer.id)
+    setTransferForm({
+      passenger: transfer.passenger || transfer.passengers || '',
+      transfer_type: transfer.transfer_type || '',
+      pickup_location: transfer.pickup_location || '',
+      destination: transfer.destination || '',
+      date: transfer.date || '',
+      time: transfer.time ? String(transfer.time).slice(0, 5) : '',
+      driver_name: transfer.driver_name || '',
+      driver_phone: transfer.driver_phone || '',
+      vehicle: transfer.vehicle || '',
+      notes: transfer.notes || '',
+    })
+    scrollToForm('transfer-form')
+  }
+
+  function resetScheduleForm() {
+    setEditingScheduleId(null)
+    setScheduleForm({
+      activity: '',
+      date: '',
+      start_time: '',
+      end_time: '',
+      location: '',
+      assigned_crew: '',
+      notes: '',
+    })
+  }
+
+  function startEditScheduleItem(item) {
+    setActiveTab('schedule')
+    setEditingScheduleId(item.id)
+    setScheduleForm({
+      activity: item.activity || '',
+      date: item.date || '',
+      start_time: item.start_time ? String(item.start_time).slice(0, 5) : '',
+      end_time: item.end_time ? String(item.end_time).slice(0, 5) : '',
+      location: item.location || '',
+      assigned_crew: item.assigned_crew || '',
+      notes: item.notes || '',
+    })
+    scrollToForm('schedule-form')
+  }
+
+  function resetDocumentForm() {
+    setEditingDocumentId(null)
+    setDocumentForm({
+      document_name: '',
+      category: '',
+      file_url: '',
+      notes: '',
+    })
+  }
+
+  function startEditDocument(document) {
+    setActiveTab('documents')
+    setEditingDocumentId(document.id)
+    setDocumentForm({
+      document_name: document.document_name || '',
+      category: document.category || '',
+      file_url: document.file_url || '',
+      notes: document.notes || '',
+    })
+    scrollToForm('document-form')
+  }
+
   function resetCrewForm() {
     setEditingCrewId(null)
     setCrewForm({
@@ -579,35 +742,24 @@ function EventManagerPage() {
         return
       }
 
-      setCrew(crew.map(member =>
-        member.id === editingCrewId
-          ? { ...member, ...payload }
-          : member
-      ))
-
       resetCrewForm()
       setMessage('Crew member updated.')
+      await loadEventManager()
       return
     }
 
-    const { data: newCrew, error } = await supabase
+    const { error } = await supabase
       .from('crew')
       .insert([payload])
-      .select()
 
     if (error) {
       setMessage(`Could not save crew member: ${error.message}`)
       return
     }
 
-    if (newCrew && newCrew.length > 0) {
-      setCrew([...crew, newCrew[0]])
-    } else {
-      loadEventManager()
-    }
-
     resetCrewForm()
     setMessage('Crew member added.')
+    await loadEventManager()
   }
 
   async function deleteCrewMember(id) {
@@ -622,7 +774,7 @@ function EventManagerPage() {
     loadEventManager()
   }
 
-  async function addFlight(e) {
+  async function saveFlight(e) {
     e.preventDefault()
     setMessage('')
 
@@ -639,29 +791,18 @@ function EventManagerPage() {
       departure_time: flightForm.departure_time || null,
     }
 
-    const { error } = await supabase
-      .from('flights')
-      .insert([cleanFlight])
+    const { error } = editingFlightId
+      ? await supabase.from('flights').update(cleanFlight).eq('id', editingFlightId)
+      : await supabase.from('flights').insert([cleanFlight])
 
     if (error) {
-      setMessage(`Could not add flight: ${error.message}`)
+      setMessage(`Could not save flight: ${error.message}`)
       return
     }
 
-    setFlightForm({
-      crew_name: '',
-      airline: '',
-      flight_number: '',
-      departure_airport: '',
-      arrival_airport: '',
-      departure_time: '',
-      arrival_time: '',
-      booking_reference: '',
-      notes: '',
-    })
-
-    setMessage('Flight added.')
-    loadEventManager()
+    resetFlightForm()
+    setMessage(editingFlightId ? 'Flight updated.' : 'Flight added.')
+    await loadEventManager()
   }
 
   async function deleteFlight(id) {
@@ -676,7 +817,7 @@ function EventManagerPage() {
     loadEventManager()
   }
 
-  async function addHotel(e) {
+  async function saveHotel(e) {
     e.preventDefault()
     setMessage('')
 
@@ -693,29 +834,18 @@ function EventManagerPage() {
       check_out: hotelForm.check_out || null,
     }
 
-    const { error } = await supabase
-      .from('hotels')
-      .insert([cleanHotel])
+    const { error } = editingHotelId
+      ? await supabase.from('hotels').update(cleanHotel).eq('id', editingHotelId)
+      : await supabase.from('hotels').insert([cleanHotel])
 
     if (error) {
-      setMessage(`Could not add hotel: ${error.message}`)
+      setMessage(`Could not save hotel: ${error.message}`)
       return
     }
 
-    setHotelForm({
-      guest_name: '',
-      hotel_name: '',
-      address: '',
-      check_in: '',
-      check_out: '',
-      room_number: '',
-      booking_reference: '',
-      hotel_contact: '',
-      notes: '',
-    })
-
-    setMessage('Hotel booking added.')
-    loadEventManager()
+    resetHotelForm()
+    setMessage(editingHotelId ? 'Hotel booking updated.' : 'Hotel booking added.')
+    await loadEventManager()
   }
 
   async function deleteHotel(id) {
@@ -730,7 +860,7 @@ function EventManagerPage() {
     loadEventManager()
   }
 
-  async function addTransfer(e) {
+  async function saveTransfer(e) {
     e.preventDefault()
     setMessage('')
 
@@ -747,30 +877,18 @@ function EventManagerPage() {
       time: transferForm.time || null,
     }
 
-    const { error } = await supabase
-      .from('transfers')
-      .insert([cleanTransfer])
+    const { error } = editingTransferId
+      ? await supabase.from('transfers').update(cleanTransfer).eq('id', editingTransferId)
+      : await supabase.from('transfers').insert([cleanTransfer])
 
     if (error) {
-      setMessage(`Could not add transfer: ${error.message}`)
+      setMessage(`Could not save transfer: ${error.message}`)
       return
     }
 
-    setTransferForm({
-      passenger: '',
-      transfer_type: '',
-      pickup_location: '',
-      destination: '',
-      date: '',
-      time: '',
-      driver_name: '',
-      driver_phone: '',
-      vehicle: '',
-      notes: '',
-    })
-
-    setMessage('Transfer added.')
-    loadEventManager()
+    resetTransferForm()
+    setMessage(editingTransferId ? 'Transfer updated.' : 'Transfer added.')
+    await loadEventManager()
   }
 
   async function deleteTransfer(id) {
@@ -785,7 +903,7 @@ function EventManagerPage() {
     loadEventManager()
   }
 
-  async function addScheduleItem(e) {
+  async function saveScheduleItem(e) {
     e.preventDefault()
     setMessage('')
 
@@ -803,27 +921,18 @@ function EventManagerPage() {
       end_time: scheduleForm.end_time || null,
     }
 
-    const { error } = await supabase
-      .from('schedule_items')
-      .insert([cleanScheduleItem])
+    const { error } = editingScheduleId
+      ? await supabase.from('schedule_items').update(cleanScheduleItem).eq('id', editingScheduleId)
+      : await supabase.from('schedule_items').insert([cleanScheduleItem])
 
     if (error) {
-      setMessage(`Could not add schedule item: ${error.message}`)
+      setMessage(`Could not save schedule item: ${error.message}`)
       return
     }
 
-    setScheduleForm({
-      activity: '',
-      date: '',
-      start_time: '',
-      end_time: '',
-      location: '',
-      assigned_crew: '',
-      notes: '',
-    })
-
-    setMessage('Schedule item added.')
-    loadEventManager()
+    resetScheduleForm()
+    setMessage(editingScheduleId ? 'Schedule item updated.' : 'Schedule item added.')
+    await loadEventManager()
   }
 
   async function deleteScheduleItem(id) {
@@ -838,7 +947,7 @@ function EventManagerPage() {
     loadEventManager()
   }
 
-  async function addDocument(e) {
+  async function saveDocument(e) {
     e.preventDefault()
     setMessage('')
 
@@ -848,24 +957,20 @@ function EventManagerPage() {
       return
     }
 
-    const { error } = await supabase
-      .from('documents')
-      .insert([{ ...documentForm, event_id: event.id }])
+    const cleanDocument = { ...documentForm, event_id: event.id }
+
+    const { error } = editingDocumentId
+      ? await supabase.from('documents').update(cleanDocument).eq('id', editingDocumentId)
+      : await supabase.from('documents').insert([cleanDocument])
 
     if (error) {
-      setMessage(`Could not add document: ${error.message}`)
+      setMessage(`Could not save document: ${error.message}`)
       return
     }
 
-    setDocumentForm({
-      document_name: '',
-      category: '',
-      file_url: '',
-      notes: '',
-    })
-
-    setMessage('Document added.')
-    loadEventManager()
+    resetDocumentForm()
+    setMessage(editingDocumentId ? 'Document updated.' : 'Document added.')
+    await loadEventManager()
   }
 
   async function deleteDocument(id) {
@@ -977,6 +1082,7 @@ function EventManagerPage() {
       <>
       <section className="eventCard" id="crew-form">
         <h2>{editingCrewId ? 'Edit Crew Member' : 'Add Crew Member'}</h2>
+        {editingCrewId && <p className="editNotice">Editing: {crewForm.name}</p>}
 
         <form onSubmit={saveCrewMember} className="adminForm">
           <label>
@@ -1066,11 +1172,12 @@ function EventManagerPage() {
 
       {activeTab === 'flights' && (
       <>
-      <section className="eventCard">
-        <h2>Add Flight</h2>
+      <section className="eventCard" id="flight-form">
+        <h2>{editingFlightId ? 'Edit Flight' : 'Add Flight'}</h2>
+        {editingFlightId && <p className="editNotice">Editing: {flightForm.crew_name} {flightForm.flight_number && `- ${flightForm.flight_number}`}</p>}
         <p>Assign each flight to an existing crew member.</p>
 
-        <form onSubmit={addFlight} className="adminForm">
+        <form onSubmit={saveFlight} className="adminForm">
           <label>
             Crew Member
             <select value={flightForm.crew_name} onChange={e => updateFlightField('crew_name', e.target.value)}>
@@ -1122,8 +1229,14 @@ function EventManagerPage() {
           </label>
 
           <button className="primaryButton" type="submit">
-            <Plus size={18} /> Add Flight
+            <Plus size={18} /> {editingFlightId ? 'Update Flight' : 'Add Flight'}
           </button>
+
+          {editingFlightId && (
+            <button className="secondaryButton" type="button" onClick={resetFlightForm}>
+              Cancel Edit
+            </button>
+          )}
         </form>
       </section>
 
@@ -1154,6 +1267,7 @@ function EventManagerPage() {
                 </div>
 
                 <div className="adminActions">
+                  <button type="button" onClick={() => startEditFlight(flight)}>Edit</button>
                   <button type="button" onClick={() => deleteFlight(flight.id)}>Delete</button>
                 </div>
               </div>
@@ -1169,11 +1283,12 @@ function EventManagerPage() {
 
       {activeTab === 'hotels' && (
       <>
-      <section className="eventCard">
-        <h2>Add Hotel</h2>
+      <section className="eventCard" id="hotel-form">
+        <h2>{editingHotelId ? 'Edit Hotel' : 'Add Hotel'}</h2>
+        {editingHotelId && <p className="editNotice">Editing: {hotelForm.guest_name} {hotelForm.hotel_name && `- ${hotelForm.hotel_name}`}</p>}
         <p>Assign each hotel booking to an existing crew member.</p>
 
-        <form onSubmit={addHotel} className="adminForm">
+        <form onSubmit={saveHotel} className="adminForm">
           <label>
             Guest
             <select value={hotelForm.guest_name} onChange={e => updateHotelField('guest_name', e.target.value)}>
@@ -1225,8 +1340,14 @@ function EventManagerPage() {
           </label>
 
           <button className="primaryButton" type="submit">
-            <Plus size={18} /> Add Hotel
+            <Plus size={18} /> {editingHotelId ? 'Update Hotel' : 'Add Hotel'}
           </button>
+
+          {editingHotelId && (
+            <button className="secondaryButton" type="button" onClick={resetHotelForm}>
+              Cancel Edit
+            </button>
+          )}
         </form>
       </section>
 
@@ -1270,6 +1391,7 @@ function EventManagerPage() {
                 </div>
 
                 <div className="adminActions">
+                  <button type="button" onClick={() => startEditHotel(hotel)}>Edit</button>
                   <button type="button" onClick={() => deleteHotel(hotel.id)}>Delete</button>
                 </div>
               </div>
@@ -1285,11 +1407,12 @@ function EventManagerPage() {
 
       {activeTab === 'transfers' && (
       <>
-      <section className="eventCard">
-        <h2>Add Transfer</h2>
+      <section className="eventCard" id="transfer-form">
+        <h2>{editingTransferId ? 'Edit Transfer' : 'Add Transfer'}</h2>
+        {editingTransferId && <p className="editNotice">Editing: {transferForm.passenger} {transferForm.transfer_type && `- ${transferForm.transfer_type}`}</p>}
         <p>Add airport transfers, taxis, hotel shuttles or venue transport.</p>
 
-        <form onSubmit={addTransfer} className="adminForm">
+        <form onSubmit={saveTransfer} className="adminForm">
           <label>
             Passenger
             <select value={transferForm.passenger} onChange={e => updateTransferField('passenger', e.target.value)}>
@@ -1346,8 +1469,14 @@ function EventManagerPage() {
           </label>
 
           <button className="primaryButton" type="submit">
-            <Plus size={18} /> Add Transfer
+            <Plus size={18} /> {editingTransferId ? 'Update Transfer' : 'Add Transfer'}
           </button>
+
+          {editingTransferId && (
+            <button className="secondaryButton" type="button" onClick={resetTransferForm}>
+              Cancel Edit
+            </button>
+          )}
         </form>
       </section>
 
@@ -1383,6 +1512,7 @@ function EventManagerPage() {
                 </div>
 
                 <div className="adminActions">
+                  <button type="button" onClick={() => startEditTransfer(transfer)}>Edit</button>
                   <button type="button" onClick={() => deleteTransfer(transfer.id)}>Delete</button>
                 </div>
               </div>
@@ -1398,11 +1528,12 @@ function EventManagerPage() {
 
       {activeTab === 'schedule' && (
       <>
-      <section className="eventCard">
-        <h2>Add Schedule Item</h2>
+      <section className="eventCard" id="schedule-form">
+        <h2>{editingScheduleId ? 'Edit Schedule Item' : 'Add Schedule Item'}</h2>
+        {editingScheduleId && <p className="editNotice">Editing: {scheduleForm.activity}</p>}
         <p>Add crew calls, build timings, show timings, breaks and load-out information.</p>
 
-        <form onSubmit={addScheduleItem} className="adminForm">
+        <form onSubmit={saveScheduleItem} className="adminForm">
           <label>
             Activity
             <input value={scheduleForm.activity} onChange={e => updateScheduleField('activity', e.target.value)} placeholder="Crew Call" />
@@ -1439,8 +1570,14 @@ function EventManagerPage() {
           </label>
 
           <button className="primaryButton" type="submit">
-            <Plus size={18} /> Add Schedule Item
+            <Plus size={18} /> {editingScheduleId ? 'Update Schedule Item' : 'Add Schedule Item'}
           </button>
+
+          {editingScheduleId && (
+            <button className="secondaryButton" type="button" onClick={resetScheduleForm}>
+              Cancel Edit
+            </button>
+          )}
         </form>
       </section>
 
@@ -1469,6 +1606,7 @@ function EventManagerPage() {
                 </div>
 
                 <div className="adminActions">
+                  <button type="button" onClick={() => startEditScheduleItem(item)}>Edit</button>
                   <button type="button" onClick={() => deleteScheduleItem(item.id)}>Delete</button>
                 </div>
               </div>
@@ -1484,11 +1622,12 @@ function EventManagerPage() {
 
       {activeTab === 'documents' && (
       <>
-      <section className="eventCard">
-        <h2>Add Document</h2>
+      <section className="eventCard" id="document-form">
+        <h2>{editingDocumentId ? 'Edit Document' : 'Add Document'}</h2>
+        {editingDocumentId && <p className="editNotice">Editing: {documentForm.document_name}</p>}
         <p>Add links to RAMS, venue packs, floor plans, power plans, call sheets or Current RMS documents.</p>
 
-        <form onSubmit={addDocument} className="adminForm">
+        <form onSubmit={saveDocument} className="adminForm">
           <label>
             Document Name
             <input value={documentForm.document_name} onChange={e => updateDocumentField('document_name', e.target.value)} placeholder="RAMS" />
@@ -1510,8 +1649,14 @@ function EventManagerPage() {
           </label>
 
           <button className="primaryButton" type="submit">
-            <Plus size={18} /> Add Document
+            <Plus size={18} /> {editingDocumentId ? 'Update Document' : 'Add Document'}
           </button>
+
+          {editingDocumentId && (
+            <button className="secondaryButton" type="button" onClick={resetDocumentForm}>
+              Cancel Edit
+            </button>
+          )}
         </form>
       </section>
 
@@ -1530,6 +1675,7 @@ function EventManagerPage() {
                 </div>
 
                 <div className="adminActions">
+                  <button type="button" onClick={() => startEditDocument(document)}>Edit</button>
                   <button type="button" onClick={() => deleteDocument(document.id)}>Delete</button>
                 </div>
               </div>
