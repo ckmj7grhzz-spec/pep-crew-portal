@@ -887,4 +887,366 @@ table a:hover {
   .slimHero .pepLogo {
     width: 130px;
   }
-}  
+}
+  /* ================================
+   Modern PEP Admin Dashboard Layout
+   ================================ */
+
+.adminLogoutBar {
+  display: none;
+}
+
+.dashboardLayout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  background: #f6f8fb;
+  color: #0f172a;
+}
+
+.dashboardSidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  padding: 26px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.sidebarBrand {
+  padding: 0 8px 18px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sidebarLogo {
+  width: 170px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.sideNav {
+  display: grid;
+  gap: 10px;
+}
+
+.sideNavItem {
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  background: transparent;
+  border-radius: 12px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sideNavItem:hover {
+  background: #f1f5f9;
+}
+
+.sideNavItem.active {
+  background: linear-gradient(180deg, #17b94f 0%, #0f9f43 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(22, 163, 74, 0.24);
+}
+
+.sidebarFooter {
+  margin-top: auto;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.sideFooterLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #0f172a;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.sideFooterLink:hover {
+  color: #16a34a;
+}
+
+.dashboardMain {
+  min-width: 0;
+  padding: 0 42px 48px;
+}
+
+.dashboardTopbar {
+  height: 116px;
+  margin: 0 -42px 32px;
+  padding: 0 42px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.eventTitleBlock {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.eventTitleBlock h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.eventTitleBlock p {
+  margin: 8px 0 0;
+  color: #475569;
+  font-weight: 600;
+}
+
+.topbarMeta {
+  font-weight: 800;
+  color: #475569;
+}
+
+.dashboardStats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(130px, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.dashStat {
+  min-height: 150px;
+  border-radius: 18px;
+  padding: 22px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.dashStat .dashIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #eaf4ff;
+  color: #0f6fc6;
+}
+
+.dashStat strong {
+  font-size: 42px;
+  line-height: 1;
+}
+
+.dashStat span {
+  color: #334155;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.dashStat small {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Traffic light KPI cards */
+.dashStat.statusRed,
+.dashboardSummary div.statusRed,
+.missingGrid div.statusRed {
+  background: linear-gradient(135deg, #fff7f7 0%, #fff1f1 100%) !important;
+  border-color: #fca5a5 !important;
+}
+
+.dashStat.statusRed .dashIcon {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.dashStat.statusRed strong,
+.dashStat.statusRed span,
+.dashStat.statusRed small,
+.dashboardSummary div.statusRed strong,
+.dashboardSummary div.statusRed span,
+.dashboardSummary div.statusRed small,
+.missingGrid div.statusRed h3,
+.missingGrid div.statusRed p {
+  color: #991b1b !important;
+}
+
+.dashStat.statusOrange,
+.dashboardSummary div.statusOrange,
+.modernReadiness.statusOrange {
+  background: linear-gradient(135deg, #fffaf3 0%, #fff4e8 100%) !important;
+  border-color: #fb923c !important;
+}
+
+.dashStat.statusOrange .dashIcon {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+.dashStat.statusOrange strong,
+.dashStat.statusOrange span,
+.dashStat.statusOrange small,
+.dashboardSummary div.statusOrange strong,
+.dashboardSummary div.statusOrange span,
+.dashboardSummary div.statusOrange small,
+.modernReadiness.statusOrange h2,
+.modernReadiness.statusOrange p,
+.modernReadiness.statusOrange strong {
+  color: #9a3412 !important;
+}
+
+.dashStat.statusGreen,
+.dashboardSummary div.statusGreen,
+.missingGrid div.statusGreen,
+.modernReadiness.statusGreen {
+  background: linear-gradient(135deg, #f5fff8 0%, #ecfdf5 100%) !important;
+  border-color: #86efac !important;
+}
+
+.dashStat.statusGreen .dashIcon {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.dashStat.statusGreen strong,
+.dashStat.statusGreen span,
+.dashStat.statusGreen small,
+.dashboardSummary div.statusGreen strong,
+.dashboardSummary div.statusGreen span,
+.dashboardSummary div.statusGreen small,
+.missingGrid div.statusGreen h3,
+.missingGrid div.statusGreen p,
+.modernReadiness.statusGreen h2,
+.modernReadiness.statusGreen p,
+.modernReadiness.statusGreen strong {
+  color: #166534 !important;
+}
+
+/* Dashboard cards in content area */
+.dashboardMain .eventCard {
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.modernReadiness {
+  padding: 30px !important;
+}
+
+.modernReadiness h2 {
+  font-size: 48px !important;
+}
+
+.readinessBar {
+  height: 12px;
+  background: rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.readinessBar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.dashboardSummary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.dashboardSummary div {
+  border-radius: 16px;
+  padding: 18px;
+  border: 1px solid #e5e7eb;
+}
+
+.missingGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.missingGrid div {
+  border-radius: 16px;
+  padding: 18px;
+  border: 1px solid #e5e7eb;
+}
+
+.missingGrid div.statusGreen {
+  background: #f0fdf4 !important;
+  border-color: #86efac !important;
+}
+
+.tabs {
+  display: none !important;
+}
+
+@media (max-width: 1100px) {
+  .dashboardLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboardSidebar {
+    position: static;
+    height: auto;
+  }
+
+  .sideNav {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboardMain {
+    padding: 24px;
+  }
+
+  .dashboardTopbar {
+    margin: -24px -24px 24px;
+    padding: 24px;
+    height: auto;
+  }
+
+  .dashboardStats,
+  .dashboardSummary,
+  .missingGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboardStats,
+  .dashboardSummary,
+  .missingGrid,
+  .sideNav {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboardTopbar {
+    display: grid;
+    gap: 16px;
+  }
+
+  .sidebarLogo {
+    width: 140px;
+  }
+}
