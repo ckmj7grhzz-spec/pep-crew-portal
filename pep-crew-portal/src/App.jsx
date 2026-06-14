@@ -1063,101 +1063,119 @@ function EventManagerPage() {
   }
 
   return (
-    <main className="page">
-      <header className="hero slimHero">
-        <img
-          src={pepLogo}
-          alt="Premium Event Productions"
-          className="pepLogo"
-        />
-      </header>
-
-      <section className="eventCard">
-        <a href="/admin" className="backLink"><ArrowLeft size={16} /> Back to Admin</a>
-        <h2>{event.show_name}</h2>
-        <p>{event.venue}</p>
-        <div className="eventGrid">
-          <span><strong>Start:</strong> {formatDate(event.start_date)}</span>
-          <span><strong>End:</strong> {formatDate(event.end_date)}</span>
-          <span><strong>Project Manager:</strong> {event.project_manager}</span>
-        </div>
-        <div className="adminActions managerTopActions">
-          <a href={`/${event.public_slug}`} target="_blank" rel="noreferrer">Open Public Sheet</a>
-        </div>
-      </section>
-
-      <section className="eventCard">
-        <div className="statsGrid">
-          <div><strong>{crew.length}</strong><span>Crew</span></div>
-          <div className={getStatusClass(flightCompletion)}><strong>{flights.length}</strong><span>Flights</span><small>{flightCompletion}% complete</small></div>
-          <div className={getStatusClass(hotelCompletion)}><strong>{hotels.length}</strong><span>Hotels</span><small>{hotelCompletion}% complete</small></div>
-          <div className={getStatusClass(transferCompletion)}><strong>{transfers.length}</strong><span>Transfers</span><small>{transferCompletion}% complete</small></div>
-          <div><strong>{scheduleItems.length}</strong><span>Schedule</span></div>
-          <div><strong>{documents.length}</strong><span>Documents</span></div>
+    <main className="dashboardLayout">
+      <aside className="dashboardSidebar">
+        <div className="sidebarBrand">
+          <img src={pepLogo} alt="Premium Event Productions" className="sidebarLogo" />
         </div>
 
-        <div className="tabs">
-          {[
-            ['overview', 'Overview'],
-            ['crew', 'Crew'],
-            ['flights', 'Flights'],
-            ['hotels', 'Hotels'],
-            ['transfers', 'Transfers'],
-            ['schedule', 'Schedule'],
-            ['documents', 'Documents'],
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key)}
-              style={{
-                backgroundColor: activeTab === key ? '#16a34a' : 'white',
-                color: activeTab === key ? 'white' : '#0f172a',
-                borderColor: activeTab === key ? '#16a34a' : '#cbd5e1',
-                border: '1px solid',
-                borderRadius: '999px',
-                padding: '12px 18px',
-                fontWeight: '800',
-                cursor: 'pointer',
-                boxShadow: activeTab === key ? '0 4px 12px rgba(22, 163, 74, 0.25)' : 'none',
-              }}
-            >
-              {label}
-            </button>
-          ))}
+        <nav className="sideNav">
+          <button className={activeTab === 'overview' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('overview')}>
+            <Settings size={20} /> Overview
+          </button>
+          <button className={activeTab === 'crew' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('crew')}>
+            <Users size={20} /> Crew
+          </button>
+          <button className={activeTab === 'flights' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('flights')}>
+            <Plane size={20} /> Flights
+          </button>
+          <button className={activeTab === 'hotels' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('hotels')}>
+            <Hotel size={20} /> Hotels
+          </button>
+          <button className={activeTab === 'transfers' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('transfers')}>
+            <Car size={20} /> Transfers
+          </button>
+          <button className={activeTab === 'schedule' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('schedule')}>
+            <CalendarDays size={20} /> Schedule
+          </button>
+          <button className={activeTab === 'documents' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('documents')}>
+            <FileText size={20} /> Documents
+          </button>
+        </nav>
+
+        <div className="sidebarFooter">
+          <a href="/admin" className="sideFooterLink"><ArrowLeft size={18} /> Back to Admin</a>
+          <a href={`/${event.public_slug}`} target="_blank" rel="noreferrer" className="sideFooterLink">Open Public Sheet</a>
         </div>
-      </section>
+      </aside>
+
+      <section className="dashboardMain">
+        <header className="dashboardTopbar">
+          <div className="eventTitleBlock">
+            <CalendarDays size={26} />
+            <div>
+              <h1>{event.show_name}</h1>
+              <p>{formatDate(event.start_date)} - {formatDate(event.end_date)} • {event.venue}</p>
+            </div>
+          </div>
+          <div className="topbarMeta">
+            <span>{event.project_manager || 'No project manager'}</span>
+          </div>
+        </header>
+
+        <section className="dashboardStats">
+          <div className="dashStat neutral">
+            <span className="dashIcon"><Users size={24} /></span>
+            <strong>{crew.length}</strong>
+            <span>Crew</span>
+          </div>
+          <div className={`dashStat ${getStatusClass(flightCompletion)}`}>
+            <span className="dashIcon"><Plane size={24} /></span>
+            <strong>{flights.length}</strong>
+            <span>Flights</span>
+            <small>{flightCompletion}% complete</small>
+          </div>
+          <div className={`dashStat ${getStatusClass(hotelCompletion)}`}>
+            <span className="dashIcon"><Hotel size={24} /></span>
+            <strong>{hotels.length}</strong>
+            <span>Hotels</span>
+            <small>{hotelCompletion}% complete</small>
+          </div>
+          <div className={`dashStat ${getStatusClass(transferCompletion)}`}>
+            <span className="dashIcon"><Car size={24} /></span>
+            <strong>{transfers.length}</strong>
+            <span>Transfers</span>
+            <small>{transferCompletion}% complete</small>
+          </div>
+          <div className="dashStat neutral">
+            <span className="dashIcon"><CalendarDays size={24} /></span>
+            <strong>{scheduleItems.length}</strong>
+            <span>Schedule</span>
+          </div>
+          <div className="dashStat neutral">
+            <span className="dashIcon"><FileText size={24} /></span>
+            <strong>{documents.length}</strong>
+            <span>Documents</span>
+          </div>
+        </section>
 
       {activeTab === 'overview' && (
         <>
-          <section className={`eventCard dashboardHero compactDashboard ${getStatusClass(readinessScore)}`}>
-            <div className="readinessTop">
-              <div>
-                <p className="eyebrowDark">Event Readiness</p>
-                <h2>{readinessScore}%</h2>
-              </div>
-              <strong className="readinessBadge">
-                {readinessScore === 100 ? '🟢 Complete' : readinessScore >= 70 ? '🟠 Needs attention' : '🔴 High risk'}
-              </strong>
+          <section className={`eventCard dashboardHero modernReadiness ${getStatusClass(readinessScore)}`}>
+            <div>
+              <p className="eyebrowDark">Event Readiness</p>
+              <h2>{readinessScore}%</h2>
+              <p>{readinessStatus}</p>
             </div>
 
             <div className="readinessBar">
               <span style={{ width: `${readinessScore}%`, background: getStatusColour(readinessScore) }}></span>
             </div>
 
-            <div className="dashboardSummary compactKpis">
+            <div className="dashboardSummary">
               <div className={getStatusClass(flightCompletion)}>
                 <strong>{flightCompletion}%</strong>
-                <span>Flights</span>
+                <span>Flights Complete</span>
                 <small>{crewNamesWithFlights.size}/{crew.length} crew booked</small>
               </div>
               <div className={getStatusClass(hotelCompletion)}>
                 <strong>{hotelCompletion}%</strong>
-                <span>Hotels</span>
+                <span>Hotels Complete</span>
                 <small>{crewNamesWithHotels.size}/{crew.length} crew booked</small>
               </div>
               <div className={getStatusClass(transferCompletion)}>
                 <strong>{transferCompletion}%</strong>
-                <span>Transfers</span>
+                <span>Transfers Complete</span>
                 <small>{crewNamesWithTransfers.size}/{crew.length} crew booked</small>
               </div>
             </div>
@@ -1179,7 +1197,7 @@ function EventManagerPage() {
             <p>These are the crew records that still need travel, accommodation or transfer details.</p>
 
             <div className="missingGrid">
-              <div className={missingFlights.length ? 'statusRed' : 'statusGreen'}>
+              <div>
                 <h3>Missing Flights</h3>
                 {missingFlights.length ? (
                   missingFlights.map(member => <p key={member.id}>⚠ {member.name}</p>)
@@ -1188,7 +1206,7 @@ function EventManagerPage() {
                 )}
               </div>
 
-              <div className={missingHotels.length ? 'statusRed' : 'statusGreen'}>
+              <div>
                 <h3>Missing Hotels</h3>
                 {missingHotels.length ? (
                   missingHotels.map(member => <p key={member.id}>⚠ {member.name}</p>)
@@ -1197,7 +1215,7 @@ function EventManagerPage() {
                 )}
               </div>
 
-              <div className={missingTransfers.length ? 'statusRed' : 'statusGreen'}>
+              <div>
                 <h3>Missing Transfers</h3>
                 {missingTransfers.length ? (
                   missingTransfers.map(member => <p key={member.id}>⚠ {member.name}</p>)
@@ -1819,6 +1837,7 @@ function EventManagerPage() {
       </section>
       </>
       )}
+      </section>
     </main>
   )
 }
