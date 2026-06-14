@@ -1103,28 +1103,20 @@ function EventManagerPage() {
         <div className="tabs">
           {[
             ['overview', 'Overview'],
-            ['crew', `Crew ${crew.length}`],
-            ['flights', `Flights ${flightCompletion}%`],
-            ['hotels', `Hotels ${hotelCompletion}%`],
-            ['transfers', `Transfers ${transferCompletion}%`],
-            ['schedule', `Schedule ${scheduleItems.length}`],
-            ['documents', `Documents ${documents.length}`],
+            ['crew', 'Crew'],
+            ['flights', 'Flights'],
+            ['hotels', 'Hotels'],
+            ['transfers', 'Transfers'],
+            ['schedule', 'Schedule'],
+            ['documents', 'Documents'],
           ].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
               style={{
-                backgroundColor: activeTab === key
-                  ? (key === 'flights' ? getStatusColour(flightCompletion) : key === 'hotels' ? getStatusColour(hotelCompletion) : key === 'transfers' ? getStatusColour(transferCompletion) : '#16a34a')
-                  : 'white',
+                backgroundColor: activeTab === key ? '#16a34a' : 'white',
                 color: activeTab === key ? 'white' : '#0f172a',
-                borderColor: key === 'flights'
-                  ? getStatusColour(flightCompletion)
-                  : key === 'hotels'
-                    ? getStatusColour(hotelCompletion)
-                    : key === 'transfers'
-                      ? getStatusColour(transferCompletion)
-                      : activeTab === key ? '#16a34a' : '#cbd5e1',
+                borderColor: activeTab === key ? '#16a34a' : '#cbd5e1',
                 border: '1px solid',
                 borderRadius: '999px',
                 padding: '12px 18px',
