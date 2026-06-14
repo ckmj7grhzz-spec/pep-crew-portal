@@ -994,6 +994,63 @@ function EventManagerPage() {
     loadEventManager()
   }
 
+
+  const crewNamesWithFlights = new Set(flights.map(flight => flight.crew_name).filter(Boolean))
+  const crewNamesWithHotels = new Set(hotels.map(hotel => hotel.guest_name).filter(Boolean))
+  const crewNamesWithTransfers = new Set(transfers.map(transfer => transfer.passenger || transfer.passengers).filter(Boolean))
+
+  const missingFlights = crew.filter(member => !crewNamesWithFlights.has(member.name))
+  const missingHotels = crew.filter(member => !crewNamesWithHotels.has(member.name))
+  const missingTransfers = crew.filter(member => !crewNamesWithTransfers.has(member.name))
+
+  const readinessChecks = [
+    ...crew.map(member => ({
+      type: 'Flight',
+      name: member.name,
+      issue: 'No flight assigned',
+      complete: crewNamesWithFlights.has(member.name),
+    })),
+    ...crew.map(member => ({
+      type: 'Hotel',
+      name: member.name,
+      issue: 'No hotel assigned',
+      complete: crewNamesWithHotels.has(member.name),
+    })),
+    ...crew.map(member => ({
+      type: 'Transfer',
+      name: member.name,
+      issue: 'No transfer assigned',
+      complete: crewNamesWithTransfers.has(member.name),
+    })),
+  ]
+
+  const completedChecks = readinessChecks.filter(check => check.complete).length
+  const readinessScore = readinessChecks.length
+    ? Math.round((completedChecks / readinessChecks.length) * 100)
+    : 100
+
+  function getStatusColour(score) {
+    if (score === 100) return '#16a34a'
+    if (score >= 70) return '#f97316'
+    return '#dc2626'
+  }
+
+  function getStatusClass(score) {
+    if (score === 100) return 'statusGreen'
+    if (score >= 70) return 'statusOrange'
+    return 'statusRed'
+  }
+
+  const readinessStatus = readinessScore === 100
+    ? 'Complete'
+    : readinessScore >= 70
+      ? 'Needs attention'
+      : 'High risk'
+
+  const flightCompletion = crew.length ? Math.round((crewNamesWithFlights.size / crew.length) * 100) : 100
+  const hotelCompletion = crew.length ? Math.round((crewNamesWithHotels.size / crew.length) * 100) : 100
+  const transferCompletion = crew.length ? Math.round((crewNamesWithTransfers.size / crew.length) * 100) : 100
+
   if (loading) return <main className="page"><p>Loading event manager...</p></main>
 
   if (!event) {
@@ -1036,9 +1093,9 @@ function EventManagerPage() {
       <section className="eventCard">
         <div className="statsGrid">
           <div><strong>{crew.length}</strong><span>Crew</span></div>
-          <div><strong>{flights.length}</strong><span>Flights</span></div>
-          <div><strong>{hotels.length}</strong><span>Hotels</span></div>
-          <div><strong>{transfers.length}</strong><span>Transfers</span></div>
+          <div className={getStatusClass(flightCompletion)}><strong>{flights.length}</strong><span>Flights</span><small>{flightCompletion}% complete</small></div>
+          <div className={getStatusClass(hotelCompletion)}><strong>{hotels.length}</strong><span>Hotels</span><small>{hotelCompletion}% complete</small></div>
+          <div className={getStatusClass(transferCompletion)}><strong>{transfers.length}</strong><span>Transfers</span><small>{transferCompletion}% complete</small></div>
           <div><strong>{scheduleItems.length}</strong><span>Schedule</span></div>
           <div><strong>{documents.length}</strong><span>Documents</span></div>
         </div>
@@ -1046,20 +1103,28 @@ function EventManagerPage() {
         <div className="tabs">
           {[
             ['overview', 'Overview'],
-            ['crew', 'Crew'],
-            ['flights', 'Flights'],
-            ['hotels', 'Hotels'],
-            ['transfers', 'Transfers'],
-            ['schedule', 'Schedule'],
-            ['documents', 'Documents'],
+            ['crew', `Crew ${crew.length}`],
+            ['flights', `Flights ${flightCompletion}%`],
+            ['hotels', `Hotels ${hotelCompletion}%`],
+            ['transfers', `Transfers ${transferCompletion}%`],
+            ['schedule', `Schedule ${scheduleItems.length}`],
+            ['documents', `Documents ${documents.length}`],
           ].map(([key, label]) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
               style={{
-                backgroundColor: activeTab === key ? '#16a34a' : 'white',
+                backgroundColor: activeTab === key
+                  ? (key === 'flights' ? getStatusColour(flightCompletion) : key === 'hotels' ? getStatusColour(hotelCompletion) : key === 'transfers' ? getStatusColour(transferCompletion) : '#16a34a')
+                  : 'white',
                 color: activeTab === key ? 'white' : '#0f172a',
-                borderColor: activeTab === key ? '#16a34a' : '#cbd5e1',
+                borderColor: key === 'flights'
+                  ? getStatusColour(flightCompletion)
+                  : key === 'hotels'
+                    ? getStatusColour(hotelCompletion)
+                    : key === 'transfers'
+                      ? getStatusColour(transferCompletion)
+                      : activeTab === key ? '#16a34a' : '#cbd5e1',
                 border: '1px solid',
                 borderRadius: '999px',
                 padding: '12px 18px',
@@ -1075,16 +1140,82 @@ function EventManagerPage() {
       </section>
 
       {activeTab === 'overview' && (
-        <section className="eventCard">
-          <h2>Overview</h2>
-          <p>This is the admin overview for this PEP crew sheet.</p>
-          <div className="overviewGrid">
-            <div><strong>Public Link</strong><a href={`/${event.public_slug}`} target="_blank" rel="noreferrer">/{event.public_slug}</a></div>
-            <div><strong>Current RMS ID</strong><span>{event.current_rms_id || 'Not linked yet'}</span></div>
-            <div><strong>Project Manager</strong><span>{event.project_manager || 'Not set'}</span></div>
-            <div><strong>Venue</strong><span>{event.venue || 'Not set'}</span></div>
-          </div>
-        </section>
+        <>
+          <section className="eventCard dashboardHero">
+            <div>
+              <p className="eyebrowDark">Event Readiness</p>
+              <h2>{readinessScore}%</h2>
+              <p>{readinessStatus}</p>
+            </div>
+
+            <div className="readinessBar">
+              <span style={{ width: `${readinessScore}%`, background: getStatusColour(readinessScore) }}></span>
+            </div>
+
+            <div className="dashboardSummary">
+              <div className={getStatusClass(flightCompletion)}>
+                <strong>{flightCompletion}%</strong>
+                <span>Flights Complete</span>
+                <small>{crewNamesWithFlights.size}/{crew.length} crew booked</small>
+              </div>
+              <div className={getStatusClass(hotelCompletion)}>
+                <strong>{hotelCompletion}%</strong>
+                <span>Hotels Complete</span>
+                <small>{crewNamesWithHotels.size}/{crew.length} crew booked</small>
+              </div>
+              <div className={getStatusClass(transferCompletion)}>
+                <strong>{transferCompletion}%</strong>
+                <span>Transfers Complete</span>
+                <small>{crewNamesWithTransfers.size}/{crew.length} crew booked</small>
+              </div>
+            </div>
+          </section>
+
+          <section className="eventCard">
+            <h2>Overview</h2>
+            <p>This is the admin overview for this PEP crew sheet.</p>
+            <div className="overviewGrid">
+              <div><strong>Public Link</strong><a href={`/${event.public_slug}`} target="_blank" rel="noreferrer">/{event.public_slug}</a></div>
+              <div><strong>Current RMS ID</strong><span>{event.current_rms_id || 'Not linked yet'}</span></div>
+              <div><strong>Project Manager</strong><span>{event.project_manager || 'Not set'}</span></div>
+              <div><strong>Venue</strong><span>{event.venue || 'Not set'}</span></div>
+            </div>
+          </section>
+
+          <section className="eventCard">
+            <h2>Missing Information</h2>
+            <p>These are the crew records that still need travel, accommodation or transfer details.</p>
+
+            <div className="missingGrid">
+              <div>
+                <h3>Missing Flights</h3>
+                {missingFlights.length ? (
+                  missingFlights.map(member => <p key={member.id}>⚠ {member.name}</p>)
+                ) : (
+                  <p className="allGood">✓ All crew have flights</p>
+                )}
+              </div>
+
+              <div>
+                <h3>Missing Hotels</h3>
+                {missingHotels.length ? (
+                  missingHotels.map(member => <p key={member.id}>⚠ {member.name}</p>)
+                ) : (
+                  <p className="allGood">✓ All crew have hotels</p>
+                )}
+              </div>
+
+              <div>
+                <h3>Missing Transfers</h3>
+                {missingTransfers.length ? (
+                  missingTransfers.map(member => <p key={member.id}>⚠ {member.name}</p>)
+                ) : (
+                  <p className="allGood">✓ All crew have transfers</p>
+                )}
+              </div>
+            </div>
+          </section>
+        </>
       )}
 
       {activeTab === 'crew' && (
