@@ -41,6 +41,15 @@ function slugify(text) {
     .replace(/(^-|-$)/g, '')
 }
 
+
+function personSlug(text) {
+  return String(text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
+
 function Accordion({ title, subtitle, icon: Icon, children }) {
   const [open, setOpen] = useState(false)
 
@@ -1691,6 +1700,286 @@ function EventManagerPage() {
   )
 }
 
+
+function CrewPersonalView() {
+  const parts = window.location.pathname.split('/').filter(Boolean)
+  const eventSlug = parts[0]
+  const crewId = parts[2]
+
+  const [event, setEvent] = useState(null)
+  const [member, setMember] = useState(null)
+  const [data, setData] = useState({
+    flights: [],
+    transfers: [],
+    hotels: [],
+    schedule_items: [],
+    documents: [],
+  })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    async function loadCrewView() {
+      setLoading(true)
+
+      const { data: eventData, error: eventError } = await supabase
+        .from('Events')
+        .select('*')
+        .eq('public_slug', eventSlug)
+        .eq('share_enabled', true)
+        .single()
+
+      if (eventError || !eventData) {
+        setError('Crew sheet not found or not published.')
+        setLoading(false)
+        return
+      }
+
+      setEvent(eventData)
+
+      const { data: crewData, error: crewError } = await supabase
+        .from('crew')
+        .select('*')
+        .eq('event_id', eventData.id)
+        .eq('id', crewId)
+        .single()
+
+      if (crewError || !crewData) {
+        setError('Crew member not found.')
+        setLoading(false)
+        return
+      }
+
+      setMember(crewData)
+
+      const crewName = crewData.name
+
+      const { data: flights } = await supabase
+        .from('flights')
+        .select('*')
+        .eq('event_id', eventData.id)
+        .eq('crew_name', crewName)
+
+      const { data: hotels } = await supabase
+        .from('hotels')
+        .select('*')
+        .eq('event_id', eventData.id)
+        .eq('guest_name', crewName)
+
+      const { data: transfers } = await supabase
+        .from('transfers')
+        .select('*')
+        .eq('event_id', eventData.id)
+
+      const { data: scheduleItems } = await supabase
+        .from('schedule_items')
+        .select('*')
+        .eq('event_id', eventData.id)
+        .order('date', { ascending: true })
+        .order('start_time', { ascending: true })
+
+      const { data: documents } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('event_id', eventData.id)
+
+      const filteredTransfers = (transfers || []).filter(item => {
+        const passenger = String(item.passenger || item.passengers || '').toLowerCase()
+        return passenger === crewName.toLowerCase()
+      })
+
+      const filteredSchedule = (scheduleItems || []).filter(item => {
+        const assigned = String(item.assigned_crew || '').toLowerCase()
+        return !assigned || assigned.includes('all') || assigned.includes(crewName.toLowerCase())
+      })
+
+      setData({
+        flights: flights || [],
+        hotels: hotels || [],
+        transfers: filteredTransfers,
+        schedule_items: filteredSchedule,
+        documents: documents || [],
+      })
+
+      setLoading(false)
+    }
+
+    loadCrewView()
+  }, [eventSlug, crewId])
+
+  if (loading) return <main className="page"><p>Loading crew view...</p></main>
+  if (error) return <main className="page"><p>{error}</p></main>
+
+  return (
+    <main className="page">
+      <header className="hero">
+        <img
+          src={pepLogo}
+          alt="Premium Event Productions"
+          className="pepLogo"
+        />
+        <div>
+          <p className="eyebrow">Personal Crew View</p>
+          <h1>{member.name}</h1>
+        </div>
+      </header>
+
+      <section className="eventCard">
+        <a href={`/${event.public_slug}`} className="backLink"><ArrowLeft size={16} /> Back to Full Call Sheet</a>
+        <h2>{event.show_name}</h2>
+        <p>{event.venue}</p>
+        <div className="eventGrid">
+          <span><strong>Role:</strong> {member.role || 'Not set'}</span>
+          <span><strong>Department:</strong> {member.department || 'Not set'}</span>
+          <span><strong>Mobile:</strong> {member.mobile || 'Not set'}</span>
+        </div>
+        {member.notes && <p><strong>Notes:</strong> {member.notes}</p>}
+      </section>
+
+      <div className="accordionStack">
+        <Accordion title="My Flights" subtitle={`${data.flights.length} flight records`} icon={Plane}>
+          {data.flights.length ? (
+            data.flights.map(x => (
+              <div className="item" key={x.id}>
+                <strong>{x.airline} {x.flight_number}</strong>
+                <p>{x.departure_airport} → {x.arrival_airport}</p>
+                {x.departure_time && <small>Departure: {formatDateTime(x.departure_time)}</small>}
+                {x.arrival_time && (
+                  <small>
+                    <br />
+                    Arrival: {formatDateTime(x.arrival_time)}
+                  </small>
+                )}
+                {x.booking_reference && (
+                  <small>
+                    <br />
+                    Booking Ref: {x.booking_reference}
+                  </small>
+                )}
+                {x.notes && <p>{x.notes}</p>}
+              </div>
+            ))
+          ) : (
+            <Empty text="No flights assigned to you yet." />
+          )}
+        </Accordion>
+
+        <Accordion title="My Hotel" subtitle={`${data.hotels.length} hotel records`} icon={Hotel}>
+          {data.hotels.length ? (
+            data.hotels.map(x => (
+              <div className="item" key={x.id}>
+                <strong>{x.hotel_name}</strong>
+                {x.address && <p>{x.address}</p>}
+                <small>
+                  Check-in: {formatDate(x.check_in)}
+                  {x.check_out && (
+                    <>
+                      <br />
+                      Check-out: {formatDate(x.check_out)}
+                    </>
+                  )}
+                  {x.room_number && (
+                    <>
+                      <br />
+                      Room: {x.room_number}
+                    </>
+                  )}
+                </small>
+                {x.booking_reference && (
+                  <small>
+                    <br />
+                    Booking Ref: {x.booking_reference}
+                  </small>
+                )}
+                {x.hotel_contact && (
+                  <small>
+                    <br />
+                    Hotel Contact: {x.hotel_contact}
+                  </small>
+                )}
+                {x.notes && <p>{x.notes}</p>}
+              </div>
+            ))
+          ) : (
+            <Empty text="No hotel assigned to you yet." />
+          )}
+        </Accordion>
+
+        <Accordion title="My Transfers" subtitle={`${data.transfers.length} transfer records`} icon={Car}>
+          {data.transfers.length ? (
+            data.transfers.map(x => (
+              <div className="item" key={x.id}>
+                <strong>{x.transfer_type}</strong>
+                <p>{x.pickup_location} → {x.destination}</p>
+                <small>
+                  {formatDate(x.date)}
+                  {x.time && ` at ${formatTime(x.time)}`}
+                </small>
+                {x.driver_name && (
+                  <small>
+                    <br />
+                    Driver: {x.driver_name}
+                    {x.driver_phone && ` | ${x.driver_phone}`}
+                  </small>
+                )}
+                {x.vehicle && (
+                  <small>
+                    <br />
+                    Vehicle: {x.vehicle}
+                  </small>
+                )}
+                {x.notes && <p>{x.notes}</p>}
+              </div>
+            ))
+          ) : (
+            <Empty text="No transfers assigned to you yet." />
+          )}
+        </Accordion>
+
+        <Accordion title="My Schedule" subtitle={`${data.schedule_items.length} schedule items`} icon={CalendarDays}>
+          {data.schedule_items.length ? (
+            data.schedule_items.map(x => (
+              <div className="item" key={x.id}>
+                <strong>{x.activity}</strong>
+                <p>{x.location}</p>
+                <small>
+                  {formatDate(x.date)}
+                  {x.start_time && ` | ${formatTime(x.start_time)}`}
+                  {x.end_time && ` - ${formatTime(x.end_time)}`}
+                </small>
+                {x.assigned_crew && (
+                  <small>
+                    <br />
+                    Assigned Crew: {x.assigned_crew}
+                  </small>
+                )}
+                {x.notes && <p>{x.notes}</p>}
+              </div>
+            ))
+          ) : (
+            <Empty text="No schedule items assigned to you yet." />
+          )}
+        </Accordion>
+
+        <Accordion title="Documents" subtitle={`${data.documents.length} documents`} icon={FileText}>
+          {data.documents.length ? (
+            data.documents.map(x => (
+              <div className="item" key={x.id}>
+                <strong>{x.document_name}</strong>
+                <p>{x.category}</p>
+                {x.file_url && <a href={x.file_url} target="_blank" rel="noreferrer">Open document</a>}
+                {x.notes && <p>{x.notes}</p>}
+              </div>
+            ))
+          ) : (
+            <Empty text="No documents added yet." />
+          )}
+        </Accordion>
+      </div>
+    </main>
+  )
+}
+
 function PublicCrewSheet() {
   const slug = window.location.pathname.replace('/', '') || 'test-pep-show'
 
@@ -1787,7 +2076,9 @@ function PublicCrewSheet() {
               <tbody>
                 {data.crew.map(x => (
                   <tr key={x.id}>
-                    <td>{x.name}</td>
+                    <td>
+                      <a href={`/${slug}/crew/${x.id}`}>{x.name}</a>
+                    </td>
                     <td>{x.role}</td>
                     <td>{x.mobile}</td>
                     <td>{x.hotel} {x.room_number}</td>
@@ -1989,7 +2280,14 @@ function App() {
     }
   }, [isAdminRoute])
 
-  if (!isAdminRoute) return <PublicCrewSheet />
+  if (!isAdminRoute) {
+    const parts = path.split('/').filter(Boolean)
+    if (parts.length === 3 && parts[1] === 'crew') {
+      return <CrewPersonalView />
+    }
+
+    return <PublicCrewSheet />
+  }
 
   if (checkingAuth) {
     return <main className="page"><p>Checking admin access...</p></main>
