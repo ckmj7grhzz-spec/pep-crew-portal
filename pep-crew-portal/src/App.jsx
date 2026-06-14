@@ -131,6 +131,58 @@ function parseCsv(text) {
 }
 
 
+function normaliseImportKey(key) {
+  return String(key || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_')
+}
+
+function normaliseImportRows(rows) {
+  return rows.map(row => {
+    const cleaned = {}
+
+    Object.entries(row).forEach(([key, value]) => {
+      cleaned[normaliseImportKey(key)] =
+        value === undefined || value === null
+          ? ''
+          : String(value).trim()
+    })
+
+    return cleaned
+  })
+}
+
+async function readImportFile(file, sheetName) {
+  const extension = file.name.split('.').pop().toLowerCase()
+
+  if (extension === 'csv') {
+    const text = await file.text()
+    return parseCsv(text)
+  }
+
+  const buffer = await file.arrayBuffer()
+
+  const workbook = XLSX.read(buffer, {
+    type: 'array'
+  })
+
+  const targetSheetName =
+    workbook.SheetNames.find(name => name.toLowerCase() === sheetName.toLowerCase()) ||
+    workbook.SheetNames.find(name => name.toLowerCase().includes(sheetName.toLowerCase())) ||
+    workbook.SheetNames[0]
+
+  const sheet = workbook.Sheets[targetSheetName]
+  if (!sheet) return []
+
+  const rows = XLSX.utils.sheet_to_json(sheet, {
+    defval: '',
+    raw: false
+  })
+
+  return normaliseImportRows(rows)
+}
+
 
 function LoginPage({ onLogin }) {
   const [email, setEmail] = useState('')
@@ -191,51 +243,6 @@ function LoginPage({ onLogin }) {
     </main>
   )
 }
-
-
-function normaliseImportKey(key) {
-  return String(key || '')
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '_')
-}
-
-function normaliseImportRows(rows) {
-  return rows.map(row => {
-    const cleaned = {}
-    Object.entries(row).forEach(([key, value]) => {
-      cleaned[normaliseImportKey(key)] = value === undefined || value === null ? '' : String(value).trim()
-    })
-    return cleaned
-  })
-}
-
-async function readImportFile(file, sheetName) {
-  const extension = file.name.split('.').pop().toLowerCase()
-
-  if (extension === 'csv') {
-    const text = await file.text()
-    return parseCsv(text)
-  }
-
-  const buffer = await file.arrayBuffer()
-  const workbook = XLSX.read(buffer, { type: 'array' })
-  const targetSheetName =
-    workbook.SheetNames.find(name => name.toLowerCase() === sheetName.toLowerCase()) ||
-    workbook.SheetNames.find(name => name.toLowerCase().includes(sheetName.toLowerCase())) ||
-    workbook.SheetNames[0]
-
-  const sheet = workbook.Sheets[targetSheetName]
-  if (!sheet) return []
-
-  const rows = XLSX.utils.sheet_to_json(sheet, {
-    defval: '',
-    raw: false,
-  })
-
-  return normaliseImportRows(rows)
-}
-
 
 function AdminShell({ children }) {
   async function logout() {
