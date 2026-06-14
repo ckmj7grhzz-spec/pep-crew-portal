@@ -783,3 +783,28 @@ th {
 .fileUploadBox input {
   width: 100%;
 }
+
+
+/* Blue Import Workbook tab */
+.tabs button.importTabButton {
+  background: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.22);
+}
+
+.tabs button.importTabButton:hover {
+  background: #1e40af !important;
+  border-color: #1e40af !important;
+  color: #ffffff !important;
+}
+
+.tabs button.importTabButton.active {
+  background: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+  color: #ffffff !important;
+}
+
+.workbookImportCard {
+  border-left-color: #1d4ed8 !important;
+}
