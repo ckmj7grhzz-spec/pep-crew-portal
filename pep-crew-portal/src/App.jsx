@@ -90,10 +90,10 @@ function LoginPage({ onLogin }) {
     <main className="page">
       <header className="hero">
         <img
-          src={pepLogo}
-          alt="Premium Event Productions"
-          className="pepLogo"
-        />
+  src={pepLogo}
+  alt="Premium Event Productions"
+  className="pepLogo"
+/>
         <div>
           <p className="eyebrow">Premium Event Productions</p>
           <h1>PEP Admin Login</h1>
@@ -236,10 +236,10 @@ function AdminPage() {
     <main className="page">
       <header className="hero">
         <img
-          src={pepLogo}
-          alt="Premium Event Productions"
-          className="pepLogo"
-        />
+  src={pepLogo}
+  alt="Premium Event Productions"
+  className="pepLogo"
+/>
         <div>
           <p className="eyebrow">Premium Event Productions</p>
           <h1>PEP Admin</h1>
@@ -351,6 +351,7 @@ function EventManagerPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
+  const [editingCrewId, setEditingCrewId] = useState(null)
 
   const [crewForm, setCrewForm] = useState({
     name: '',
@@ -520,25 +521,8 @@ function EventManagerPage() {
     setDocumentForm({ ...documentForm, [field]: value })
   }
 
-  async function addCrewMember(e) {
-    e.preventDefault()
-    setMessage('')
-
-    if (!event) return
-    if (!crewForm.name) {
-      setMessage('Crew member name is required.')
-      return
-    }
-
-    const { error } = await supabase
-      .from('crew')
-      .insert([{ ...crewForm, event_id: event.id }])
-
-    if (error) {
-      setMessage(`Could not add crew member: ${error.message}`)
-      return
-    }
-
+  function resetCrewForm() {
+    setEditingCrewId(null)
     setCrewForm({
       name: '',
       role: '',
@@ -549,8 +533,47 @@ function EventManagerPage() {
       room_number: '',
       notes: '',
     })
+  }
 
-    setMessage('Crew member added.')
+  function startEditCrew(member) {
+    setActiveTab('crew')
+    setEditingCrewId(member.id)
+    setCrewForm({
+      name: member.name || '',
+      role: member.role || '',
+      department: member.department || '',
+      mobile: member.mobile || '',
+      email: member.email || '',
+      hotel: member.hotel || '',
+      room_number: member.room_number || '',
+      notes: member.notes || '',
+    })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  async function saveCrewMember(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!event) return
+    if (!crewForm.name) {
+      setMessage('Crew member name is required.')
+      return
+    }
+
+    const payload = { ...crewForm, event_id: event.id }
+
+    const { error } = editingCrewId
+      ? await supabase.from('crew').update(payload).eq('id', editingCrewId)
+      : await supabase.from('crew').insert([payload])
+
+    if (error) {
+      setMessage(`Could not save crew member: ${error.message}`)
+      return
+    }
+
+    resetCrewForm()
+    setMessage(editingCrewId ? 'Crew member updated.' : 'Crew member added.')
     loadEventManager()
   }
 
@@ -920,9 +943,9 @@ function EventManagerPage() {
       {activeTab === 'crew' && (
       <>
       <section className="eventCard">
-        <h2>Add Crew Member</h2>
+        <h2>{editingCrewId ? 'Edit Crew Member' : 'Add Crew Member'}</h2>
 
-        <form onSubmit={addCrewMember} className="adminForm">
+        <form onSubmit={saveCrewMember} className="adminForm">
           <label>
             Name
             <input value={crewForm.name} onChange={e => updateCrewField('name', e.target.value)} placeholder="Liam Howard" />
@@ -964,8 +987,14 @@ function EventManagerPage() {
           </label>
 
           <button className="primaryButton" type="submit">
-            <Plus size={18} /> Add Crew Member
+            <Plus size={18} /> {editingCrewId ? 'Update Crew Member' : 'Add Crew Member'}
           </button>
+
+          {editingCrewId && (
+            <button className="secondaryButton" type="button" onClick={resetCrewForm}>
+              Cancel Edit
+            </button>
+          )}
         </form>
 
         {message && <p className="adminMessage">{message}</p>}
@@ -988,6 +1017,7 @@ function EventManagerPage() {
                 </div>
 
                 <div className="adminActions">
+                  <button type="button" onClick={() => startEditCrew(member)}>Edit</button>
                   <button type="button" onClick={() => deleteCrewMember(member.id)}>Delete</button>
                 </div>
               </div>
