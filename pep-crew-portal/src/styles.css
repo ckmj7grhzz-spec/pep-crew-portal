@@ -683,3 +683,14 @@ th {
 .secondaryButton:hover {
   background: #f8fafc;
 }
+
+  /* Crew personal view links */
+table a {
+  color: #1d4ed8;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+table a:hover {
+  text-decoration: underline;
+}
