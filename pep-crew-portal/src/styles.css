@@ -744,7 +744,7 @@ th {
   grid-column: 1 / -1;
 }
 
-/* CSV import */
+/* Excel import */
 .importCard {
   border-left: 5px solid var(--pep-green);
 }
