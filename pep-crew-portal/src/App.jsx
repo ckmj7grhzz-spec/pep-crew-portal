@@ -72,6 +72,64 @@ function Empty({ text }) {
   return <p className="empty">{text}</p>
 }
 
+function parseCsv(text) {
+  const rows = []
+  let current = ''
+  let row = []
+  let insideQuotes = false
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    const next = text[i + 1]
+
+    if (char === '"' && insideQuotes && next === '"') {
+      current += '"'
+      i++
+    } else if (char === '"') {
+      insideQuotes = !insideQuotes
+    } else if (char === ',' && !insideQuotes) {
+      row.push(current.trim())
+      current = ''
+    } else if ((char === '\n' || char === '\r') && !insideQuotes) {
+      if (current || row.length) {
+        row.push(current.trim())
+        rows.push(row)
+        row = []
+        current = ''
+      }
+      if (char === '\r' && next === '\n') i++
+    } else {
+      current += char
+    }
+  }
+
+  if (current || row.length) {
+    row.push(current.trim())
+    rows.push(row)
+  }
+
+  if (!rows.length) return []
+
+  const headers = rows[0].map(header =>
+    header
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '_')
+  )
+
+  return rows
+    .slice(1)
+    .filter(row => row.some(cell => cell && cell.trim()))
+    .map(row => {
+      const record = {}
+      headers.forEach((header, index) => {
+        record[header] = row[index] || ''
+      })
+      return record
+    })
+}
+
+
 
 function LoginPage({ onLogin }) {
   const [email, setEmail] = useState('')
@@ -783,6 +841,58 @@ function EventManagerPage() {
     loadEventManager()
   }
 
+
+  async function importCrewCsv(e) {
+    const file = e.target.files?.[0]
+    if (!file || !event) return
+
+    setMessage('Importing crew CSV...')
+
+    const text = await file.text()
+    const rows = parseCsv(text)
+
+    if (!rows.length) {
+      setMessage('CSV file is empty or could not be read.')
+      e.target.value = ''
+      return
+    }
+
+    const crewRows = rows
+      .map(row => ({
+        event_id: event.id,
+        name: row.name || row.crew_name || row.full_name || '',
+        role: row.role || row.position || '',
+        department: row.department || '',
+        mobile: row.mobile || row.phone || row.telephone || '',
+        email: row.email || '',
+        hotel: row.hotel || '',
+        room_number: row.room_number || row.room || '',
+        notes: row.notes || '',
+      }))
+      .filter(row => row.name)
+
+    if (!crewRows.length) {
+      setMessage('No valid crew rows found. The CSV must include a name column.')
+      e.target.value = ''
+      return
+    }
+
+    const { error } = await supabase
+      .from('crew')
+      .insert(crewRows)
+
+    if (error) {
+      setMessage(`Could not import crew CSV: ${error.message}`)
+      e.target.value = ''
+      return
+    }
+
+    setMessage(`${crewRows.length} crew members imported.`)
+    e.target.value = ''
+    await loadEventManager()
+  }
+
+
   async function saveFlight(e) {
     e.preventDefault()
     setMessage('')
@@ -1220,6 +1330,21 @@ function EventManagerPage() {
 
       {activeTab === 'crew' && (
       <>
+      <section className="eventCard importCard">
+        <h2>Import Crew CSV</h2>
+        <p>Upload a CSV file to add multiple crew members at once.</p>
+
+        <div className="csvTemplateBox">
+          <strong>Required header:</strong>
+          <code>name,role,department,mobile,email,hotel,room_number,notes</code>
+        </div>
+
+        <label className="fileUploadBox">
+          Upload Crew CSV
+          <input type="file" accept=".csv,text/csv" onChange={importCrewCsv} />
+        </label>
+      </section>
+
       <section className="eventCard" id="crew-form">
         <h2>{editingCrewId ? 'Edit Crew Member' : 'Add Crew Member'}</h2>
         {editingCrewId && <p className="editNotice">Editing: {crewForm.name}</p>}
