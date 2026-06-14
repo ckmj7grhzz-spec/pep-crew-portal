@@ -734,3 +734,15 @@ table a:hover {
   font-size: 12px;
   font-weight: 700;
 }  
+
+  .statusRed {
+  background: red !important;
+}
+
+.statusOrange {
+  background: orange !important;
+}
+
+.statusGreen {
+  background: green !important;
+}
