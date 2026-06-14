@@ -1500,10 +1500,11 @@ function EventManagerPage() {
             ['transfers', 'Transfers'],
             ['schedule', 'Schedule'],
             ['documents', 'Documents'],
+            ['import', 'Import Workbook'],
           ].map(([key, label]) => (
             <button
               key={key}
-              className={activeTab === key ? 'active' : ''}
+              className={`${activeTab === key ? 'active' : ''} ${key === 'import' ? 'importTabButton' : ''}`.trim()}
               onClick={() => setActiveTab(key)}
               type="button"
             >
@@ -1515,21 +1516,6 @@ function EventManagerPage() {
 
       {activeTab === 'overview' && (
         <>
-          <section className="eventCard importCard">
-            <h2>Import Event Workbook</h2>
-            <p>Upload one PEP Excel workbook to import crew, flights, hotels, transfers, schedule items and documents in one go.</p>
-
-            <div className="csvTemplateBox">
-              <strong>Workbook sheets supported:</strong>
-              <code>Crew, Flights, Hotels, Transfers, Schedule, Documents</code>
-            </div>
-
-            <label className="fileUploadBox">
-              Upload Event Workbook
-              <input type="file" accept=".xlsx,.xls" onChange={importEventWorkbook} />
-            </label>
-          </section>
-
           <section className={`eventCard dashboardHero modernReadiness ${getStatusClass(readinessScore)}`}>
             <div>
               <p className="eyebrowDark">Event Readiness</p>
@@ -1606,6 +1592,25 @@ function EventManagerPage() {
             </div>
           </section>
         </>
+      )}
+
+      {activeTab === 'import' && (
+        <section className="eventCard importCard workbookImportCard">
+          <h2>Import Event Workbook</h2>
+          <p>Upload one PEP Excel workbook to import crew, flights, hotels, transfers, schedule items and documents in one go.</p>
+
+          <div className="csvTemplateBox">
+            <strong>Workbook sheets supported:</strong>
+            <code>Crew, Flights, Hotels, Transfers, Schedule, Documents</code>
+          </div>
+
+          <label className="fileUploadBox">
+            Upload Event Workbook
+            <input type="file" accept=".xlsx,.xls" onChange={importEventWorkbook} />
+          </label>
+
+          {message && <p className="adminMessage">{message}</p>}
+        </section>
       )}
 
       {activeTab === 'crew' && (
