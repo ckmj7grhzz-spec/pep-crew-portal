@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDown, Plus, Copy, Settings, ArrowLeft, LogOut } from 'lucide-react'
 import { supabase } from './supabase'
 import './styles.css'
+import * as XLSX from 'xlsx'
 import pepLogo from './BW Logo_Pep_With bg.png'
 
 function formatDate(dateString) {
@@ -190,6 +191,51 @@ function LoginPage({ onLogin }) {
     </main>
   )
 }
+
+
+function normaliseImportKey(key) {
+  return String(key || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_')
+}
+
+function normaliseImportRows(rows) {
+  return rows.map(row => {
+    const cleaned = {}
+    Object.entries(row).forEach(([key, value]) => {
+      cleaned[normaliseImportKey(key)] = value === undefined || value === null ? '' : String(value).trim()
+    })
+    return cleaned
+  })
+}
+
+async function readImportFile(file, sheetName) {
+  const extension = file.name.split('.').pop().toLowerCase()
+
+  if (extension === 'csv') {
+    const text = await file.text()
+    return parseCsv(text)
+  }
+
+  const buffer = await file.arrayBuffer()
+  const workbook = XLSX.read(buffer, { type: 'array' })
+  const targetSheetName =
+    workbook.SheetNames.find(name => name.toLowerCase() === sheetName.toLowerCase()) ||
+    workbook.SheetNames.find(name => name.toLowerCase().includes(sheetName.toLowerCase())) ||
+    workbook.SheetNames[0]
+
+  const sheet = workbook.Sheets[targetSheetName]
+  if (!sheet) return []
+
+  const rows = XLSX.utils.sheet_to_json(sheet, {
+    defval: '',
+    raw: false,
+  })
+
+  return normaliseImportRows(rows)
+}
+
 
 function AdminShell({ children }) {
   async function logout() {
@@ -842,17 +888,16 @@ function EventManagerPage() {
   }
 
 
-  async function importCrewCsv(e) {
+  async function importCrewFile(e) {
     const file = e.target.files?.[0]
     if (!file || !event) return
 
-    setMessage('Importing crew CSV...')
+    setMessage('Importing crew file...')
 
-    const text = await file.text()
-    const rows = parseCsv(text)
+    const rows = await readImportFile(file, 'Crew Import')
 
     if (!rows.length) {
-      setMessage('CSV file is empty or could not be read.')
+      setMessage('File is empty or could not be read. Use the Crew Import sheet or a CSV with the correct headers.')
       e.target.value = ''
       return
     }
@@ -872,7 +917,7 @@ function EventManagerPage() {
       .filter(row => row.name)
 
     if (!crewRows.length) {
-      setMessage('No valid crew rows found. The CSV must include a name column.')
+      setMessage('No valid crew rows found. The file must include a name column.')
       e.target.value = ''
       return
     }
@@ -882,7 +927,7 @@ function EventManagerPage() {
       .insert(crewRows)
 
     if (error) {
-      setMessage(`Could not import crew CSV: ${error.message}`)
+      setMessage(`Could not import crew file: ${error.message}`)
       e.target.value = ''
       return
     }
@@ -891,7 +936,6 @@ function EventManagerPage() {
     e.target.value = ''
     await loadEventManager()
   }
-
 
   async function saveFlight(e) {
     e.preventDefault()
@@ -1331,17 +1375,17 @@ function EventManagerPage() {
       {activeTab === 'crew' && (
       <>
       <section className="eventCard importCard">
-        <h2>Import Crew CSV</h2>
-        <p>Upload a CSV file to add multiple crew members at once.</p>
+        <h2>Import Crew Excel</h2>
+        <p>Upload the PEP Excel template to add multiple crew members at once. CSV files are still supported.</p>
 
         <div className="csvTemplateBox">
-          <strong>Required header:</strong>
-          <code>name,role,department,mobile,email,hotel,room_number,notes</code>
+          <strong>Accepted file:</strong>
+          <code>.xlsx template using the Crew Import sheet, or .csv with name,role,department,mobile,email,hotel,room_number,notes</code>
         </div>
 
         <label className="fileUploadBox">
-          Upload Crew CSV
-          <input type="file" accept=".csv,text/csv" onChange={importCrewCsv} />
+          Upload Crew Excel
+          <input type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={importCrewFile} />
         </label>
       </section>
 
