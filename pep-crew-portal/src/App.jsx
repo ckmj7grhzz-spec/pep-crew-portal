@@ -1064,16 +1064,12 @@ function EventManagerPage() {
 
   return (
     <main className="page">
-      <header className="hero">
+      <header className="hero slimHero">
         <img
           src={pepLogo}
           alt="Premium Event Productions"
           className="pepLogo"
         />
-        <div>
-          <p className="eyebrow">Premium Event Productions</p>
-          <h1>Manage Crew Sheet</h1>
-        </div>
       </header>
 
       <section className="eventCard">
@@ -1133,31 +1129,35 @@ function EventManagerPage() {
 
       {activeTab === 'overview' && (
         <>
-          <section className="eventCard dashboardHero">
-            <div>
-              <p className="eyebrowDark">Event Readiness</p>
-              <h2>{readinessScore}%</h2>
-              <p>{readinessStatus}</p>
+          <section className={`eventCard dashboardHero compactDashboard ${getStatusClass(readinessScore)}`}>
+            <div className="readinessTop">
+              <div>
+                <p className="eyebrowDark">Event Readiness</p>
+                <h2>{readinessScore}%</h2>
+              </div>
+              <strong className="readinessBadge">
+                {readinessScore === 100 ? '🟢 Complete' : readinessScore >= 70 ? '🟠 Needs attention' : '🔴 High risk'}
+              </strong>
             </div>
 
             <div className="readinessBar">
               <span style={{ width: `${readinessScore}%`, background: getStatusColour(readinessScore) }}></span>
             </div>
 
-            <div className="dashboardSummary">
+            <div className="dashboardSummary compactKpis">
               <div className={getStatusClass(flightCompletion)}>
                 <strong>{flightCompletion}%</strong>
-                <span>Flights Complete</span>
+                <span>Flights</span>
                 <small>{crewNamesWithFlights.size}/{crew.length} crew booked</small>
               </div>
               <div className={getStatusClass(hotelCompletion)}>
                 <strong>{hotelCompletion}%</strong>
-                <span>Hotels Complete</span>
+                <span>Hotels</span>
                 <small>{crewNamesWithHotels.size}/{crew.length} crew booked</small>
               </div>
               <div className={getStatusClass(transferCompletion)}>
                 <strong>{transferCompletion}%</strong>
-                <span>Transfers Complete</span>
+                <span>Transfers</span>
                 <small>{crewNamesWithTransfers.size}/{crew.length} crew booked</small>
               </div>
             </div>
@@ -1179,7 +1179,7 @@ function EventManagerPage() {
             <p>These are the crew records that still need travel, accommodation or transfer details.</p>
 
             <div className="missingGrid">
-              <div>
+              <div className={missingFlights.length ? 'statusRed' : 'statusGreen'}>
                 <h3>Missing Flights</h3>
                 {missingFlights.length ? (
                   missingFlights.map(member => <p key={member.id}>⚠ {member.name}</p>)
@@ -1188,7 +1188,7 @@ function EventManagerPage() {
                 )}
               </div>
 
-              <div>
+              <div className={missingHotels.length ? 'statusRed' : 'statusGreen'}>
                 <h3>Missing Hotels</h3>
                 {missingHotels.length ? (
                   missingHotels.map(member => <p key={member.id}>⚠ {member.name}</p>)
@@ -1197,7 +1197,7 @@ function EventManagerPage() {
                 )}
               </div>
 
-              <div>
+              <div className={missingTransfers.length ? 'statusRed' : 'statusGreen'}>
                 <h3>Missing Transfers</h3>
                 {missingTransfers.length ? (
                   missingTransfers.map(member => <p key={member.id}>⚠ {member.name}</p>)
