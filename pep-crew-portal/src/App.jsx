@@ -175,14 +175,35 @@ async function readImportFile(file, sheetName) {
   const sheet = workbook.Sheets[targetSheetName]
   if (!sheet) return []
 
-  const rows = XLSX.utils.sheet_to_json(sheet, {
+  const rawRows = XLSX.utils.sheet_to_json(sheet, {
+    header: 1,
     defval: '',
     raw: false
   })
 
+  const headerRowIndex = rawRows.findIndex(row =>
+    row.map(cell => normaliseImportKey(cell)).includes('name')
+  )
+
+  if (headerRowIndex === -1) return []
+
+  const headers = rawRows[headerRowIndex].map(header => normaliseImportKey(header))
+
+  const rows = rawRows
+    .slice(headerRowIndex + 1)
+    .filter(row => row.some(cell => String(cell || '').trim()))
+    .map(row => {
+      const record = {}
+      headers.forEach((header, index) => {
+        if (header) {
+          record[header] = row[index] === undefined || row[index] === null ? '' : String(row[index]).trim()
+        }
+      })
+      return record
+    })
+
   return normaliseImportRows(rows)
 }
-
 
 function LoginPage({ onLogin }) {
   const [email, setEmail] = useState('')
@@ -896,52 +917,75 @@ function EventManagerPage() {
 
 
   async function importCrewFile(e) {
-    const file = e.target.files?.[0]
-    if (!file || !event) return
+    try {
+      const file = e.target.files?.[0]
 
-    setMessage('Importing crew file...')
+      if (!file) {
+        setMessage('No file selected.')
+        return
+      }
 
-    const rows = await readImportFile(file, 'Crew Import')
+      if (!event) {
+        setMessage('Event has not loaded yet. Please refresh and try again.')
+        e.target.value = ''
+        return
+      }
 
-    if (!rows.length) {
-      setMessage('File is empty or could not be read. Use the Crew Import sheet or a CSV with the correct headers.')
+      console.log('PEP import selected file:', file.name, file.type, file.size)
+      setMessage(`Reading file: ${file.name}`)
+
+      const rows = await readImportFile(file, 'Crew Import')
+      console.log('PEP import rows found:', rows)
+
+      if (!rows.length) {
+        setMessage('No rows found. Make sure the Excel file has a sheet called Crew Import and that the sheet contains a name header.')
+        e.target.value = ''
+        return
+      }
+
+      const crewRows = rows
+        .map(row => ({
+          event_id: event.id,
+          name: row.name || row.crew_name || row.full_name || '',
+          role: row.role || row.position || '',
+          department: row.department || '',
+          mobile: row.mobile || row.phone || row.telephone || '',
+          email: row.email || '',
+          hotel: row.hotel || '',
+          room_number: row.room_number || row.room || '',
+          notes: row.notes || '',
+        }))
+        .filter(row => row.name)
+
+      console.log('PEP import cleaned crew rows:', crewRows)
+
+      if (!crewRows.length) {
+        setMessage('Rows were found, but no valid crew names were detected. Check the sheet has a header called name.')
+        e.target.value = ''
+        return
+      }
+
+      setMessage(`Uploading ${crewRows.length} crew members...`)
+
+      const { error } = await supabase
+        .from('crew')
+        .insert(crewRows)
+
+      if (error) {
+        console.error('PEP import Supabase error:', error)
+        setMessage(`Could not import crew file: ${error.message}`)
+        e.target.value = ''
+        return
+      }
+
+      setMessage(`${crewRows.length} crew members imported.`)
       e.target.value = ''
-      return
-    }
-
-    const crewRows = rows
-      .map(row => ({
-        event_id: event.id,
-        name: row.name || row.crew_name || row.full_name || '',
-        role: row.role || row.position || '',
-        department: row.department || '',
-        mobile: row.mobile || row.phone || row.telephone || '',
-        email: row.email || '',
-        hotel: row.hotel || '',
-        room_number: row.room_number || row.room || '',
-        notes: row.notes || '',
-      }))
-      .filter(row => row.name)
-
-    if (!crewRows.length) {
-      setMessage('No valid crew rows found. The file must include a name column.')
+      await loadEventManager()
+    } catch (error) {
+      console.error('PEP import error:', error)
+      setMessage(`Import failed: ${error.message}`)
       e.target.value = ''
-      return
     }
-
-    const { error } = await supabase
-      .from('crew')
-      .insert(crewRows)
-
-    if (error) {
-      setMessage(`Could not import crew file: ${error.message}`)
-      e.target.value = ''
-      return
-    }
-
-    setMessage(`${crewRows.length} crew members imported.`)
-    e.target.value = ''
-    await loadEventManager()
   }
 
   async function saveFlight(e) {
