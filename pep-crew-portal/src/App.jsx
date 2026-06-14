@@ -568,32 +568,46 @@ function EventManagerPage() {
 
     const payload = { ...crewForm, event_id: event.id }
 
-    const { data: savedCrew, error } = editingCrewId
-      ? await supabase
-          .from('crew')
-          .update(payload)
-          .eq('id', editingCrewId)
-          .select()
-          .single()
-      : await supabase
-          .from('crew')
-          .insert([payload])
-          .select()
-          .single()
+    if (editingCrewId) {
+      const { error } = await supabase
+        .from('crew')
+        .update(payload)
+        .eq('id', editingCrewId)
+
+      if (error) {
+        setMessage(`Could not save crew member: ${error.message}`)
+        return
+      }
+
+      setCrew(crew.map(member =>
+        member.id === editingCrewId
+          ? { ...member, ...payload }
+          : member
+      ))
+
+      resetCrewForm()
+      setMessage('Crew member updated.')
+      return
+    }
+
+    const { data: newCrew, error } = await supabase
+      .from('crew')
+      .insert([payload])
+      .select()
 
     if (error) {
       setMessage(`Could not save crew member: ${error.message}`)
       return
     }
 
-    if (editingCrewId) {
-      setCrew(crew.map(member => member.id === editingCrewId ? savedCrew : member))
+    if (newCrew && newCrew.length > 0) {
+      setCrew([...crew, newCrew[0]])
     } else {
-      setCrew([...crew, savedCrew])
+      loadEventManager()
     }
 
     resetCrewForm()
-    setMessage(editingCrewId ? 'Crew member updated.' : 'Crew member added.')
+    setMessage('Crew member added.')
   }
 
   async function deleteCrewMember(id) {
