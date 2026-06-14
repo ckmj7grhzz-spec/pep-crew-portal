@@ -1063,91 +1063,80 @@ function EventManagerPage() {
   }
 
   return (
-    <main className="dashboardLayout">
-      <aside className="dashboardSidebar">
-        <div className="sidebarBrand">
-          <img src={pepLogo} alt="Premium Event Productions" className="sidebarLogo" />
-        </div>
+    <main className="page">
+      <section className="eventCard managerHeaderCard">
+        <div className="managerHeaderTop">
+          <img
+            src={pepLogo}
+            alt="Premium Event Productions"
+            className="managerLogo"
+          />
 
-        <nav className="sideNav">
-          <button className={activeTab === 'overview' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('overview')}>
-            <Settings size={20} /> Overview
-          </button>
-          <button className={activeTab === 'crew' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('crew')}>
-            <Users size={20} /> Crew
-          </button>
-          <button className={activeTab === 'flights' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('flights')}>
-            <Plane size={20} /> Flights
-          </button>
-          <button className={activeTab === 'hotels' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('hotels')}>
-            <Hotel size={20} /> Hotels
-          </button>
-          <button className={activeTab === 'transfers' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('transfers')}>
-            <Car size={20} /> Transfers
-          </button>
-          <button className={activeTab === 'schedule' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('schedule')}>
-            <CalendarDays size={20} /> Schedule
-          </button>
-          <button className={activeTab === 'documents' ? 'sideNavItem active' : 'sideNavItem'} onClick={() => setActiveTab('documents')}>
-            <FileText size={20} /> Documents
-          </button>
-        </nav>
-
-        <div className="sidebarFooter">
-          <a href="/admin" className="sideFooterLink"><ArrowLeft size={18} /> Back to Admin</a>
-          <a href={`/${event.public_slug}`} target="_blank" rel="noreferrer" className="sideFooterLink">Open Public Sheet</a>
-        </div>
-      </aside>
-
-      <section className="dashboardMain">
-        <header className="dashboardTopbar">
-          <div className="eventTitleBlock">
-            <CalendarDays size={26} />
-            <div>
-              <h1>{event.show_name}</h1>
-              <p>{formatDate(event.start_date)} - {formatDate(event.end_date)} • {event.venue}</p>
-            </div>
+          <div className="managerTitle">
+            <a href="/admin" className="backLink"><ArrowLeft size={16} /> Back to Admin</a>
+            <h1>{event.show_name}</h1>
+            <p>{formatDate(event.start_date)} - {formatDate(event.end_date)} • {event.venue}</p>
+            <small>Project Manager: {event.project_manager || 'Not set'}</small>
           </div>
-          <div className="topbarMeta">
-            <span>{event.project_manager || 'No project manager'}</span>
-          </div>
-        </header>
 
-        <section className="dashboardStats">
-          <div className="dashStat neutral">
-            <span className="dashIcon"><Users size={24} /></span>
+          <div className="adminActions managerTopActions">
+            <a href={`/${event.public_slug}`} target="_blank" rel="noreferrer">Open Public Sheet</a>
+          </div>
+        </div>
+      </section>
+
+      <section className="eventCard compactControlCard">
+        <div className="statsGrid">
+          <div>
             <strong>{crew.length}</strong>
             <span>Crew</span>
           </div>
-          <div className={`dashStat ${getStatusClass(flightCompletion)}`}>
-            <span className="dashIcon"><Plane size={24} /></span>
+          <div className={getStatusClass(flightCompletion)}>
             <strong>{flights.length}</strong>
             <span>Flights</span>
             <small>{flightCompletion}% complete</small>
           </div>
-          <div className={`dashStat ${getStatusClass(hotelCompletion)}`}>
-            <span className="dashIcon"><Hotel size={24} /></span>
+          <div className={getStatusClass(hotelCompletion)}>
             <strong>{hotels.length}</strong>
             <span>Hotels</span>
             <small>{hotelCompletion}% complete</small>
           </div>
-          <div className={`dashStat ${getStatusClass(transferCompletion)}`}>
-            <span className="dashIcon"><Car size={24} /></span>
+          <div className={getStatusClass(transferCompletion)}>
             <strong>{transfers.length}</strong>
             <span>Transfers</span>
             <small>{transferCompletion}% complete</small>
           </div>
-          <div className="dashStat neutral">
-            <span className="dashIcon"><CalendarDays size={24} /></span>
+          <div>
             <strong>{scheduleItems.length}</strong>
             <span>Schedule</span>
           </div>
-          <div className="dashStat neutral">
-            <span className="dashIcon"><FileText size={24} /></span>
+          <div>
             <strong>{documents.length}</strong>
             <span>Documents</span>
           </div>
-        </section>
+        </div>
+
+        <div className="tabs">
+          {[
+            ['overview', 'Overview'],
+            ['crew', 'Crew'],
+            ['flights', 'Flights'],
+            ['hotels', 'Hotels'],
+            ['transfers', 'Transfers'],
+            ['schedule', 'Schedule'],
+            ['documents', 'Documents'],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              className={activeTab === key ? 'active' : ''}
+              onClick={() => setActiveTab(key)}
+              type="button"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {activeTab === 'overview' && (
         <>
@@ -1197,7 +1186,7 @@ function EventManagerPage() {
             <p>These are the crew records that still need travel, accommodation or transfer details.</p>
 
             <div className="missingGrid">
-              <div>
+              <div className={missingFlights.length ? 'statusRed' : 'statusGreen'}>
                 <h3>Missing Flights</h3>
                 {missingFlights.length ? (
                   missingFlights.map(member => <p key={member.id}>⚠ {member.name}</p>)
@@ -1206,7 +1195,7 @@ function EventManagerPage() {
                 )}
               </div>
 
-              <div>
+              <div className={missingHotels.length ? 'statusRed' : 'statusGreen'}>
                 <h3>Missing Hotels</h3>
                 {missingHotels.length ? (
                   missingHotels.map(member => <p key={member.id}>⚠ {member.name}</p>)
@@ -1215,7 +1204,7 @@ function EventManagerPage() {
                 )}
               </div>
 
-              <div>
+              <div className={missingTransfers.length ? 'statusRed' : 'statusGreen'}>
                 <h3>Missing Transfers</h3>
                 {missingTransfers.length ? (
                   missingTransfers.map(member => <p key={member.id}>⚠ {member.name}</p>)
@@ -1837,7 +1826,6 @@ function EventManagerPage() {
       </section>
       </>
       )}
-      </section>
     </main>
   )
 }
