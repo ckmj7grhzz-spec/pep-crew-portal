@@ -654,3 +654,32 @@ th {
 .secondaryButton:hover {
   background: #f8fafc;
 }
+
+  /* Edit mode indicator */
+.editNotice {
+  background: #ecfdf5;
+  color: #166534 !important;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 800;
+  margin: 12px 0 18px !important;
+}
+
+.secondaryButton {
+  min-height: 48px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.secondaryButton:hover {
+  background: #f8fafc;
+}
