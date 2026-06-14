@@ -548,7 +548,12 @@ function EventManagerPage() {
       room_number: member.room_number || '',
       notes: member.notes || '',
     })
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setTimeout(() => {
+      const form = document.getElementById('crew-form')
+      if (form) {
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
   }
 
   async function saveCrewMember(e) {
@@ -942,7 +947,7 @@ function EventManagerPage() {
 
       {activeTab === 'crew' && (
       <>
-      <section className="eventCard">
+      <section className="eventCard" id="crew-form">
         <h2>{editingCrewId ? 'Edit Crew Member' : 'Add Crew Member'}</h2>
 
         <form onSubmit={saveCrewMember} className="adminForm">
