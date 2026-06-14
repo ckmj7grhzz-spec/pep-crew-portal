@@ -988,6 +988,176 @@ function EventManagerPage() {
     }
   }
 
+
+  function combineDateTime(dateValue, timeValue) {
+    if (!dateValue && !timeValue) return null
+    if (dateValue && String(dateValue).includes('T')) return String(dateValue)
+    if (dateValue && timeValue) return `${dateValue}T${String(timeValue).slice(0, 5)}`
+    if (dateValue) return String(dateValue)
+    return null
+  }
+
+  async function importEventWorkbook(e) {
+    try {
+      const file = e.target.files?.[0]
+
+      if (!file) {
+        setMessage('No file selected.')
+        return
+      }
+
+      if (!event) {
+        setMessage('Event has not loaded yet. Please refresh and try again.')
+        e.target.value = ''
+        return
+      }
+
+      setMessage(`Reading event workbook: ${file.name}`)
+
+      const [
+        crewRowsRaw,
+        flightRowsRaw,
+        hotelRowsRaw,
+        transferRowsRaw,
+        scheduleRowsRaw,
+        documentRowsRaw,
+      ] = await Promise.all([
+        readImportFile(file, 'Crew'),
+        readImportFile(file, 'Flights'),
+        readImportFile(file, 'Hotels'),
+        readImportFile(file, 'Transfers'),
+        readImportFile(file, 'Schedule'),
+        readImportFile(file, 'Documents'),
+      ])
+
+      const crewRows = crewRowsRaw
+        .map(row => ({
+          event_id: event.id,
+          name: row.name || row.crew_name || row.full_name || '',
+          role: row.role || row.position || '',
+          department: row.department || '',
+          mobile: row.mobile || row.phone || row.telephone || '',
+          email: row.email || '',
+          hotel: row.hotel || '',
+          room_number: row.room_number || row.room || '',
+          notes: row.notes || '',
+        }))
+        .filter(row => row.name)
+
+      const flightRows = flightRowsRaw
+        .map(row => ({
+          event_id: event.id,
+          crew_name: row.crew_name || row.name || row.passenger || '',
+          airline: row.airline || '',
+          flight_number: row.flight_number || row.flight || '',
+          departure_airport: row.departure_airport || row.from || '',
+          arrival_airport: row.arrival_airport || row.to || '',
+          departure_time: combineDateTime(row.departure_date, row.departure_time) || row.departure_datetime || null,
+          arrival_time: combineDateTime(row.arrival_date, row.arrival_time) || row.arrival_datetime || null,
+          booking_reference: row.booking_reference || row.reference || '',
+          notes: row.notes || '',
+        }))
+        .filter(row => row.crew_name)
+
+      const hotelRows = hotelRowsRaw
+        .map(row => ({
+          event_id: event.id,
+          guest_name: row.guest_name || row.name || row.crew_name || '',
+          hotel_name: row.hotel_name || row.hotel || '',
+          address: row.address || '',
+          check_in: row.check_in || row.check_in_date || null,
+          check_out: row.check_out || row.check_out_date || null,
+          room_number: row.room_number || row.room || '',
+          booking_reference: row.booking_reference || row.reference || '',
+          hotel_contact: row.hotel_contact || row.contact || '',
+          notes: row.notes || '',
+        }))
+        .filter(row => row.guest_name)
+
+      const transferRows = transferRowsRaw
+        .map(row => ({
+          event_id: event.id,
+          passenger: row.passenger || row.name || row.crew_name || '',
+          transfer_type: row.transfer_type || row.type || '',
+          pickup_location: row.pickup_location || row.pickup || '',
+          destination: row.destination || row.dropoff || row.drop_off || '',
+          date: row.date || row.transfer_date || null,
+          time: row.time || row.transfer_time || null,
+          driver_name: row.driver_name || row.driver || '',
+          driver_phone: row.driver_phone || row.driver_mobile || row.phone || '',
+          vehicle: row.vehicle || '',
+          notes: row.notes || '',
+        }))
+        .filter(row => row.passenger)
+
+      const scheduleRows = scheduleRowsRaw
+        .map(row => ({
+          event_id: event.id,
+          activity: row.activity || row.title || '',
+          date: row.date || row.schedule_date || null,
+          start_time: row.start_time || '',
+          end_time: row.end_time || '',
+          location: row.location || '',
+          assigned_crew: row.assigned_crew || row.crew || '',
+          notes: row.notes || '',
+        }))
+        .filter(row => row.activity)
+
+      const documentRows = documentRowsRaw
+        .map(row => ({
+          event_id: event.id,
+          document_name: row.document_name || row.name || row.title || '',
+          category: row.category || '',
+          file_url: row.file_url || row.url || row.link || '',
+          notes: row.notes || '',
+        }))
+        .filter(row => row.document_name)
+
+      const counts = {
+        crew: crewRows.length,
+        flights: flightRows.length,
+        hotels: hotelRows.length,
+        transfers: transferRows.length,
+        schedule: scheduleRows.length,
+        documents: documentRows.length,
+      }
+
+      if (!Object.values(counts).some(Boolean)) {
+        setMessage('No importable rows found. Check the workbook sheet names and headers.')
+        e.target.value = ''
+        return
+      }
+
+      setMessage(`Importing workbook: ${counts.crew} crew, ${counts.flights} flights, ${counts.hotels} hotels, ${counts.transfers} transfers, ${counts.schedule} schedule, ${counts.documents} documents...`)
+
+      const operations = []
+
+      if (crewRows.length) operations.push(supabase.from('crew').insert(crewRows))
+      if (flightRows.length) operations.push(supabase.from('flights').insert(flightRows))
+      if (hotelRows.length) operations.push(supabase.from('hotels').insert(hotelRows))
+      if (transferRows.length) operations.push(supabase.from('transfers').insert(transferRows))
+      if (scheduleRows.length) operations.push(supabase.from('schedule_items').insert(scheduleRows))
+      if (documentRows.length) operations.push(supabase.from('documents').insert(documentRows))
+
+      const results = await Promise.all(operations)
+      const failed = results.find(result => result.error)
+
+      if (failed?.error) {
+        setMessage(`Workbook import failed: ${failed.error.message}`)
+        e.target.value = ''
+        return
+      }
+
+      setMessage(`Workbook imported: ${counts.crew} crew, ${counts.flights} flights, ${counts.hotels} hotels, ${counts.transfers} transfers, ${counts.schedule} schedule, ${counts.documents} documents.`)
+      e.target.value = ''
+      await loadEventManager()
+    } catch (error) {
+      console.error('PEP workbook import error:', error)
+      setMessage(`Workbook import failed: ${error.message}`)
+      e.target.value = ''
+    }
+  }
+
   async function saveFlight(e) {
     e.preventDefault()
     setMessage('')
@@ -1345,6 +1515,21 @@ function EventManagerPage() {
 
       {activeTab === 'overview' && (
         <>
+          <section className="eventCard importCard">
+            <h2>Import Event Workbook</h2>
+            <p>Upload one PEP Excel workbook to import crew, flights, hotels, transfers, schedule items and documents in one go.</p>
+
+            <div className="csvTemplateBox">
+              <strong>Workbook sheets supported:</strong>
+              <code>Crew, Flights, Hotels, Transfers, Schedule, Documents</code>
+            </div>
+
+            <label className="fileUploadBox">
+              Upload Event Workbook
+              <input type="file" accept=".xlsx,.xls" onChange={importEventWorkbook} />
+            </label>
+          </section>
+
           <section className={`eventCard dashboardHero modernReadiness ${getStatusClass(readinessScore)}`}>
             <div>
               <p className="eyebrowDark">Event Readiness</p>
