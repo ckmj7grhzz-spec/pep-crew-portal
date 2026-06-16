@@ -1135,3 +1135,128 @@ th {
   background: #fef2f2 !important;
   color: #991b1b !important;
 }
+
+
+/* Public Call Sheet 2.0 */
+.publicOverviewCard {
+  display: grid;
+  gap: 22px;
+}
+
+.publicOverviewHeader {
+  display: grid;
+  grid-template-columns: 1fr minmax(230px, 320px);
+  gap: 22px;
+  align-items: start;
+}
+
+.publicVenueLine {
+  font-size: 18px;
+  font-weight: 900;
+  color: #334155 !important;
+  margin-bottom: 8px !important;
+}
+
+.publicAddressLine {
+  margin-bottom: 0 !important;
+}
+
+.publicDateCard {
+  background: #0f172a;
+  color: #ffffff;
+  border-radius: 18px;
+  padding: 20px;
+  display: grid;
+  gap: 6px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
+}
+
+.publicDateCard span {
+  color: rgba(255,255,255,0.72);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 900;
+}
+
+.publicDateCard strong {
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.publicDateCard small {
+  color: rgba(255,255,255,0.76);
+  font-weight: 800;
+}
+
+.publicQuickStats {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+}
+
+.publicQuickStats div {
+  background: var(--pep-soft);
+  border: 1px solid var(--pep-border);
+  border-radius: 16px;
+  padding: 18px;
+  display: grid;
+  gap: 4px;
+  min-height: 96px;
+  align-content: center;
+}
+
+.publicQuickStats strong {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.publicQuickStats span {
+  color: var(--pep-muted);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.publicQuickActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.publicManagerPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: var(--green-text);
+  font-weight: 900;
+}
+
+.publicLocationNotes {
+  margin-top: 0;
+}
+
+@media (max-width: 1000px) {
+  .publicQuickStats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .publicOverviewHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .publicQuickStats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .publicQuickActions .locationButton,
+  .publicManagerPill {
+    width: 100%;
+  }
+}
