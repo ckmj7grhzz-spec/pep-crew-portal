@@ -1123,3 +1123,15 @@ th {
   color: var(--orange-text);
   border-color: var(--orange-border);
 }
+
+.visibilityPublicButton {
+  border-color: #86efac !important;
+  background: #f0fdf4 !important;
+  color: #166534 !important;
+}
+
+.visibilityPrivateButton {
+  border-color: #fca5a5 !important;
+  background: #fef2f2 !important;
+  color: #991b1b !important;
+}
