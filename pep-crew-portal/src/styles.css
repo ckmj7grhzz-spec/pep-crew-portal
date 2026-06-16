@@ -856,3 +856,36 @@ th {
 .managerTitle .locationButtonRow {
   margin-bottom: 0;
 }
+
+
+/* Search and filter controls */
+.filterBar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: 18px 0 22px;
+}
+
+.filterBar input,
+.filterBar select {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 13px 15px;
+  min-height: 46px;
+  font-size: 15px;
+  background: #ffffff;
+}
+
+.filterBar input:focus,
+.filterBar select:focus {
+  outline: none;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.14);
+}
+
+@media (min-width: 760px) {
+  .filterBar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
