@@ -1377,3 +1377,104 @@ th {
     font-size: 30px;
   }
 }
+
+
+/* Readiness Dashboard 2.0 compact layout update */
+.readiness2ClickableGrid button,
+.readiness2MetaButton {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.readiness2MetaButton {
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 4px;
+}
+
+.readiness2MetaButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.readiness2IssueDrawer {
+  display: grid;
+  gap: 14px;
+}
+
+.readiness2IssuePanel {
+  border-radius: 16px;
+  border: 1px solid var(--pep-border);
+  padding: 18px;
+}
+
+.readiness2IssuePanel h3 {
+  margin: 0 0 12px;
+}
+
+.readiness2IssuePanel ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.readiness2IssuePanel li {
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.readiness2CompactHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.readiness2SummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.readiness2SummaryPill {
+  border: 1px solid var(--pep-border);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 4px;
+  min-height: 84px;
+  align-content: center;
+}
+
+.readiness2SummaryPill strong {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.readiness2SummaryPill span {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+@media (max-width: 900px) {
+  .readiness2SummaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .readiness2CompactHeader {
+    display: grid;
+  }
+}
+
+@media (max-width: 560px) {
+  .readiness2SummaryGrid {
+    grid-template-columns: 1fr;
+  }
+}
