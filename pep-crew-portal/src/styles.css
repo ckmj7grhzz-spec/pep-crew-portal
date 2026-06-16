@@ -808,3 +808,51 @@ th {
 .workbookImportCard {
   border-left-color: #1d4ed8 !important;
 }
+
+
+/* Venue maps and location buttons */
+.locationButtonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+
+.locationButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8 !important;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.locationButton:hover {
+  background: #dbeafe;
+  text-decoration: none;
+}
+
+.locationNotes {
+  margin-top: 18px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.locationNotes p {
+  margin: 0 0 8px;
+}
+
+.locationNotes p:last-child {
+  margin-bottom: 0;
+}
+
+.managerTitle .locationButtonRow {
+  margin-bottom: 0;
+}
