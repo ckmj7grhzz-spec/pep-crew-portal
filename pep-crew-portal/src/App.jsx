@@ -1158,6 +1158,231 @@ function EventManagerPage() {
     }
   }
 
+
+  async function importFlightsFile(e) {
+    try {
+      const file = e.target.files?.[0]
+      if (!file || !event) return
+      setMessage(`Reading flights file: ${file.name}`)
+      const rows = await readImportFile(file, 'Flights')
+
+      const flightRows = rows
+        .map(row => ({
+          event_id: event.id,
+          crew_name: row.crew_name || row.name || row.passenger || '',
+          airline: row.airline || '',
+          flight_number: row.flight_number || row.flight || '',
+          departure_airport: row.departure_airport || row.from || '',
+          arrival_airport: row.arrival_airport || row.to || '',
+          departure_time: combineDateTime(row.departure_date, row.departure_time) || row.departure_datetime || null,
+          arrival_time: combineDateTime(row.arrival_date, row.arrival_time) || row.arrival_datetime || null,
+          booking_reference: row.booking_reference || row.reference || '',
+          notes: row.notes || '',
+        }))
+        .filter(row => row.crew_name)
+
+      if (!flightRows.length) {
+        setMessage('No valid flight rows found. The file must include crew_name or name.')
+        e.target.value = ''
+        return
+      }
+
+      const { error } = await supabase.from('flights').insert(flightRows)
+
+      if (error) {
+        setMessage(`Could not import flights: ${error.message}`)
+        e.target.value = ''
+        return
+      }
+
+      setMessage(`${flightRows.length} flights imported.`)
+      e.target.value = ''
+      await loadEventManager()
+    } catch (error) {
+      console.error('PEP flights import error:', error)
+      setMessage(`Flights import failed: ${error.message}`)
+      e.target.value = ''
+    }
+  }
+
+  async function importHotelsFile(e) {
+    try {
+      const file = e.target.files?.[0]
+      if (!file || !event) return
+      setMessage(`Reading hotels file: ${file.name}`)
+      const rows = await readImportFile(file, 'Hotels')
+
+      const hotelRows = rows
+        .map(row => ({
+          event_id: event.id,
+          guest_name: row.guest_name || row.name || row.crew_name || '',
+          hotel_name: row.hotel_name || row.hotel || '',
+          address: row.address || '',
+          check_in: row.check_in || row.check_in_date || null,
+          check_out: row.check_out || row.check_out_date || null,
+          room_number: row.room_number || row.room || '',
+          booking_reference: row.booking_reference || row.reference || '',
+          hotel_contact: row.hotel_contact || row.contact || '',
+          notes: row.notes || '',
+        }))
+        .filter(row => row.guest_name)
+
+      if (!hotelRows.length) {
+        setMessage('No valid hotel rows found. The file must include guest_name or name.')
+        e.target.value = ''
+        return
+      }
+
+      const { error } = await supabase.from('hotels').insert(hotelRows)
+
+      if (error) {
+        setMessage(`Could not import hotels: ${error.message}`)
+        e.target.value = ''
+        return
+      }
+
+      setMessage(`${hotelRows.length} hotel bookings imported.`)
+      e.target.value = ''
+      await loadEventManager()
+    } catch (error) {
+      console.error('PEP hotels import error:', error)
+      setMessage(`Hotels import failed: ${error.message}`)
+      e.target.value = ''
+    }
+  }
+
+  async function importTransfersFile(e) {
+    try {
+      const file = e.target.files?.[0]
+      if (!file || !event) return
+      setMessage(`Reading transfers file: ${file.name}`)
+      const rows = await readImportFile(file, 'Transfers')
+
+      const transferRows = rows
+        .map(row => ({
+          event_id: event.id,
+          passenger: row.passenger || row.name || row.crew_name || '',
+          transfer_type: row.transfer_type || row.type || '',
+          pickup_location: row.pickup_location || row.pickup || '',
+          destination: row.destination || row.dropoff || row.drop_off || '',
+          date: row.date || row.transfer_date || null,
+          time: row.time || row.transfer_time || null,
+          driver_name: row.driver_name || row.driver || '',
+          driver_phone: row.driver_phone || row.driver_mobile || row.phone || '',
+          vehicle: row.vehicle || '',
+          notes: row.notes || '',
+        }))
+        .filter(row => row.passenger)
+
+      if (!transferRows.length) {
+        setMessage('No valid transfer rows found. The file must include passenger or name.')
+        e.target.value = ''
+        return
+      }
+
+      const { error } = await supabase.from('transfers').insert(transferRows)
+
+      if (error) {
+        setMessage(`Could not import transfers: ${error.message}`)
+        e.target.value = ''
+        return
+      }
+
+      setMessage(`${transferRows.length} transfers imported.`)
+      e.target.value = ''
+      await loadEventManager()
+    } catch (error) {
+      console.error('PEP transfers import error:', error)
+      setMessage(`Transfers import failed: ${error.message}`)
+      e.target.value = ''
+    }
+  }
+
+  async function importScheduleFile(e) {
+    try {
+      const file = e.target.files?.[0]
+      if (!file || !event) return
+      setMessage(`Reading schedule file: ${file.name}`)
+      const rows = await readImportFile(file, 'Schedule')
+
+      const scheduleRows = rows
+        .map(row => ({
+          event_id: event.id,
+          activity: row.activity || row.title || '',
+          date: row.date || row.schedule_date || null,
+          start_time: row.start_time || '',
+          end_time: row.end_time || '',
+          location: row.location || '',
+          assigned_crew: row.assigned_crew || row.crew || '',
+          notes: row.notes || '',
+        }))
+        .filter(row => row.activity)
+
+      if (!scheduleRows.length) {
+        setMessage('No valid schedule rows found. The file must include activity.')
+        e.target.value = ''
+        return
+      }
+
+      const { error } = await supabase.from('schedule_items').insert(scheduleRows)
+
+      if (error) {
+        setMessage(`Could not import schedule: ${error.message}`)
+        e.target.value = ''
+        return
+      }
+
+      setMessage(`${scheduleRows.length} schedule items imported.`)
+      e.target.value = ''
+      await loadEventManager()
+    } catch (error) {
+      console.error('PEP schedule import error:', error)
+      setMessage(`Schedule import failed: ${error.message}`)
+      e.target.value = ''
+    }
+  }
+
+  async function importDocumentsFile(e) {
+    try {
+      const file = e.target.files?.[0]
+      if (!file || !event) return
+      setMessage(`Reading documents file: ${file.name}`)
+      const rows = await readImportFile(file, 'Documents')
+
+      const documentRows = rows
+        .map(row => ({
+          event_id: event.id,
+          document_name: row.document_name || row.name || row.title || '',
+          category: row.category || '',
+          file_url: row.file_url || row.url || row.link || '',
+          notes: row.notes || '',
+        }))
+        .filter(row => row.document_name)
+
+      if (!documentRows.length) {
+        setMessage('No valid document rows found. The file must include document_name or name.')
+        e.target.value = ''
+        return
+      }
+
+      const { error } = await supabase.from('documents').insert(documentRows)
+
+      if (error) {
+        setMessage(`Could not import documents: ${error.message}`)
+        e.target.value = ''
+        return
+      }
+
+      setMessage(`${documentRows.length} documents imported.`)
+      e.target.value = ''
+      await loadEventManager()
+    } catch (error) {
+      console.error('PEP documents import error:', error)
+      setMessage(`Documents import failed: ${error.message}`)
+      e.target.value = ''
+    }
+  }
+
   async function saveFlight(e) {
     e.preventDefault()
     setMessage('')
@@ -1722,6 +1947,21 @@ function EventManagerPage() {
 
       {activeTab === 'flights' && (
       <>
+      <section className="eventCard importCard">
+        <h2>Import Flights Excel</h2>
+        <p>Upload a flights sheet to add multiple flight records at once.</p>
+
+        <div className="csvTemplateBox">
+          <strong>Accepted file:</strong>
+          <code>.xlsx sheet named Flights, or .csv with crew_name,airline,flight_number,departure_airport,arrival_airport,departure_date,departure_time,arrival_date,arrival_time,booking_reference,notes</code>
+        </div>
+
+        <label className="fileUploadBox">
+          Upload Flights Excel
+          <input type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={importFlightsFile} />
+        </label>
+      </section>
+
       <section className="eventCard" id="flight-form">
         <h2>{editingFlightId ? 'Edit Flight' : 'Add Flight'}</h2>
         {editingFlightId && <p className="editNotice">Editing: {flightForm.crew_name} {flightForm.flight_number && `- ${flightForm.flight_number}`}</p>}
@@ -1833,6 +2073,21 @@ function EventManagerPage() {
 
       {activeTab === 'hotels' && (
       <>
+      <section className="eventCard importCard">
+        <h2>Import Hotels Excel</h2>
+        <p>Upload a hotels sheet to add multiple hotel bookings at once.</p>
+
+        <div className="csvTemplateBox">
+          <strong>Accepted file:</strong>
+          <code>.xlsx sheet named Hotels, or .csv with guest_name,hotel_name,address,check_in,check_out,room_number,booking_reference,hotel_contact,notes</code>
+        </div>
+
+        <label className="fileUploadBox">
+          Upload Hotels Excel
+          <input type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={importHotelsFile} />
+        </label>
+      </section>
+
       <section className="eventCard" id="hotel-form">
         <h2>{editingHotelId ? 'Edit Hotel' : 'Add Hotel'}</h2>
         {editingHotelId && <p className="editNotice">Editing: {hotelForm.guest_name} {hotelForm.hotel_name && `- ${hotelForm.hotel_name}`}</p>}
@@ -1957,6 +2212,21 @@ function EventManagerPage() {
 
       {activeTab === 'transfers' && (
       <>
+      <section className="eventCard importCard">
+        <h2>Import Transfers Excel</h2>
+        <p>Upload a transfers sheet to add multiple transfer records at once.</p>
+
+        <div className="csvTemplateBox">
+          <strong>Accepted file:</strong>
+          <code>.xlsx sheet named Transfers, or .csv with passenger,transfer_type,pickup_location,destination,date,time,driver_name,driver_phone,vehicle,notes</code>
+        </div>
+
+        <label className="fileUploadBox">
+          Upload Transfers Excel
+          <input type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={importTransfersFile} />
+        </label>
+      </section>
+
       <section className="eventCard" id="transfer-form">
         <h2>{editingTransferId ? 'Edit Transfer' : 'Add Transfer'}</h2>
         {editingTransferId && <p className="editNotice">Editing: {transferForm.passenger} {transferForm.transfer_type && `- ${transferForm.transfer_type}`}</p>}
@@ -2078,6 +2348,21 @@ function EventManagerPage() {
 
       {activeTab === 'schedule' && (
       <>
+      <section className="eventCard importCard">
+        <h2>Import Schedule Excel</h2>
+        <p>Upload a schedule sheet to add multiple schedule items at once.</p>
+
+        <div className="csvTemplateBox">
+          <strong>Accepted file:</strong>
+          <code>.xlsx sheet named Schedule, or .csv with activity,date,start_time,end_time,location,assigned_crew,notes</code>
+        </div>
+
+        <label className="fileUploadBox">
+          Upload Schedule Excel
+          <input type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={importScheduleFile} />
+        </label>
+      </section>
+
       <section className="eventCard" id="schedule-form">
         <h2>{editingScheduleId ? 'Edit Schedule Item' : 'Add Schedule Item'}</h2>
         {editingScheduleId && <p className="editNotice">Editing: {scheduleForm.activity}</p>}
@@ -2172,6 +2457,21 @@ function EventManagerPage() {
 
       {activeTab === 'documents' && (
       <>
+      <section className="eventCard importCard">
+        <h2>Import Documents Excel</h2>
+        <p>Upload a documents sheet to add multiple document links at once.</p>
+
+        <div className="csvTemplateBox">
+          <strong>Accepted file:</strong>
+          <code>.xlsx sheet named Documents, or .csv with document_name,category,file_url,notes</code>
+        </div>
+
+        <label className="fileUploadBox">
+          Upload Documents Excel
+          <input type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={importDocumentsFile} />
+        </label>
+      </section>
+
       <section className="eventCard" id="document-form">
         <h2>{editingDocumentId ? 'Edit Document' : 'Add Document'}</h2>
         {editingDocumentId && <p className="editNotice">Editing: {documentForm.document_name}</p>}
