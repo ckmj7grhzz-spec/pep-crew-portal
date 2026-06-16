@@ -3373,21 +3373,59 @@ function PublicCrewSheet() {
         </div>
       </header>
 
-      <section className="eventCard">
-        <h2>{event.show_name}</h2>
-        <p>{event.venue}</p>
-        {event.venue_address && <p><strong>Address:</strong> {event.venue_address}</p>}
-        <div className="locationButtonRow">
-          {event.venue_maps_url && <a href={event.venue_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Open Maps</a>}
+      <section className="eventCard publicOverviewCard">
+        <div className="publicOverviewHeader">
+          <div>
+            <p className="eyebrowDark">Event Overview</p>
+            <h2>{event.show_name}</h2>
+            <p className="publicVenueLine">{event.venue}</p>
+            {event.venue_address && <p className="publicAddressLine"><strong>Address:</strong> {event.venue_address}</p>}
+          </div>
+
+          <div className="publicDateCard">
+            <span>Event Dates</span>
+            <strong>{formatDate(event.start_date)}</strong>
+            <small>to {formatDate(event.end_date)}</small>
+          </div>
+        </div>
+
+        <div className="publicQuickStats">
+          <div>
+            <strong>{data.crew.length}</strong>
+            <span>Crew</span>
+          </div>
+          <div>
+            <strong>{data.flights.length}</strong>
+            <span>Flights</span>
+          </div>
+          <div>
+            <strong>{data.hotels.length}</strong>
+            <span>Hotels</span>
+          </div>
+          <div>
+            <strong>{data.transfers.length}</strong>
+            <span>Transfers</span>
+          </div>
+          <div>
+            <strong>{data.schedule_items.length}</strong>
+            <span>Schedule</span>
+          </div>
+          <div>
+            <strong>{data.documents.length}</strong>
+            <span>Documents</span>
+          </div>
+        </div>
+
+        <div className="publicQuickActions">
+          {event.venue_maps_url && <a href={event.venue_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Venue Map</a>}
           {event.venue_what3words && <a href={`https://what3words.com/${String(event.venue_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// What3Words</a>}
+          {event.venue_access_notes && <a href="#venue-access-notes" className="locationButton">Access Info</a>}
+          {event.loading_bay_notes && <a href="#venue-access-notes" className="locationButton">Loading Bay</a>}
+          {event.project_manager && <span className="publicManagerPill">PM: {event.project_manager}</span>}
         </div>
-        <div className="eventGrid">
-          <span><strong>Start:</strong> {formatDate(event.start_date)}</span>
-          <span><strong>End:</strong> {formatDate(event.end_date)}</span>
-          <span><strong>Project Manager:</strong> {event.project_manager}</span>
-        </div>
+
         {(event.venue_access_notes || event.loading_bay_notes) && (
-          <div className="locationNotes">
+          <div className="locationNotes publicLocationNotes" id="venue-access-notes">
             {event.venue_access_notes && <p><strong>Access:</strong> {event.venue_access_notes}</p>}
             {event.loading_bay_notes && <p><strong>Loading Bay:</strong> {event.loading_bay_notes}</p>}
           </div>
