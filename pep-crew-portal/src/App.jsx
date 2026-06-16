@@ -534,6 +534,14 @@ function EventManagerPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
+  const [crewSearch, setCrewSearch] = useState('')
+  const [crewDepartmentFilter, setCrewDepartmentFilter] = useState('')
+  const [crewRoleFilter, setCrewRoleFilter] = useState('')
+  const [flightSearch, setFlightSearch] = useState('')
+  const [hotelSearch, setHotelSearch] = useState('')
+  const [transferSearch, setTransferSearch] = useState('')
+  const [scheduleSearch, setScheduleSearch] = useState('')
+  const [documentSearch, setDocumentSearch] = useState('')
   const [editingCrewId, setEditingCrewId] = useState(null)
   const [editingFlightId, setEditingFlightId] = useState(null)
   const [editingHotelId, setEditingHotelId] = useState(null)
@@ -1725,6 +1733,46 @@ function EventManagerPage() {
   const hotelCompletion = crew.length ? Math.round((crewNamesWithHotels.size / crew.length) * 100) : 100
   const transferCompletion = crew.length ? Math.round((crewNamesWithTransfers.size / crew.length) * 100) : 100
 
+  function includesText(record, searchValue, fields) {
+    const search = String(searchValue || '').toLowerCase().trim()
+    if (!search) return true
+
+    return fields.some(field =>
+      String(record[field] || '').toLowerCase().includes(search)
+    )
+  }
+
+  const crewDepartments = [...new Set(crew.map(member => member.department).filter(Boolean))].sort()
+  const crewRoles = [...new Set(crew.map(member => member.role).filter(Boolean))].sort()
+
+  const filteredCrew = crew.filter(member => {
+    const matchesSearch = includesText(member, crewSearch, ['name', 'role', 'department', 'mobile', 'email', 'hotel', 'notes'])
+    const matchesDepartment = crewDepartmentFilter ? member.department === crewDepartmentFilter : true
+    const matchesRole = crewRoleFilter ? member.role === crewRoleFilter : true
+    return matchesSearch && matchesDepartment && matchesRole
+  })
+
+  const filteredFlights = flights.filter(flight =>
+    includesText(flight, flightSearch, ['crew_name', 'airline', 'flight_number', 'departure_airport', 'arrival_airport', 'booking_reference', 'notes'])
+  )
+
+  const filteredHotels = hotels.filter(hotel =>
+    includesText(hotel, hotelSearch, ['guest_name', 'hotel_name', 'address', 'room_number', 'booking_reference', 'hotel_contact', 'notes'])
+  )
+
+  const filteredTransfers = transfers.filter(transfer =>
+    includesText(transfer, transferSearch, ['passenger', 'passengers', 'transfer_type', 'pickup_location', 'destination', 'driver_name', 'driver_phone', 'vehicle', 'notes'])
+  )
+
+  const filteredScheduleItems = scheduleItems.filter(item =>
+    includesText(item, scheduleSearch, ['activity', 'location', 'assigned_crew', 'notes'])
+  )
+
+  const filteredDocuments = documents.filter(document =>
+    includesText(document, documentSearch, ['document_name', 'category', 'file_url', 'notes'])
+  )
+
+
   if (loading) return <main className="page"><p>Loading event manager...</p></main>
 
   if (!event) {
@@ -2030,9 +2078,31 @@ function EventManagerPage() {
       <section className="eventCard">
         <h2>Crew Members</h2>
 
-        {crew.length ? (
+        <div className="filterBar">
+          <input
+            value={crewSearch}
+            onChange={e => setCrewSearch(e.target.value)}
+            placeholder="Search crew by name, role, department, hotel..."
+          />
+
+          <select value={crewDepartmentFilter} onChange={e => setCrewDepartmentFilter(e.target.value)}>
+            <option value="">All departments</option>
+            {crewDepartments.map(department => (
+              <option key={department} value={department}>{department}</option>
+            ))}
+          </select>
+
+          <select value={crewRoleFilter} onChange={e => setCrewRoleFilter(e.target.value)}>
+            <option value="">All roles</option>
+            {crewRoles.map(role => (
+              <option key={role} value={role}>{role}</option>
+            ))}
+          </select>
+        </div>
+
+        {filteredCrew.length ? (
           <div className="adminList">
-            {crew.map(member => (
+            {filteredCrew.map(member => (
               <div className="adminListItem" key={member.id}>
                 <div>
                   <strong>{member.name}</strong>
@@ -2051,7 +2121,7 @@ function EventManagerPage() {
             ))}
           </div>
         ) : (
-          <Empty text="No crew added yet." />
+          <Empty text={crew.length ? 'No crew match your search.' : 'No crew added yet.'} />
         )}
       </section>
 
@@ -2146,9 +2216,17 @@ function EventManagerPage() {
       <section className="eventCard">
         <h2>Flights</h2>
 
-        {flights.length ? (
+        <div className="filterBar">
+          <input
+            value={flightSearch}
+            onChange={e => setFlightSearch(e.target.value)}
+            placeholder="Search flights by crew, airline, flight number, airport..."
+          />
+        </div>
+
+        {filteredFlights.length ? (
           <div className="adminList">
-            {flights.map(flight => (
+            {filteredFlights.map(flight => (
               <div className="adminListItem" key={flight.id}>
                 <div>
                   <strong>{flight.crew_name}</strong>
@@ -2177,7 +2255,7 @@ function EventManagerPage() {
             ))}
           </div>
         ) : (
-          <Empty text="No flights added yet." />
+          <Empty text={flights.length ? 'No flights match your search.' : 'No flights added yet.'} />
         )}
       </section>
 
@@ -2272,9 +2350,17 @@ function EventManagerPage() {
       <section className="eventCard">
         <h2>Hotels</h2>
 
-        {hotels.length ? (
+        <div className="filterBar">
+          <input
+            value={hotelSearch}
+            onChange={e => setHotelSearch(e.target.value)}
+            placeholder="Search hotels by guest, hotel, address, room..."
+          />
+        </div>
+
+        {filteredHotels.length ? (
           <div className="adminList">
-            {hotels.map(hotel => (
+            {filteredHotels.map(hotel => (
               <div className="adminListItem" key={hotel.id}>
                 <div>
                   <strong>{hotel.guest_name}</strong>
@@ -2316,7 +2402,7 @@ function EventManagerPage() {
             ))}
           </div>
         ) : (
-          <Empty text="No hotels added yet." />
+          <Empty text={hotels.length ? 'No hotels match your search.' : 'No hotels added yet.'} />
         )}
       </section>
 
@@ -2416,9 +2502,17 @@ function EventManagerPage() {
       <section className="eventCard">
         <h2>Transfers</h2>
 
-        {transfers.length ? (
+        <div className="filterBar">
+          <input
+            value={transferSearch}
+            onChange={e => setTransferSearch(e.target.value)}
+            placeholder="Search transfers by passenger, pickup, destination, driver..."
+          />
+        </div>
+
+        {filteredTransfers.length ? (
           <div className="adminList">
-            {transfers.map(transfer => (
+            {filteredTransfers.map(transfer => (
               <div className="adminListItem" key={transfer.id}>
                 <div>
                   <strong>{transfer.passenger || transfer.passengers}</strong>
@@ -2452,7 +2546,7 @@ function EventManagerPage() {
             ))}
           </div>
         ) : (
-          <Empty text="No transfers added yet." />
+          <Empty text={transfers.length ? 'No transfers match your search.' : 'No transfers added yet.'} />
         )}
       </section>
 
@@ -2532,9 +2626,17 @@ function EventManagerPage() {
       <section className="eventCard">
         <h2>Schedule</h2>
 
-        {scheduleItems.length ? (
+        <div className="filterBar">
+          <input
+            value={scheduleSearch}
+            onChange={e => setScheduleSearch(e.target.value)}
+            placeholder="Search schedule by activity, location, crew, notes..."
+          />
+        </div>
+
+        {filteredScheduleItems.length ? (
           <div className="adminList">
-            {scheduleItems.map(item => (
+            {filteredScheduleItems.map(item => (
               <div className="adminListItem" key={item.id}>
                 <div>
                   <strong>{item.activity}</strong>
@@ -2561,7 +2663,7 @@ function EventManagerPage() {
             ))}
           </div>
         ) : (
-          <Empty text="No schedule added yet." />
+          <Empty text={scheduleItems.length ? 'No schedule items match your search.' : 'No schedule added yet.'} />
         )}
       </section>
 
@@ -2626,9 +2728,17 @@ function EventManagerPage() {
       <section className="eventCard">
         <h2>Documents</h2>
 
-        {documents.length ? (
+        <div className="filterBar">
+          <input
+            value={documentSearch}
+            onChange={e => setDocumentSearch(e.target.value)}
+            placeholder="Search documents by name, category, URL, notes..."
+          />
+        </div>
+
+        {filteredDocuments.length ? (
           <div className="adminList">
-            {documents.map(document => (
+            {filteredDocuments.map(document => (
               <div className="adminListItem" key={document.id}>
                 <div>
                   <strong>{document.document_name}</strong>
@@ -2645,7 +2755,7 @@ function EventManagerPage() {
             ))}
           </div>
         ) : (
-          <Empty text="No documents added yet." />
+          <Empty text={documents.length ? 'No documents match your search.' : 'No documents added yet.'} />
         )}
       </section>
       </>
