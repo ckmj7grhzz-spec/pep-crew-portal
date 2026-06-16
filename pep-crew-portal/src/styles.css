@@ -1061,3 +1061,65 @@ th {
 .documentPreviewFooter a {
   font-weight: 900;
 }
+
+
+/* File upload enhancements */
+.documentVisibilityToggle {
+  align-content: center;
+  background: #f8fafc;
+  border: 1px solid var(--pep-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.documentCategoryBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 6px;
+}
+
+.documentCategoryBar span {
+  color: var(--pep-muted);
+  font-weight: 900;
+}
+
+.documentCategoryBar strong {
+  background: #eef2ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
+.documentMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.documentMetaRow span {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.documentMetaRow .documentPublicBadge {
+  background: var(--green-bg);
+  color: var(--green-text);
+  border-color: var(--green-border);
+}
+
+.documentMetaRow .documentPrivateBadge {
+  background: var(--orange-bg);
+  color: var(--orange-text);
+  border-color: var(--orange-border);
+}
