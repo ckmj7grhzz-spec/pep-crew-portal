@@ -1950,6 +1950,144 @@ function EventManagerPage() {
   const hotelCompletion = crew.length ? Math.round((crewNamesWithHotels.size / crew.length) * 100) : 100
   const transferCompletion = crew.length ? Math.round((crewNamesWithTransfers.size / crew.length) * 100) : 100
 
+
+  const crewMissingMobile = crew.filter(member => !String(member.mobile || '').trim())
+  const crewMissingEmail = crew.filter(member => !String(member.email || '').trim())
+  const crewMissingRole = crew.filter(member => !String(member.role || '').trim())
+
+  const incompleteFlights = flights.filter(flight =>
+    !String(flight.flight_number || '').trim() ||
+    !String(flight.departure_airport || '').trim() ||
+    !String(flight.arrival_airport || '').trim() ||
+    !String(flight.departure_time || '').trim() ||
+    !String(flight.arrival_time || '').trim()
+  )
+
+  const incompleteHotels = hotels.filter(hotel =>
+    !String(hotel.hotel_name || '').trim() ||
+    !String(hotel.check_in || '').trim() ||
+    !String(hotel.check_out || '').trim() ||
+    !String(hotel.room_number || '').trim()
+  )
+
+  const incompleteTransfers = transfers.filter(transfer =>
+    !String(transfer.pickup_location || '').trim() ||
+    !String(transfer.destination || '').trim() ||
+    !String(transfer.date || '').trim() ||
+    !String(transfer.time || '').trim()
+  )
+
+  const publicDocuments = documents.filter(document => document.is_public !== false)
+  const documentSearchText = documents
+    .map(document => `${document.document_name || ''} ${document.category || ''} ${document.notes || ''}`)
+    .join(' ')
+    .toLowerCase()
+
+  const requiredDocuments = [
+    {
+      label: 'RAMS / Risk Assessment',
+      complete: documentSearchText.includes('rams') || documentSearchText.includes('risk assessment'),
+    },
+    {
+      label: 'Method Statement',
+      complete: documentSearchText.includes('method statement') || documentSearchText.includes('method'),
+    },
+    {
+      label: 'Build Drawings / Plans',
+      complete: documentSearchText.includes('drawing') || documentSearchText.includes('plan'),
+    },
+  ]
+
+  const missingRequiredDocuments = requiredDocuments.filter(document => !document.complete)
+
+  const readinessCriticalIssues = [
+    ...missingFlights.map(member => `${member.name} has no flight assigned`),
+    ...missingHotels.map(member => `${member.name} has no hotel assigned`),
+    ...missingTransfers.map(member => `${member.name} has no transfer assigned`),
+    ...crewMissingMobile.map(member => `${member.name} is missing a mobile number`),
+    ...crewMissingEmail.map(member => `${member.name} is missing an email address`),
+    ...missingRequiredDocuments.map(document => `${document.label} missing`),
+  ]
+
+  const readinessWarningIssues = [
+    ...crewMissingRole.map(member => `${member.name} is missing a role`),
+    ...incompleteFlights.map(flight => `${flight.crew_name || 'Flight'} has incomplete flight details`),
+    ...incompleteHotels.map(hotel => `${hotel.guest_name || 'Hotel booking'} has incomplete hotel details`),
+    ...incompleteTransfers.map(transfer => `${transfer.passenger || 'Transfer'} has incomplete transfer details`),
+  ]
+
+  const readiness2StatusClass = readinessCriticalIssues.length
+    ? 'statusRed'
+    : readinessWarningIssues.length
+      ? 'statusOrange'
+      : 'statusGreen'
+
+  const readiness2Title = readinessCriticalIssues.length
+    ? 'Critical issues found'
+    : readinessWarningIssues.length
+      ? 'Actions required'
+      : 'Ready for deployment'
+
+  const readiness2Summary = readinessCriticalIssues.length
+    ? `${readinessCriticalIssues.length} critical issue${readinessCriticalIssues.length === 1 ? '' : 's'} need attention before this event is ready.`
+    : readinessWarningIssues.length
+      ? `${readinessWarningIssues.length} warning${readinessWarningIssues.length === 1 ? '' : 's'} to review before crew deployment.`
+      : 'All core crew, travel, accommodation, transfer and document checks are complete.'
+
+  const readiness2Sections = [
+    {
+      title: 'Crew Details',
+      subtitle: `${crew.length} crew assigned`,
+      className: crewMissingMobile.length || crewMissingEmail.length ? 'statusRed' : crewMissingRole.length ? 'statusOrange' : 'statusGreen',
+      issues: [
+        ...crewMissingMobile.map(member => `${member.name} missing mobile`),
+        ...crewMissingEmail.map(member => `${member.name} missing email`),
+        ...crewMissingRole.map(member => `${member.name} missing role`),
+      ],
+      completeText: 'All crew have contact details and roles.',
+    },
+    {
+      title: 'Flights',
+      subtitle: `${crewNamesWithFlights.size}/${crew.length} crew booked`,
+      className: missingFlights.length ? 'statusRed' : incompleteFlights.length ? 'statusOrange' : 'statusGreen',
+      issues: [
+        ...missingFlights.map(member => `${member.name} has no flight assigned`),
+        ...incompleteFlights.map(flight => `${flight.crew_name || 'Flight'} has incomplete flight details`),
+      ],
+      completeText: 'All crew have flight records.',
+    },
+    {
+      title: 'Hotels',
+      subtitle: `${crewNamesWithHotels.size}/${crew.length} crew booked`,
+      className: missingHotels.length ? 'statusRed' : incompleteHotels.length ? 'statusOrange' : 'statusGreen',
+      issues: [
+        ...missingHotels.map(member => `${member.name} has no hotel assigned`),
+        ...incompleteHotels.map(hotel => `${hotel.guest_name || 'Hotel booking'} has incomplete hotel details`),
+      ],
+      completeText: 'All crew have accommodation records.',
+    },
+    {
+      title: 'Transfers',
+      subtitle: `${crewNamesWithTransfers.size}/${crew.length} crew covered`,
+      className: missingTransfers.length ? 'statusRed' : incompleteTransfers.length ? 'statusOrange' : 'statusGreen',
+      issues: [
+        ...missingTransfers.map(member => `${member.name} has no transfer assigned`),
+        ...incompleteTransfers.map(transfer => `${transfer.passenger || 'Transfer'} has incomplete transfer details`),
+      ],
+      completeText: 'All crew have transfer records.',
+    },
+    {
+      title: 'Documents',
+      subtitle: `${publicDocuments.length} public / ${documents.length} total`,
+      className: missingRequiredDocuments.length ? 'statusRed' : documents.length ? 'statusGreen' : 'statusOrange',
+      issues: [
+        ...missingRequiredDocuments.map(document => `${document.label} missing`),
+        ...(documents.length ? [] : ['No documents uploaded yet']),
+      ],
+      completeText: 'Required document types are present.',
+    },
+  ]
+
   const searchText = globalSearch.toLowerCase().trim()
 
   function matchesSearch(item) {
@@ -2080,33 +2218,64 @@ function EventManagerPage() {
 
       {activeTab === 'overview' && (
         <>
-          <section className={`eventCard dashboardHero modernReadiness ${getStatusClass(readinessScore)}`}>
+          <section className={`eventCard readiness2Hero ${readiness2StatusClass}`}>
             <div>
-              <p className="eyebrowDark">Event Readiness</p>
-              <h2>{readinessScore}%</h2>
-              <p>{readinessStatus}</p>
+              <p className="eyebrowDark">Event Readiness 2.0</p>
+              <h2>{readiness2Title}</h2>
+              <p>{readiness2Summary}</p>
+            </div>
+
+            <div className="readiness2MetaGrid">
+              <div>
+                <strong>{readinessScore}%</strong>
+                <span>Travel readiness</span>
+              </div>
+              <div>
+                <strong>{readinessCriticalIssues.length}</strong>
+                <span>Critical issues</span>
+              </div>
+              <div>
+                <strong>{readinessWarningIssues.length}</strong>
+                <span>Warnings</span>
+              </div>
             </div>
 
             <div className="readinessBar">
               <span style={{ width: `${readinessScore}%`, background: getStatusColour(readinessScore) }}></span>
             </div>
+          </section>
 
-            <div className="dashboardSummary">
-              <div className={getStatusClass(flightCompletion)}>
-                <strong>{flightCompletion}%</strong>
-                <span>Flights Complete</span>
-                <small>{crewNamesWithFlights.size}/{crew.length} crew booked</small>
+          <section className="eventCard readiness2Card">
+            <div className="readiness2Header">
+              <div>
+                <h2>Operational Checks</h2>
+                <p>Quickly review what is complete, what needs attention, and what could block the event from being ready.</p>
               </div>
-              <div className={getStatusClass(hotelCompletion)}>
-                <strong>{hotelCompletion}%</strong>
-                <span>Hotels Complete</span>
-                <small>{crewNamesWithHotels.size}/{crew.length} crew booked</small>
-              </div>
-              <div className={getStatusClass(transferCompletion)}>
-                <strong>{transferCompletion}%</strong>
-                <span>Transfers Complete</span>
-                <small>{crewNamesWithTransfers.size}/{crew.length} crew booked</small>
-              </div>
+            </div>
+
+            <div className="readiness2Grid">
+              {readiness2Sections.map(section => (
+                <div className={`readiness2Section ${section.className}`} key={section.title}>
+                  <div className="readiness2SectionTop">
+                    <div>
+                      <h3>{section.title}</h3>
+                      <small>{section.subtitle}</small>
+                    </div>
+                    <strong>{section.issues.length}</strong>
+                  </div>
+
+                  {section.issues.length ? (
+                    <ul>
+                      {section.issues.slice(0, 8).map(issue => (
+                        <li key={issue}>⚠ {issue}</li>
+                      ))}
+                      {section.issues.length > 8 && <li>+ {section.issues.length - 8} more issue{section.issues.length - 8 === 1 ? '' : 's'}</li>}
+                    </ul>
+                  ) : (
+                    <p className="readiness2Complete">✓ {section.completeText}</p>
+                  )}
+                </div>
+              ))}
             </div>
           </section>
 
