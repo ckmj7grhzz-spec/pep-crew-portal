@@ -73,6 +73,62 @@ function Empty({ text }) {
   return <p className="empty">{text}</p>
 }
 
+function DocumentPreviewLinks({ url, label = 'document' }) {
+  const [previewOpen, setPreviewOpen] = useState(false)
+
+  if (!url) return null
+
+  const cleanUrl = String(url)
+  const lowerUrl = cleanUrl.split('?')[0].toLowerCase()
+  const isImage = /\.(png|jpg|jpeg|webp|gif)$/i.test(lowerUrl)
+  const isPdf = /\.pdf$/i.test(lowerUrl)
+  const canPreview = isImage || isPdf || cleanUrl.startsWith('http')
+
+  return (
+    <>
+      <div className="documentActionLinks">
+        {canPreview && (
+          <button
+            type="button"
+            className="documentPreviewButton"
+            onClick={() => setPreviewOpen(true)}
+          >
+            Preview document
+          </button>
+        )}
+        <a href={cleanUrl} target="_blank" rel="noreferrer">
+          Open document
+        </a>
+      </div>
+
+      {previewOpen && (
+        <div className="documentPreviewOverlay" role="dialog" aria-modal="true">
+          <div className="documentPreviewModal">
+            <div className="documentPreviewHeader">
+              <strong>{label}</strong>
+              <button type="button" onClick={() => setPreviewOpen(false)}>×</button>
+            </div>
+
+            <div className="documentPreviewBody">
+              {isImage ? (
+                <img src={cleanUrl} alt={label} />
+              ) : (
+                <iframe src={cleanUrl} title={label}></iframe>
+              )}
+            </div>
+
+            <div className="documentPreviewFooter">
+              <a href={cleanUrl} target="_blank" rel="noreferrer">
+                Open in new tab
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 function parseCsv(text) {
   const rows = []
   let current = ''
@@ -2841,7 +2897,7 @@ function EventManagerPage() {
                 <div>
                   <strong>{document.document_name}</strong>
                   <p>{document.category}</p>
-                  {document.file_url && <a href={document.file_url} target="_blank" rel="noreferrer">Open document</a>}
+                  {document.file_url && <DocumentPreviewLinks url={document.file_url} label={document.document_name} />}
                   {document.notes && <p>{document.notes}</p>}
                 </div>
 
@@ -3150,7 +3206,7 @@ function CrewPersonalView() {
               <div className="item" key={x.id}>
                 <strong>{x.document_name}</strong>
                 <p>{x.category}</p>
-                {x.file_url && <a href={x.file_url} target="_blank" rel="noreferrer">Open document</a>}
+                {x.file_url && <DocumentPreviewLinks url={x.file_url} label={x.document_name} />}
                 {x.notes && <p>{x.notes}</p>}
               </div>
             ))
@@ -3431,7 +3487,7 @@ function PublicCrewSheet() {
               <div className="item" key={x.id}>
                 <strong>{x.document_name}</strong>
                 <p>{x.category}</p>
-                {x.file_url && <a href={x.file_url}>Open document</a>}
+                {x.file_url && <DocumentPreviewLinks url={x.file_url} label={x.document_name} />}
                 {x.notes && <p>{x.notes}</p>}
               </div>
             ))
