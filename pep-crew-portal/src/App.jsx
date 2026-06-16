@@ -73,6 +73,22 @@ function Empty({ text }) {
   return <p className="empty">{text}</p>
 }
 
+function formatFileSize(bytes) {
+  const value = Number(bytes || 0)
+  if (!value) return ''
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function normaliseBoolean(value, fallback = true) {
+  if (value === undefined || value === null || value === '') return fallback
+  const clean = String(value).trim().toLowerCase()
+  if (['true', 'yes', 'y', '1', 'public', 'visible'].includes(clean)) return true
+  if (['false', 'no', 'n', '0', 'private', 'hidden', 'admin only', 'admin_only'].includes(clean)) return false
+  return fallback
+}
+
 function DocumentPreviewLinks({ url, label = 'document' }) {
   const [previewOpen, setPreviewOpen] = useState(false)
 
@@ -99,6 +115,9 @@ function DocumentPreviewLinks({ url, label = 'document' }) {
         <a href={cleanUrl} target="_blank" rel="noreferrer">
           Open document
         </a>
+        <a href={cleanUrl} target="_blank" rel="noreferrer" download>
+          Download
+        </a>
       </div>
 
       {previewOpen && (
@@ -120,6 +139,9 @@ function DocumentPreviewLinks({ url, label = 'document' }) {
             <div className="documentPreviewFooter">
               <a href={cleanUrl} target="_blank" rel="noreferrer">
                 Open in new tab
+              </a>
+              <a href={cleanUrl} target="_blank" rel="noreferrer" download>
+                Download file
               </a>
             </div>
           </div>
@@ -666,6 +688,7 @@ function EventManagerPage() {
     document_name: '',
     category: '',
     file_url: '',
+    is_public: true,
     notes: '',
   })
 
@@ -958,6 +981,7 @@ function EventManagerPage() {
       document_name: '',
       category: '',
       file_url: '',
+      is_public: true,
       notes: '',
     })
   }
@@ -969,6 +993,7 @@ function EventManagerPage() {
       document_name: document.document_name || '',
       category: document.category || '',
       file_url: document.file_url || '',
+      is_public: document.is_public !== false,
       notes: document.notes || '',
     })
     scrollToForm('document-form')
@@ -1264,6 +1289,7 @@ function EventManagerPage() {
           document_name: row.document_name || row.name || row.title || '',
           category: row.category || '',
           file_url: row.file_url || row.url || row.link || '',
+          is_public: normaliseBoolean(row.is_public || row.visible_on_public_sheet || row.public || row.visible, true),
           notes: row.notes || '',
         }))
         .filter(row => row.document_name)
@@ -1516,6 +1542,7 @@ function EventManagerPage() {
           document_name: row.document_name || row.name || row.title || '',
           category: row.category || '',
           file_url: row.file_url || row.url || row.link || '',
+          is_public: normaliseBoolean(row.is_public || row.visible_on_public_sheet || row.public || row.visible, true),
           notes: row.notes || '',
         }))
         .filter(row => row.document_name)
@@ -1775,6 +1802,7 @@ function EventManagerPage() {
           file_name: file.name,
           file_type: file.type || '',
           file_size: file.size || 0,
+          is_public: true,
           notes: '',
         }])
 
@@ -1919,6 +1947,7 @@ function EventManagerPage() {
   const filteredTransfers = transfers.filter(matchesSearch)
   const filteredScheduleItems = scheduleItems.filter(matchesSearch)
   const filteredDocuments = documents.filter(matchesSearch)
+  const documentCategories = Array.from(new Set(documents.map(document => document.category || 'Uncategorised'))).sort()
 
   if (loading) return <main className="page"><p>Loading event manager...</p></main>
 
@@ -2870,6 +2899,11 @@ function EventManagerPage() {
             <input value={documentForm.file_url} onChange={e => updateDocumentField('file_url', e.target.value)} placeholder="https://..." />
           </label>
 
+          <label className="checkboxRow documentVisibilityToggle">
+            <input type="checkbox" checked={documentForm.is_public} onChange={e => updateDocumentField('is_public', e.target.checked)} />
+            Visible on public call sheet and crew personal views
+          </label>
+
           <label>
             Notes
             <input value={documentForm.notes} onChange={e => updateDocumentField('notes', e.target.value)} placeholder="Optional" />
@@ -2889,6 +2923,16 @@ function EventManagerPage() {
 
       <section className="eventCard">
         <h2>Documents</h2>
+        <p>Documents are grouped by category. Use the visibility toggle to keep internal files off the public call sheet.</p>
+
+        {documents.length > 0 && (
+          <div className="documentCategoryBar">
+            <span>Categories:</span>
+            {documentCategories.map(category => (
+              <strong key={category}>{category}</strong>
+            ))}
+          </div>
+        )}
 
         {documents.length ? (
           <div className="adminList">
@@ -2896,7 +2940,14 @@ function EventManagerPage() {
               <div className="adminListItem" key={document.id}>
                 <div>
                   <strong>{document.document_name}</strong>
-                  <p>{document.category}</p>
+                  <div className="documentMetaRow">
+                    <span>{document.category || 'Uncategorised'}</span>
+                    <span className={document.is_public === false ? 'documentPrivateBadge' : 'documentPublicBadge'}>
+                      {document.is_public === false ? 'Admin only' : 'Public'}
+                    </span>
+                    {document.file_type && <span>{document.file_type}</span>}
+                    {document.file_size ? <span>{formatFileSize(document.file_size)}</span> : null}
+                  </div>
                   {document.file_url && <DocumentPreviewLinks url={document.file_url} label={document.document_name} />}
                   {document.notes && <p>{document.notes}</p>}
                 </div>
@@ -3000,6 +3051,7 @@ function CrewPersonalView() {
         .from('documents')
         .select('*')
         .eq('event_id', eventData.id)
+        .eq('is_public', true)
 
       const filteredTransfers = (transfers || []).filter(item => {
         const passenger = String(item.passenger || item.passengers || '').toLowerCase()
@@ -3205,7 +3257,10 @@ function CrewPersonalView() {
             data.documents.map(x => (
               <div className="item" key={x.id}>
                 <strong>{x.document_name}</strong>
-                <p>{x.category}</p>
+                <div className="documentMetaRow">
+                  <span>{x.category || 'Uncategorised'}</span>
+                  {x.file_size ? <span>{formatFileSize(x.file_size)}</span> : null}
+                </div>
                 {x.file_url && <DocumentPreviewLinks url={x.file_url} label={x.document_name} />}
                 {x.notes && <p>{x.notes}</p>}
               </div>
@@ -3265,6 +3320,8 @@ function PublicCrewSheet() {
 
         results[table] = data || []
       }
+
+      results.documents = (results.documents || []).filter(document => document.is_public !== false)
 
       setData(results)
       setLoading(false)
@@ -3486,7 +3543,10 @@ function PublicCrewSheet() {
             data.documents.map(x => (
               <div className="item" key={x.id}>
                 <strong>{x.document_name}</strong>
-                <p>{x.category}</p>
+                <div className="documentMetaRow">
+                  <span>{x.category || 'Uncategorised'}</span>
+                  {x.file_size ? <span>{formatFileSize(x.file_size)}</span> : null}
+                </div>
                 {x.file_url && <DocumentPreviewLinks url={x.file_url} label={x.document_name} />}
                 {x.notes && <p>{x.notes}</p>}
               </div>
