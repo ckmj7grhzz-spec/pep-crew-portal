@@ -568,6 +568,8 @@ function EventManagerPage() {
     guest_name: '',
     hotel_name: '',
     address: '',
+    maps_url: '',
+    what3words: '',
     check_in: '',
     check_out: '',
     room_number: '',
@@ -580,7 +582,11 @@ function EventManagerPage() {
     passenger: '',
     transfer_type: '',
     pickup_location: '',
+    pickup_maps_url: '',
+    pickup_what3words: '',
     destination: '',
+    destination_maps_url: '',
+    destination_what3words: '',
     date: '',
     time: '',
     driver_name: '',
@@ -789,6 +795,8 @@ function EventManagerPage() {
       guest_name: '',
       hotel_name: '',
       address: '',
+      maps_url: '',
+      what3words: '',
       check_in: '',
       check_out: '',
       room_number: '',
@@ -805,6 +813,8 @@ function EventManagerPage() {
       guest_name: hotel.guest_name || '',
       hotel_name: hotel.hotel_name || '',
       address: hotel.address || '',
+      maps_url: hotel.maps_url || '',
+      what3words: hotel.what3words || '',
       check_in: hotel.check_in || '',
       check_out: hotel.check_out || '',
       room_number: hotel.room_number || '',
@@ -821,7 +831,11 @@ function EventManagerPage() {
       passenger: '',
       transfer_type: '',
       pickup_location: '',
+      pickup_maps_url: '',
+      pickup_what3words: '',
       destination: '',
+      destination_maps_url: '',
+      destination_what3words: '',
       date: '',
       time: '',
       driver_name: '',
@@ -838,7 +852,11 @@ function EventManagerPage() {
       passenger: transfer.passenger || transfer.passengers || '',
       transfer_type: transfer.transfer_type || '',
       pickup_location: transfer.pickup_location || '',
+      pickup_maps_url: transfer.pickup_maps_url || '',
+      pickup_what3words: transfer.pickup_what3words || '',
       destination: transfer.destination || '',
+      destination_maps_url: transfer.destination_maps_url || '',
+      destination_what3words: transfer.destination_what3words || '',
       date: transfer.date || '',
       time: transfer.time ? String(transfer.time).slice(0, 5) : '',
       driver_name: transfer.driver_name || '',
@@ -1139,6 +1157,8 @@ function EventManagerPage() {
           guest_name: row.guest_name || row.name || row.crew_name || '',
           hotel_name: row.hotel_name || row.hotel || '',
           address: row.address || '',
+          maps_url: row.maps_url || row.google_maps_url || row.hotel_maps_url || '',
+          what3words: row.what3words || row.w3w || row.hotel_what3words || '',
           check_in: row.check_in || row.check_in_date || null,
           check_out: row.check_out || row.check_out_date || null,
           room_number: row.room_number || row.room || '',
@@ -1154,7 +1174,11 @@ function EventManagerPage() {
           passenger: row.passenger || row.name || row.crew_name || '',
           transfer_type: row.transfer_type || row.type || '',
           pickup_location: row.pickup_location || row.pickup || '',
+          pickup_maps_url: row.pickup_maps_url || row.pickup_google_maps_url || row.pickup_map || '',
+          pickup_what3words: row.pickup_what3words || row.pickup_w3w || '',
           destination: row.destination || row.dropoff || row.drop_off || '',
+          destination_maps_url: row.destination_maps_url || row.destination_google_maps_url || row.destination_map || '',
+          destination_what3words: row.destination_what3words || row.destination_w3w || '',
           date: row.date || row.transfer_date || null,
           time: row.time || row.transfer_time || null,
           driver_name: row.driver_name || row.driver || '',
@@ -1292,6 +1316,8 @@ function EventManagerPage() {
           guest_name: row.guest_name || row.name || row.crew_name || '',
           hotel_name: row.hotel_name || row.hotel || '',
           address: row.address || '',
+          maps_url: row.maps_url || row.google_maps_url || row.hotel_maps_url || '',
+          what3words: row.what3words || row.w3w || row.hotel_what3words || '',
           check_in: row.check_in || row.check_in_date || null,
           check_out: row.check_out || row.check_out_date || null,
           room_number: row.room_number || row.room || '',
@@ -1338,7 +1364,11 @@ function EventManagerPage() {
           passenger: row.passenger || row.name || row.crew_name || '',
           transfer_type: row.transfer_type || row.type || '',
           pickup_location: row.pickup_location || row.pickup || '',
+          pickup_maps_url: row.pickup_maps_url || row.pickup_google_maps_url || row.pickup_map || '',
+          pickup_what3words: row.pickup_what3words || row.pickup_w3w || '',
           destination: row.destination || row.dropoff || row.drop_off || '',
+          destination_maps_url: row.destination_maps_url || row.destination_google_maps_url || row.destination_map || '',
+          destination_what3words: row.destination_what3words || row.destination_w3w || '',
           date: row.date || row.transfer_date || null,
           time: row.time || row.transfer_time || null,
           driver_name: row.driver_name || row.driver || '',
@@ -2319,6 +2349,16 @@ function EventManagerPage() {
           </label>
 
           <label>
+            Google Maps URL
+            <input value={hotelForm.maps_url} onChange={e => updateHotelField('maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+          </label>
+
+          <label>
+            What3Words
+            <input value={hotelForm.what3words} onChange={e => updateHotelField('what3words', e.target.value)} placeholder="///filled.count.soap" />
+          </label>
+
+          <label>
             Check In
             <input type="date" value={hotelForm.check_in} onChange={e => updateHotelField('check_in', e.target.value)} />
           </label>
@@ -2371,6 +2411,10 @@ function EventManagerPage() {
                   <strong>{hotel.guest_name}</strong>
                   <p>{hotel.hotel_name}</p>
                   {hotel.address && <p>{hotel.address}</p>}
+                  <div className="locationButtonRow">
+                    {hotel.maps_url && <a href={hotel.maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Hotel Maps</a>}
+                    {hotel.what3words && <a href={`https://what3words.com/${String(hotel.what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Hotel What3Words</a>}
+                  </div>
                   {hotel.check_in && <small>Check-in: {formatDate(hotel.check_in)}</small>}
                   {hotel.check_out && (
                     <small>
@@ -2458,8 +2502,28 @@ function EventManagerPage() {
           </label>
 
           <label>
+            Pickup Google Maps URL
+            <input value={transferForm.pickup_maps_url} onChange={e => updateTransferField('pickup_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+          </label>
+
+          <label>
+            Pickup What3Words
+            <input value={transferForm.pickup_what3words} onChange={e => updateTransferField('pickup_what3words', e.target.value)} placeholder="///filled.count.soap" />
+          </label>
+
+          <label>
             Destination
             <input value={transferForm.destination} onChange={e => updateTransferField('destination', e.target.value)} placeholder="AC Bella Sky Copenhagen" />
+          </label>
+
+          <label>
+            Destination Google Maps URL
+            <input value={transferForm.destination_maps_url} onChange={e => updateTransferField('destination_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+          </label>
+
+          <label>
+            Destination What3Words
+            <input value={transferForm.destination_what3words} onChange={e => updateTransferField('destination_what3words', e.target.value)} placeholder="///filled.count.soap" />
           </label>
 
           <label>
@@ -2515,6 +2579,12 @@ function EventManagerPage() {
                   <strong>{transfer.passenger || transfer.passengers}</strong>
                   <p>{transfer.transfer_type}</p>
                   <p>{transfer.pickup_location} → {transfer.destination}</p>
+                  <div className="locationButtonRow">
+                    {transfer.pickup_maps_url && <a href={transfer.pickup_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Pickup Maps</a>}
+                    {transfer.pickup_what3words && <a href={`https://what3words.com/${String(transfer.pickup_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Pickup What3Words</a>}
+                    {transfer.destination_maps_url && <a href={transfer.destination_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Destination Maps</a>}
+                    {transfer.destination_what3words && <a href={`https://what3words.com/${String(transfer.destination_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Destination What3Words</a>}
+                  </div>
                   <small>
                     {formatDate(transfer.date)}
                     {transfer.time && ` at ${formatTime(transfer.time)}`}
@@ -2938,6 +3008,10 @@ function CrewPersonalView() {
               <div className="item" key={x.id}>
                 <strong>{x.hotel_name}</strong>
                 {x.address && <p>{x.address}</p>}
+                <div className="locationButtonRow">
+                  {x.maps_url && <a href={x.maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Hotel Maps</a>}
+                  {x.what3words && <a href={`https://what3words.com/${String(x.what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Hotel What3Words</a>}
+                </div>
                 <small>
                   Check-in: {formatDate(x.check_in)}
                   {x.check_out && (
@@ -2979,6 +3053,12 @@ function CrewPersonalView() {
               <div className="item" key={x.id}>
                 <strong>{x.transfer_type}</strong>
                 <p>{x.pickup_location} → {x.destination}</p>
+                <div className="locationButtonRow">
+                  {x.pickup_maps_url && <a href={x.pickup_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Pickup Maps</a>}
+                  {x.pickup_what3words && <a href={`https://what3words.com/${String(x.pickup_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Pickup What3Words</a>}
+                  {x.destination_maps_url && <a href={x.destination_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Destination Maps</a>}
+                  {x.destination_what3words && <a href={`https://what3words.com/${String(x.destination_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Destination What3Words</a>}
+                </div>
                 <small>
                   {formatDate(x.date)}
                   {x.time && ` at ${formatTime(x.time)}`}
@@ -3207,6 +3287,12 @@ function PublicCrewSheet() {
               <div className="item" key={x.id}>
                 <strong>{x.transfer_type}</strong>
                 <p>{x.pickup_location} → {x.destination}</p>
+                <div className="locationButtonRow">
+                  {x.pickup_maps_url && <a href={x.pickup_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Pickup Maps</a>}
+                  {x.pickup_what3words && <a href={`https://what3words.com/${String(x.pickup_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Pickup What3Words</a>}
+                  {x.destination_maps_url && <a href={x.destination_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Destination Maps</a>}
+                  {x.destination_what3words && <a href={`https://what3words.com/${String(x.destination_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Destination What3Words</a>}
+                </div>
                 <small>
                   {formatDate(x.date)}
                   {x.time && ` at ${formatTime(x.time)}`}
@@ -3240,6 +3326,10 @@ function PublicCrewSheet() {
                 <strong>{x.guest_name}</strong>
                 <p>{x.hotel_name}</p>
                 {x.address && <p>{x.address}</p>}
+                <div className="locationButtonRow">
+                  {x.maps_url && <a href={x.maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Hotel Maps</a>}
+                  {x.what3words && <a href={`https://what3words.com/${String(x.what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Hotel What3Words</a>}
+                </div>
                 <small>
                   Check-in: {formatDate(x.check_in)}
                   {x.check_out && (
