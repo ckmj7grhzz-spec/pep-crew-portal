@@ -1873,6 +1873,25 @@ function EventManagerPage() {
     loadEventManager()
   }
 
+  async function toggleDocumentVisibility(document) {
+    setMessage('')
+
+    const nextVisibility = document.is_public === false
+
+    const { error } = await supabase
+      .from('documents')
+      .update({ is_public: nextVisibility })
+      .eq('id', document.id)
+
+    if (error) {
+      setMessage(`Could not update document visibility: ${error.message}`)
+      return
+    }
+
+    setMessage(nextVisibility ? 'Document is now visible publicly.' : 'Document is now admin only.')
+    await loadEventManager()
+  }
+
 
 
   const crewNamesWithFlights = new Set(flights.map(flight => flight.crew_name).filter(Boolean))
@@ -2953,6 +2972,13 @@ function EventManagerPage() {
                 </div>
 
                 <div className="adminActions">
+                  <button
+                    type="button"
+                    className={document.is_public === false ? 'visibilityPublicButton' : 'visibilityPrivateButton'}
+                    onClick={() => toggleDocumentVisibility(document)}
+                  >
+                    {document.is_public === false ? 'Make Public' : 'Make Admin Only'}
+                  </button>
                   <button type="button" onClick={() => startEditDocument(document)}>Edit</button>
                   <button type="button" onClick={() => deleteDocument(document.id)}>Delete</button>
                 </div>
