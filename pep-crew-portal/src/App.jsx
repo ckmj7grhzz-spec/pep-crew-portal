@@ -534,6 +534,7 @@ function EventManagerPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
+  const [globalSearch, setGlobalSearch] = useState('')
   const [editingCrewId, setEditingCrewId] = useState(null)
   const [editingFlightId, setEditingFlightId] = useState(null)
   const [editingHotelId, setEditingHotelId] = useState(null)
@@ -1846,6 +1847,23 @@ function EventManagerPage() {
   const hotelCompletion = crew.length ? Math.round((crewNamesWithHotels.size / crew.length) * 100) : 100
   const transferCompletion = crew.length ? Math.round((crewNamesWithTransfers.size / crew.length) * 100) : 100
 
+  const searchText = globalSearch.toLowerCase().trim()
+
+  function matchesSearch(item) {
+    if (!searchText) return true
+    return Object.values(item || {})
+      .join(' ')
+      .toLowerCase()
+      .includes(searchText)
+  }
+
+  const filteredCrew = crew.filter(matchesSearch)
+  const filteredFlights = flights.filter(matchesSearch)
+  const filteredHotels = hotels.filter(matchesSearch)
+  const filteredTransfers = transfers.filter(matchesSearch)
+  const filteredScheduleItems = scheduleItems.filter(matchesSearch)
+  const filteredDocuments = documents.filter(matchesSearch)
+
   if (loading) return <main className="page"><p>Loading event manager...</p></main>
 
   if (!event) {
@@ -1914,6 +1932,23 @@ function EventManagerPage() {
             <strong>{documents.length}</strong>
             <span>Documents</span>
           </div>
+        </div>
+
+        <div className="globalSearchBox">
+          <label>
+            Global Search
+            <input
+              value={globalSearch}
+              onChange={e => setGlobalSearch(e.target.value)}
+              placeholder="Search crew, flights, hotels, transfers, schedule or documents..."
+            />
+          </label>
+
+          {globalSearch && (
+            <button type="button" onClick={() => setGlobalSearch('')}>
+              Clear
+            </button>
+          )}
         </div>
 
         <div className="tabs">
@@ -2153,7 +2188,7 @@ function EventManagerPage() {
 
         {crew.length ? (
           <div className="adminList">
-            {crew.map(member => (
+            {filteredCrew.map(member => (
               <div className="adminListItem" key={member.id}>
                 <div>
                   <strong>{member.name}</strong>
@@ -2269,7 +2304,7 @@ function EventManagerPage() {
 
         {flights.length ? (
           <div className="adminList">
-            {flights.map(flight => (
+            {filteredFlights.map(flight => (
               <div className="adminListItem" key={flight.id}>
                 <div>
                   <strong>{flight.crew_name}</strong>
@@ -2405,7 +2440,7 @@ function EventManagerPage() {
 
         {hotels.length ? (
           <div className="adminList">
-            {hotels.map(hotel => (
+            {filteredHotels.map(hotel => (
               <div className="adminListItem" key={hotel.id}>
                 <div>
                   <strong>{hotel.guest_name}</strong>
@@ -2573,7 +2608,7 @@ function EventManagerPage() {
 
         {transfers.length ? (
           <div className="adminList">
-            {transfers.map(transfer => (
+            {filteredTransfers.map(transfer => (
               <div className="adminListItem" key={transfer.id}>
                 <div>
                   <strong>{transfer.passenger || transfer.passengers}</strong>
@@ -2695,7 +2730,7 @@ function EventManagerPage() {
 
         {scheduleItems.length ? (
           <div className="adminList">
-            {scheduleItems.map(item => (
+            {filteredScheduleItems.map(item => (
               <div className="adminListItem" key={item.id}>
                 <div>
                   <strong>{item.activity}</strong>
@@ -2801,7 +2836,7 @@ function EventManagerPage() {
 
         {documents.length ? (
           <div className="adminList">
-            {documents.map(document => (
+            {filteredDocuments.map(document => (
               <div className="adminListItem" key={document.id}>
                 <div>
                   <strong>{document.document_name}</strong>
