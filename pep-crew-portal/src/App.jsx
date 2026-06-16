@@ -296,6 +296,11 @@ function AdminPage() {
     public_slug: '',
     share_enabled: true,
     current_rms_id: '',
+    venue_address: '',
+    venue_maps_url: '',
+    venue_what3words: '',
+    venue_access_notes: '',
+    loading_bay_notes: '',
   })
 
   useEffect(() => {
@@ -347,6 +352,11 @@ function AdminPage() {
       public_slug: '',
       share_enabled: true,
       current_rms_id: '',
+      venue_address: '',
+      venue_maps_url: '',
+      venue_what3words: '',
+      venue_access_notes: '',
+      loading_bay_notes: '',
     })
 
     setMessage('Event created.')
@@ -400,6 +410,31 @@ function AdminPage() {
           <label>
             Venue
             <input value={form.venue} onChange={e => updateField('venue', e.target.value)} placeholder="Bella Center Copenhagen" />
+          </label>
+
+          <label>
+            Venue Address
+            <input value={form.venue_address} onChange={e => updateField('venue_address', e.target.value)} placeholder="Center Blvd. 5, Copenhagen" />
+          </label>
+
+          <label>
+            Google Maps URL
+            <input value={form.venue_maps_url} onChange={e => updateField('venue_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+          </label>
+
+          <label>
+            What3Words
+            <input value={form.venue_what3words} onChange={e => updateField('venue_what3words', e.target.value)} placeholder="///filled.count.soap" />
+          </label>
+
+          <label>
+            Access Notes
+            <input value={form.venue_access_notes} onChange={e => updateField('venue_access_notes', e.target.value)} placeholder="Use north entrance / exhibitor access" />
+          </label>
+
+          <label>
+            Loading Bay Notes
+            <input value={form.loading_bay_notes} onChange={e => updateField('loading_bay_notes', e.target.value)} placeholder="Loading bay 3, vehicle pass required" />
           </label>
 
           <label>
@@ -483,6 +518,13 @@ function AdminPage() {
 function EventManagerPage() {
   const slug = window.location.pathname.replace('/admin/event/', '')
   const [event, setEvent] = useState(null)
+  const [eventLocationForm, setEventLocationForm] = useState({
+    venue_address: '',
+    venue_maps_url: '',
+    venue_what3words: '',
+    venue_access_notes: '',
+    loading_bay_notes: '',
+  })
   const [crew, setCrew] = useState([])
   const [flights, setFlights] = useState([])
   const [hotels, setHotels] = useState([])
@@ -584,6 +626,13 @@ function EventManagerPage() {
     }
 
     setEvent(eventData)
+    setEventLocationForm({
+      venue_address: eventData.venue_address || '',
+      venue_maps_url: eventData.venue_maps_url || '',
+      venue_what3words: eventData.venue_what3words || '',
+      venue_access_notes: eventData.venue_access_notes || '',
+      loading_bay_notes: eventData.loading_bay_notes || '',
+    })
 
     const { data: crewData, error: crewError } = await supabase
       .from('crew')
@@ -666,6 +715,31 @@ function EventManagerPage() {
   function updateDocumentField(field, value) {
     setDocumentForm({ ...documentForm, [field]: value })
   }
+
+  function updateEventLocationField(field, value) {
+    setEventLocationForm({ ...eventLocationForm, [field]: value })
+  }
+
+  async function saveEventLocation(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!event) return
+
+    const { error } = await supabase
+      .from('Events')
+      .update(eventLocationForm)
+      .eq('id', event.id)
+
+    if (error) {
+      setMessage(`Could not save location details: ${error.message}`)
+      return
+    }
+
+    setMessage('Location details updated.')
+    await loadEventManager()
+  }
+
 
 
   function scrollToForm(id) {
@@ -1676,7 +1750,12 @@ function EventManagerPage() {
             <a href="/admin" className="backLink"><ArrowLeft size={16} /> Back to Admin</a>
             <h1>{event.show_name}</h1>
             <p>{formatDate(event.start_date)} - {formatDate(event.end_date)} • {event.venue}</p>
+            {event.venue_address && <small>{event.venue_address}</small>}
             <small>Project Manager: {event.project_manager || 'Not set'}</small>
+            <div className="locationButtonRow">
+              {event.venue_maps_url && <a href={event.venue_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Open Maps</a>}
+              {event.venue_what3words && <a href={`https://what3words.com/${String(event.venue_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// What3Words</a>}
+            </div>
           </div>
 
           <div className="adminActions managerTopActions">
@@ -1780,6 +1859,40 @@ function EventManagerPage() {
               <div><strong>Project Manager</strong><span>{event.project_manager || 'Not set'}</span></div>
               <div><strong>Venue</strong><span>{event.venue || 'Not set'}</span></div>
             </div>
+          </section>
+
+          <section className="eventCard">
+            <h2>Venue Location</h2>
+            <p>Add map links and access notes for the venue. These appear on the public call sheet and crew personal view.</p>
+
+            <form onSubmit={saveEventLocation} className="adminForm">
+              <label>
+                Venue Address
+                <input value={eventLocationForm.venue_address} onChange={e => updateEventLocationField('venue_address', e.target.value)} placeholder="Center Blvd. 5, Copenhagen" />
+              </label>
+
+              <label>
+                Google Maps URL
+                <input value={eventLocationForm.venue_maps_url} onChange={e => updateEventLocationField('venue_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+              </label>
+
+              <label>
+                What3Words
+                <input value={eventLocationForm.venue_what3words} onChange={e => updateEventLocationField('venue_what3words', e.target.value)} placeholder="///filled.count.soap" />
+              </label>
+
+              <label>
+                Access Notes
+                <input value={eventLocationForm.venue_access_notes} onChange={e => updateEventLocationField('venue_access_notes', e.target.value)} placeholder="Use north entrance / exhibitor access" />
+              </label>
+
+              <label>
+                Loading Bay Notes
+                <input value={eventLocationForm.loading_bay_notes} onChange={e => updateEventLocationField('loading_bay_notes', e.target.value)} placeholder="Loading bay 3, vehicle pass required" />
+              </label>
+
+              <button className="primaryButton" type="submit">Save Location Details</button>
+            </form>
           </section>
 
           <section className="eventCard">
@@ -2669,11 +2782,22 @@ function CrewPersonalView() {
         <a href={`/${event.public_slug}`} className="backLink"><ArrowLeft size={16} /> Back to Full Call Sheet</a>
         <h2>{event.show_name}</h2>
         <p>{event.venue}</p>
+        {event.venue_address && <p><strong>Address:</strong> {event.venue_address}</p>}
+        <div className="locationButtonRow">
+          {event.venue_maps_url && <a href={event.venue_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Open Maps</a>}
+          {event.venue_what3words && <a href={`https://what3words.com/${String(event.venue_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// What3Words</a>}
+        </div>
         <div className="eventGrid">
           <span><strong>Role:</strong> {member.role || 'Not set'}</span>
           <span><strong>Department:</strong> {member.department || 'Not set'}</span>
           <span><strong>Mobile:</strong> {member.mobile || 'Not set'}</span>
         </div>
+        {(event.venue_access_notes || event.loading_bay_notes) && (
+          <div className="locationNotes">
+            {event.venue_access_notes && <p><strong>Access:</strong> {event.venue_access_notes}</p>}
+            {event.loading_bay_notes && <p><strong>Loading Bay:</strong> {event.loading_bay_notes}</p>}
+          </div>
+        )}
         {member.notes && <p><strong>Notes:</strong> {member.notes}</p>}
       </section>
 
@@ -2895,11 +3019,22 @@ function PublicCrewSheet() {
       <section className="eventCard">
         <h2>{event.show_name}</h2>
         <p>{event.venue}</p>
+        {event.venue_address && <p><strong>Address:</strong> {event.venue_address}</p>}
+        <div className="locationButtonRow">
+          {event.venue_maps_url && <a href={event.venue_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Open Maps</a>}
+          {event.venue_what3words && <a href={`https://what3words.com/${String(event.venue_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// What3Words</a>}
+        </div>
         <div className="eventGrid">
           <span><strong>Start:</strong> {formatDate(event.start_date)}</span>
           <span><strong>End:</strong> {formatDate(event.end_date)}</span>
           <span><strong>Project Manager:</strong> {event.project_manager}</span>
         </div>
+        {(event.venue_access_notes || event.loading_bay_notes) && (
+          <div className="locationNotes">
+            {event.venue_access_notes && <p><strong>Access:</strong> {event.venue_access_notes}</p>}
+            {event.loading_bay_notes && <p><strong>Loading Bay:</strong> {event.loading_bay_notes}</p>}
+          </div>
+        )}
       </section>
 
       <div className="accordionStack">
