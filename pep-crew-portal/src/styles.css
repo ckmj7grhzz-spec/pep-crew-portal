@@ -1967,3 +1967,149 @@ th {
     grid-column: 1 / -1;
   }
 }
+
+
+/* Admin home dashboard */
+.adminOverviewDashboard {
+  display: grid;
+  gap: 22px;
+}
+
+.adminOverviewGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+.adminOverviewGrid div {
+  background: var(--pep-soft);
+  border: 1px solid var(--pep-border);
+  border-radius: 16px;
+  padding: 20px;
+  display: grid;
+  gap: 6px;
+  min-height: 110px;
+  align-content: center;
+}
+
+.adminOverviewGrid strong {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.adminOverviewGrid span {
+  color: var(--pep-muted);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.readyNotificationBox {
+  background: var(--green-bg);
+  border: 1px solid var(--green-border);
+  border-radius: 16px;
+  padding: 18px;
+  color: var(--green-text);
+}
+
+.readyNotificationBox strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 18px;
+}
+
+.readyNotificationBox p {
+  margin: 0;
+  color: var(--green-text) !important;
+  font-weight: 800;
+}
+
+.collapsibleCreateCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.collapsibleCreateHeader {
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+  color: var(--pep-text);
+  padding: 24px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.collapsibleCreateHeader strong {
+  display: block;
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.collapsibleCreateHeader small {
+  color: var(--pep-muted);
+  font-weight: 800;
+}
+
+.collapsibleCreateHeader.active {
+  background: var(--pep-green);
+  color: #ffffff;
+}
+
+.collapsibleCreateHeader.active small {
+  color: rgba(255,255,255,0.85);
+}
+
+.collapsibleCreateBody {
+  border-top: 1px solid var(--pep-border);
+  padding: 28px;
+}
+
+.crewSheetStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 12px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid var(--pep-border);
+}
+
+.statusComplete {
+  background: #eef2ff !important;
+  border-color: #a5b4fc !important;
+}
+
+.statusComplete,
+.statusComplete strong,
+.statusComplete span,
+.statusComplete small,
+.statusComplete h2,
+.statusComplete h3,
+.statusComplete p {
+  color: #3730a3 !important;
+}
+
+@media (max-width: 1000px) {
+  .adminOverviewGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .adminOverviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .collapsibleCreateHeader {
+    padding: 22px;
+  }
+
+  .collapsibleCreateBody {
+    padding: 22px;
+  }
+}
