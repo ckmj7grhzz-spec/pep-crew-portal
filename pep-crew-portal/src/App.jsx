@@ -406,22 +406,45 @@ function AdminShell({ children }) {
   )
 }
 
+function readStoredValue(key, fallback) {
+  if (typeof window === 'undefined') return fallback
+
+  try {
+    const stored = window.localStorage.getItem(key)
+    if (stored === null) return fallback
+    return JSON.parse(stored)
+  } catch (error) {
+    return fallback
+  }
+}
+
+function writeStoredValue(key, value) {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  } catch (error) {
+    // Ignore storage errors so the portal still works if localStorage is unavailable.
+  }
+}
+
 function AdminPage() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
-  const [showCreateCrewSheet, setShowCreateCrewSheet] = useState(false)
-  const [showExistingCrewSheets, setShowExistingCrewSheets] = useState(true)
-  const [activePortalTab, setActivePortalTab] = useState('crew_sheets')
+  const [showCreateCrewSheet, setShowCreateCrewSheet] = useState(() => readStoredValue('pep.showCreateCrewSheet', false))
+  const [showExistingCrewSheets, setShowExistingCrewSheets] = useState(() => readStoredValue('pep.showExistingCrewSheets', true))
+  const [activePortalTab, setActivePortalTab] = useState(() => readStoredValue('pep.activePortalTab', 'crew_sheets'))
   const [crewSheetSearch, setCrewSheetSearch] = useState('')
   const [staffMembers, setStaffMembers] = useState([])
   const [staffLoading, setStaffLoading] = useState(true)
   const [staffSearch, setStaffSearch] = useState('')
-  const [openStaffGroups, setOpenStaffGroups] = useState({
+  const [openStaffGroups, setOpenStaffGroups] = useState(() => readStoredValue('pep.openStaffGroups', {
     staff: true,
     freelancers: true,
     inactive: false,
-  })
+  }))
+  const [showAddStaffMember, setShowAddStaffMember] = useState(() => readStoredValue('pep.showAddStaffMember', false))
   const [editingStaffId, setEditingStaffId] = useState(null)
   const [staffForm, setStaffForm] = useState({
     name: '',
@@ -460,6 +483,26 @@ function AdminPage() {
     loadEvents()
     loadStaffMembers()
   }, [])
+
+  useEffect(() => {
+    writeStoredValue('pep.activePortalTab', activePortalTab)
+  }, [activePortalTab])
+
+  useEffect(() => {
+    writeStoredValue('pep.showCreateCrewSheet', showCreateCrewSheet)
+  }, [showCreateCrewSheet])
+
+  useEffect(() => {
+    writeStoredValue('pep.showExistingCrewSheets', showExistingCrewSheets)
+  }, [showExistingCrewSheets])
+
+  useEffect(() => {
+    writeStoredValue('pep.openStaffGroups', openStaffGroups)
+  }, [openStaffGroups])
+
+  useEffect(() => {
+    writeStoredValue('pep.showAddStaffMember', showAddStaffMember)
+  }, [showAddStaffMember])
 
   async function loadEvents() {
     setLoading(true)
@@ -509,6 +552,7 @@ function AdminPage() {
   }
 
   function startEditStaff(member) {
+    setShowAddStaffMember(true)
     setEditingStaffId(member.id)
     setStaffForm({
       name: member.name || '',
@@ -598,6 +642,22 @@ function AdminPage() {
     const next = { ...form, [field]: value }
     if (field === 'show_name' && !form.public_slug) next.public_slug = slugify(value)
     setForm(next)
+  }
+
+  function changePortalTab(tab) {
+    setActivePortalTab(tab)
+  }
+
+  function toggleCreateCrewSheet() {
+    setShowCreateCrewSheet(current => !current)
+  }
+
+  function toggleExistingCrewSheets() {
+    setShowExistingCrewSheets(current => !current)
+  }
+
+  function toggleAddStaffMember() {
+    setShowAddStaffMember(current => !current)
   }
 
   async function createEvent(e) {
@@ -796,11 +856,14 @@ function AdminPage() {
     return (
       <div className={`staffGroup staffGroup${tone === 'freelancer' ? 'Freelancer' : tone === 'inactive' ? 'Inactive' : 'Default'}`}>
         <button type="button" className={isOpen ? 'staffGroupHeader open' : 'staffGroupHeader'} onClick={() => toggleStaffGroup(groupKey)}>
-          <span>
+          <span className="staffGroupHeaderText">
             <strong>{title}</strong>
             <small>{records.length} {records.length === 1 ? 'record' : 'records'}</small>
           </span>
-          <ChevronDown className={isOpen ? 'chevron open' : 'chevron'} />
+          <span className="staffGroupHeaderRight">
+            <span className="staffGroupCount">{records.length}</span>
+            <ChevronDown className={isOpen ? 'chevron open' : 'chevron'} />
+          </span>
         </button>
 
         {isOpen && (
@@ -913,28 +976,28 @@ function AdminPage() {
         <button
           type="button"
           className={activePortalTab === 'crew_sheets' ? 'active' : ''}
-          onClick={() => setActivePortalTab('crew_sheets')}
+          onClick={() => changePortalTab('crew_sheets')}
         >
           Crew Sheets
         </button>
         <button
           type="button"
           className={activePortalTab === 'operations_calendar' ? 'active' : ''}
-          onClick={() => setActivePortalTab('operations_calendar')}
+          onClick={() => changePortalTab('operations_calendar')}
         >
           Operations Calendar
         </button>
         <button
           type="button"
           className={activePortalTab === 'staff' ? 'active' : ''}
-          onClick={() => setActivePortalTab('staff')}
+          onClick={() => changePortalTab('staff')}
         >
           Staff
         </button>
         <button
           type="button"
           className={activePortalTab === 'reports' ? 'active' : ''}
-          onClick={() => setActivePortalTab('reports')}
+          onClick={() => changePortalTab('reports')}
         >
           Reports
         </button>
@@ -986,7 +1049,7 @@ function AdminPage() {
         <button
           type="button"
           className={showCreateCrewSheet ? 'collapsibleCreateHeader active' : 'collapsibleCreateHeader'}
-          onClick={() => setShowCreateCrewSheet(!showCreateCrewSheet)}
+          onClick={toggleCreateCrewSheet}
         >
           <span>
             <strong>Create New Crew Sheet</strong>
@@ -1102,7 +1165,7 @@ function AdminPage() {
         <button
           type="button"
           className={showExistingCrewSheets ? 'collapsibleExistingHeader active' : 'collapsibleExistingHeader'}
-          onClick={() => setShowExistingCrewSheets(!showExistingCrewSheets)}
+          onClick={toggleExistingCrewSheets}
         >
           <span>
             <strong>Existing Crew Sheets</strong>
@@ -1208,18 +1271,26 @@ function AdminPage() {
 
           {message && <p className="adminMessage adminHomeMessage">{message}</p>}
 
-          <section className="eventCard staffManagementCard">
-            <div className="staffSectionHeader">
-              <div>
-                <p className="eyebrowDark">Add / Edit</p>
-                <h2>{editingStaffId ? 'Edit Staff Member' : 'Add Staff or Freelancer'}</h2>
-              </div>
-              {editingStaffId && (
-                <button type="button" className="secondaryButton" onClick={resetStaffForm}>
-                  Cancel Edit
-                </button>
-              )}
-            </div>
+          <section className="eventCard staffManagementCard collapsibleStaffFormCard">
+            <button
+              type="button"
+              className={showAddStaffMember ? 'collapsibleStaffFormHeader active' : 'collapsibleStaffFormHeader'}
+              onClick={toggleAddStaffMember}
+            >
+              <span>
+                <strong>{editingStaffId ? 'Edit Staff Member' : 'Add Staff or Freelancer'}</strong>
+                <small>Create and manage full-time staff and freelancer records.</small>
+              </span>
+              <ChevronDown className={showAddStaffMember ? 'chevron open' : 'chevron'} />
+            </button>
+
+            {showAddStaffMember && (
+              <div className="collapsibleStaffFormBody">
+                {editingStaffId && (
+                  <button type="button" className="secondaryButton staffCancelEditButton" onClick={resetStaffForm}>
+                    Cancel Edit
+                  </button>
+                )}
 
             <form onSubmit={saveStaffMember} className="adminForm staffForm">
               <label>
@@ -1274,6 +1345,8 @@ function AdminPage() {
                 <Plus size={18} /> {editingStaffId ? 'Save Staff Member' : 'Add Staff Member'}
               </button>
             </form>
+              </div>
+            )}
           </section>
 
           <section className="eventCard staffDirectoryCard">
