@@ -539,8 +539,8 @@ function AdminPage() {
   async function updateCrewSheetStatus(eventRecord, status) {
     const payload = {
       crew_sheet_status: status,
-      crew_sheet_ready_at: status === 'ready_to_go' ? new Date().toISOString() : eventRecord.crew_sheet_ready_at || null,
-      show_completed_at: status === 'show_complete' ? new Date().toISOString() : eventRecord.show_completed_at || null,
+      crew_sheet_ready_at: status === 'ready_to_go' ? new Date().toISOString() : null,
+      show_completed_at: status === 'show_complete' ? new Date().toISOString() : null,
     }
 
     const { error } = await supabase
@@ -740,16 +740,24 @@ function AdminPage() {
           <p>Loading events...</p>
         ) : events.length ? (
           <div className="adminList">
-            {events.map(eventRecord => (
-              <div className="adminListItem" key={eventRecord.id}>
+            {events.map(eventRecord => {
+              const crewSheetStatus = getCrewSheetStatus(eventRecord)
+              const crewSheetCardClass = crewSheetStatus === 'ready_to_go'
+                ? 'adminListItem crewSheetReadyCard'
+                : crewSheetStatus === 'show_complete'
+                  ? 'adminListItem crewSheetCompleteCard'
+                  : 'adminListItem'
+
+              return (
+              <div className={crewSheetCardClass} key={eventRecord.id}>
                 <div>
                   <strong>{eventRecord.show_name}</strong>
                   <p>{eventRecord.venue}</p>
                   <small>{formatDate(eventRecord.start_date)} → {formatDate(eventRecord.end_date)}</small>
                   <br />
                   <small>Slug: /{eventRecord.public_slug}</small>
-                  <div className={`crewSheetStatusBadge ${getCrewSheetStatusClass(getCrewSheetStatus(eventRecord))}`}>
-                    {getCrewSheetStatusLabel(getCrewSheetStatus(eventRecord))}
+                  <div className={`crewSheetStatusBadge ${getCrewSheetStatusClass(crewSheetStatus)}`}>
+                    {getCrewSheetStatusLabel(crewSheetStatus)}
                   </div>
                 </div>
 
@@ -761,17 +769,22 @@ function AdminPage() {
                   <button type="button" onClick={() => copyLink(eventRecord.public_slug)}>
                     <Copy size={16} /> Copy Link
                   </button>
-                  {getCrewSheetStatus(eventRecord) !== 'ready_to_go' && getCrewSheetStatus(eventRecord) !== 'show_complete' && (
+                  {crewSheetStatus === 'in_progress' && (
                     <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'ready_to_go')}>
                       Mark Ready
                     </button>
                   )}
-                  {getCrewSheetStatus(eventRecord) !== 'show_complete' && (
+                  {crewSheetStatus === 'ready_to_go' && (
+                    <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'in_progress')}>
+                      Mark In Progress
+                    </button>
+                  )}
+                  {crewSheetStatus !== 'show_complete' && (
                     <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'show_complete')}>
                       Mark Show Complete
                     </button>
                   )}
-                  {getCrewSheetStatus(eventRecord) !== 'in_progress' && (
+                  {crewSheetStatus === 'show_complete' && (
                     <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'in_progress')}>
                       Reopen
                     </button>
@@ -781,7 +794,7 @@ function AdminPage() {
                   </button>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         ) : (
           <Empty text="No crew sheets created yet." />
