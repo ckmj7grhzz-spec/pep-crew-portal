@@ -6,6 +6,8 @@ import './styles.css'
 import * as XLSX from 'xlsx'
 import pepLogo from './BW Logo_Pep_With bg.png'
 
+const CALENDAR_MONTH_SHORTCUTS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 function formatDate(dateString) {
   if (!dateString) return ''
   return new Date(dateString).toLocaleDateString('en-GB', {
@@ -1229,11 +1231,26 @@ function AdminPage() {
           </div>
 
           <div className="calendarToolbar">
-            <div className="calendarViewTabs" role="tablist" aria-label="Calendar views">
-              <button type="button" className={calendarView === 'month' ? 'active' : ''} onClick={() => changeCalendarView('month')}>Monthly</button>
-              <button type="button" className={calendarView === 'two_week' ? 'active' : ''} onClick={() => changeCalendarView('two_week')}>Two-weekly</button>
-              <button type="button" className={calendarView === 'week' ? 'active' : ''} onClick={() => changeCalendarView('week')}>Weekly</button>
-              <button type="button" className={calendarView === 'day' ? 'active' : ''} onClick={() => changeCalendarView('day')}>Daily</button>
+            <div className="calendarViewControlGroup">
+              <div className="calendarViewTabs" role="tablist" aria-label="Calendar views">
+                <button type="button" className={calendarView === 'month' ? 'active' : ''} onClick={() => changeCalendarView('month')}>Monthly</button>
+                <button type="button" className={calendarView === 'two_week' ? 'active' : ''} onClick={() => changeCalendarView('two_week')}>Two-weekly</button>
+                <button type="button" className={calendarView === 'week' ? 'active' : ''} onClick={() => changeCalendarView('week')}>Weekly</button>
+                <button type="button" className={calendarView === 'day' ? 'active' : ''} onClick={() => changeCalendarView('day')}>Daily</button>
+              </div>
+
+              <div className="calendarMonthJumpBar" aria-label="Jump to month">
+                {CALENDAR_MONTH_SHORTCUTS.map((monthName, monthIndex) => (
+                  <button
+                    type="button"
+                    key={monthName}
+                    className={focus.getMonth() === monthIndex ? 'active' : ''}
+                    onClick={() => setCalendarFocusDate(formatCalendarDateInput(new Date(focus.getFullYear(), monthIndex, 1)))}
+                  >
+                    {monthName}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <label className="calendarDatePicker">
