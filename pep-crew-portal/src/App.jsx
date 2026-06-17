@@ -6,8 +6,6 @@ import './styles.css'
 import * as XLSX from 'xlsx'
 import pepLogo from './BW Logo_Pep_With bg.png'
 
-const CALENDAR_MONTH_SHORTCUTS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
 function formatDate(dateString) {
   if (!dateString) return ''
   return new Date(dateString).toLocaleDateString('en-GB', {
@@ -943,6 +941,16 @@ function AdminPage() {
     setCalendarView(view)
   }
 
+  function jumpCalendarToMonth(monthIndex) {
+    const focus = parseCalendarDate(calendarFocusDate) || new Date()
+    const next = new Date(focus.getFullYear(), monthIndex, 1)
+    setCalendarFocusDate(formatCalendarDateInput(next))
+  }
+
+  function jumpCalendarToToday() {
+    setCalendarFocusDate(formatCalendarDateInput(new Date()))
+  }
+
   function moveCalendar(direction) {
     const focus = parseCalendarDate(calendarFocusDate) || new Date()
     let next = focus
@@ -1225,13 +1233,13 @@ function AdminPage() {
             </div>
             <div className="calendarNavigationActions">
               <button type="button" onClick={() => moveCalendar(-1)}>Previous</button>
-              <button type="button" onClick={() => setCalendarFocusDate(formatCalendarDateInput(new Date()))}>Today</button>
+              <button type="button" onClick={jumpCalendarToToday}>Today</button>
               <button type="button" onClick={() => moveCalendar(1)}>Next</button>
             </div>
           </div>
 
           <div className="calendarToolbar">
-            <div className="calendarViewControlGroup">
+            <div className="calendarNavGroup">
               <div className="calendarViewTabs" role="tablist" aria-label="Calendar views">
                 <button type="button" className={calendarView === 'month' ? 'active' : ''} onClick={() => changeCalendarView('month')}>Monthly</button>
                 <button type="button" className={calendarView === 'two_week' ? 'active' : ''} onClick={() => changeCalendarView('two_week')}>Two-weekly</button>
@@ -1239,17 +1247,24 @@ function AdminPage() {
                 <button type="button" className={calendarView === 'day' ? 'active' : ''} onClick={() => changeCalendarView('day')}>Daily</button>
               </div>
 
-              <div className="calendarMonthJumpBar" aria-label="Jump to month">
-                {CALENDAR_MONTH_SHORTCUTS.map((monthName, monthIndex) => (
-                  <button
-                    type="button"
-                    key={monthName}
-                    className={focus.getMonth() === monthIndex ? 'active' : ''}
-                    onClick={() => setCalendarFocusDate(formatCalendarDateInput(new Date(focus.getFullYear(), monthIndex, 1)))}
-                  >
-                    {monthName}
-                  </button>
-                ))}
+              <div className="calendarMonthJumpRow" aria-label="Jump to month">
+                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((monthName, monthIndex) => {
+                  const today = new Date()
+                  const selectedMonth = calendarFocus.getMonth() === monthIndex
+                  const currentMonth = today.getFullYear() === calendarFocus.getFullYear() && today.getMonth() === monthIndex
+
+                  return (
+                    <button
+                      type="button"
+                      key={monthName}
+                      className={`${selectedMonth ? 'selectedMonth' : ''} ${currentMonth ? 'currentMonth' : ''}`}
+                      onClick={() => jumpCalendarToMonth(monthIndex)}
+                    >
+                      {monthName}
+                    </button>
+                  )
+                })}
+                <button type="button" className="todayMonthJumpButton" onClick={jumpCalendarToToday}>Today</button>
               </div>
             </div>
 
