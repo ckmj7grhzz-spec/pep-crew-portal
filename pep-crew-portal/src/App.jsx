@@ -411,6 +411,7 @@ function AdminPage() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
+  const [showCreateCrewSheet, setShowCreateCrewSheet] = useState(false)
   const [form, setForm] = useState({
     show_name: '',
     venue: '',
@@ -422,6 +423,7 @@ function AdminPage() {
     operations_contact_name: '',
     operations_contact_phone: '',
     emergency_contact_number: '',
+    crew_sheet_status: 'in_progress',
     public_slug: '',
     share_enabled: true,
     current_rms_id: '',
@@ -478,6 +480,12 @@ function AdminPage() {
       start_date: '',
       end_date: '',
       project_manager: '',
+      project_manager_phone: '',
+      project_manager_email: '',
+      operations_contact_name: '',
+      operations_contact_phone: '',
+      emergency_contact_number: '',
+      crew_sheet_status: 'in_progress',
       public_slug: '',
       share_enabled: true,
       current_rms_id: '',
@@ -512,6 +520,49 @@ function AdminPage() {
     setMessage(`Copied: ${url}`)
   }
 
+  function getCrewSheetStatus(eventRecord) {
+    return eventRecord.crew_sheet_status || 'in_progress'
+  }
+
+  function getCrewSheetStatusLabel(status) {
+    if (status === 'ready_to_go') return 'Ready To Go'
+    if (status === 'show_complete') return 'Show Complete'
+    return 'In Progress'
+  }
+
+  function getCrewSheetStatusClass(status) {
+    if (status === 'ready_to_go') return 'statusGreen'
+    if (status === 'show_complete') return 'statusComplete'
+    return 'statusOrange'
+  }
+
+  async function updateCrewSheetStatus(eventRecord, status) {
+    const payload = {
+      crew_sheet_status: status,
+      crew_sheet_ready_at: status === 'ready_to_go' ? new Date().toISOString() : eventRecord.crew_sheet_ready_at || null,
+      show_completed_at: status === 'show_complete' ? new Date().toISOString() : eventRecord.show_completed_at || null,
+    }
+
+    const { error } = await supabase
+      .from('Events')
+      .update(payload)
+      .eq('id', eventRecord.id)
+
+    if (error) {
+      setMessage(`Could not update crew sheet status: ${error.message}`)
+      return
+    }
+
+    setMessage(`${eventRecord.show_name} marked as ${getCrewSheetStatusLabel(status)}.`)
+    loadEvents()
+  }
+
+  const totalCrewSheets = events.length
+  const readyCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'ready_to_go')
+  const completedCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'show_complete')
+  const activeCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) !== 'show_complete')
+  const inProgressCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'in_progress' || !eventRecord.crew_sheet_status)
+
   return (
     <main className="page">
       <header className="hero">
@@ -526,105 +577,158 @@ function AdminPage() {
         </div>
       </header>
 
-      <section className="eventCard">
-        <h2>Create New Crew Sheet</h2>
-        <p>Add the event header information. Crew, flights, transfers and hotels are managed from each event.</p>
+      <section className="eventCard adminOverviewDashboard">
+        <div>
+          <p className="eyebrowDark">Admin Overview</p>
+          <h2>Crew Sheet Dashboard</h2>
+          <p>Track active crew sheets, ready shows and completed events from one place.</p>
+        </div>
 
-        <form onSubmit={createEvent} className="adminForm">
-          <label>
-            Show Name
-            <input value={form.show_name} onChange={e => updateField('show_name', e.target.value)} placeholder="EHA Congress 2026" />
-          </label>
+        <div className="adminOverviewGrid">
+          <div>
+            <strong>{totalCrewSheets}</strong>
+            <span>Total Crew Sheets</span>
+          </div>
+          <div>
+            <strong>{activeCrewSheets.length}</strong>
+            <span>Active</span>
+          </div>
+          <div className={readyCrewSheets.length ? 'statusGreen' : ''}>
+            <strong>{readyCrewSheets.length}</strong>
+            <span>Ready To Go</span>
+          </div>
+          <div>
+            <strong>{inProgressCrewSheets.length}</strong>
+            <span>In Progress</span>
+          </div>
+          <div className={completedCrewSheets.length ? 'statusComplete' : ''}>
+            <strong>{completedCrewSheets.length}</strong>
+            <span>Show Complete</span>
+          </div>
+        </div>
 
-          <label>
-            Venue
-            <input value={form.venue} onChange={e => updateField('venue', e.target.value)} placeholder="Bella Center Copenhagen" />
-          </label>
+        {readyCrewSheets.length > 0 && (
+          <div className="readyNotificationBox">
+            <strong>{readyCrewSheets.length} crew sheet{readyCrewSheets.length === 1 ? '' : 's'} ready to go</strong>
+            <p>{readyCrewSheets.map(eventRecord => eventRecord.show_name).join(', ')} {readyCrewSheets.length === 1 ? 'is' : 'are'} marked 100% ready to go.</p>
+          </div>
+        )}
+      </section>
 
-          <label>
-            Venue Address
-            <input value={form.venue_address} onChange={e => updateField('venue_address', e.target.value)} placeholder="Center Blvd. 5, Copenhagen" />
-          </label>
+      <section className="eventCard collapsibleCreateCard">
+        <button
+          type="button"
+          className={showCreateCrewSheet ? 'collapsibleCreateHeader active' : 'collapsibleCreateHeader'}
+          onClick={() => setShowCreateCrewSheet(!showCreateCrewSheet)}
+        >
+          <span>
+            <strong>Create New Crew Sheet</strong>
+            <small>Add a new event and create its public crew sheet.</small>
+          </span>
+          <ChevronDown className={showCreateCrewSheet ? 'chevron open' : 'chevron'} />
+        </button>
 
-          <label>
-            Google Maps URL
-            <input value={form.venue_maps_url} onChange={e => updateField('venue_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
-          </label>
+        {showCreateCrewSheet && (
+          <div className="collapsibleCreateBody">
+            <p>Add the event header information. Crew, flights, transfers and hotels are managed from each event.</p>
 
-          <label>
-            What3Words
-            <input value={form.venue_what3words} onChange={e => updateField('venue_what3words', e.target.value)} placeholder="///filled.count.soap" />
-          </label>
+            <form onSubmit={createEvent} className="adminForm">
+              <label>
+                Show Name
+                <input value={form.show_name} onChange={e => updateField('show_name', e.target.value)} placeholder="EHA Congress 2026" />
+              </label>
 
-          <label>
-            Access Notes
-            <input value={form.venue_access_notes} onChange={e => updateField('venue_access_notes', e.target.value)} placeholder="Use north entrance / exhibitor access" />
-          </label>
+              <label>
+                Venue
+                <input value={form.venue} onChange={e => updateField('venue', e.target.value)} placeholder="Bella Center Copenhagen" />
+              </label>
 
-          <label>
-            Loading Bay Notes
-            <input value={form.loading_bay_notes} onChange={e => updateField('loading_bay_notes', e.target.value)} placeholder="Loading bay 3, vehicle pass required" />
-          </label>
+              <label>
+                Venue Address
+                <input value={form.venue_address} onChange={e => updateField('venue_address', e.target.value)} placeholder="Center Blvd. 5, Copenhagen" />
+              </label>
 
-          <label>
-            Start Date
-            <input type="date" value={form.start_date} onChange={e => updateField('start_date', e.target.value)} />
-          </label>
+              <label>
+                Google Maps URL
+                <input value={form.venue_maps_url} onChange={e => updateField('venue_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+              </label>
 
-          <label>
-            End Date
-            <input type="date" value={form.end_date} onChange={e => updateField('end_date', e.target.value)} />
-          </label>
+              <label>
+                What3Words
+                <input value={form.venue_what3words} onChange={e => updateField('venue_what3words', e.target.value)} placeholder="///filled.count.soap" />
+              </label>
 
-          <label>
-            Project Manager
-            <input value={form.project_manager} onChange={e => updateField('project_manager', e.target.value)} placeholder="Liam Howard" />
-          </label>
+              <label>
+                Access Notes
+                <input value={form.venue_access_notes} onChange={e => updateField('venue_access_notes', e.target.value)} placeholder="Use north entrance / exhibitor access" />
+              </label>
 
-          <label>
-            Project Manager Phone
-            <input value={form.project_manager_phone} onChange={e => updateField('project_manager_phone', e.target.value)} placeholder="+44..." />
-          </label>
+              <label>
+                Loading Bay Notes
+                <input value={form.loading_bay_notes} onChange={e => updateField('loading_bay_notes', e.target.value)} placeholder="Loading bay 3, vehicle pass required" />
+              </label>
 
-          <label>
-            Project Manager Email
-            <input type="email" value={form.project_manager_email} onChange={e => updateField('project_manager_email', e.target.value)} placeholder="name@pepled.com" />
-          </label>
+              <label>
+                Start Date
+                <input type="date" value={form.start_date} onChange={e => updateField('start_date', e.target.value)} />
+              </label>
 
-          <label>
-            Operations Contact Name
-            <input value={form.operations_contact_name} onChange={e => updateField('operations_contact_name', e.target.value)} placeholder="Operations contact" />
-          </label>
+              <label>
+                End Date
+                <input type="date" value={form.end_date} onChange={e => updateField('end_date', e.target.value)} />
+              </label>
 
-          <label>
-            Operations Contact Phone
-            <input value={form.operations_contact_phone} onChange={e => updateField('operations_contact_phone', e.target.value)} placeholder="+44..." />
-          </label>
+              <label>
+                Project Manager
+                <input value={form.project_manager} onChange={e => updateField('project_manager', e.target.value)} placeholder="Liam Howard" />
+              </label>
 
-          <label>
-            Emergency Contact Number
-            <input value={form.emergency_contact_number} onChange={e => updateField('emergency_contact_number', e.target.value)} placeholder="+44..." />
-          </label>
+              <label>
+                Project Manager Phone
+                <input value={form.project_manager_phone} onChange={e => updateField('project_manager_phone', e.target.value)} placeholder="+44..." />
+              </label>
 
-          <label>
-            Public Slug
-            <input value={form.public_slug} onChange={e => updateField('public_slug', e.target.value)} placeholder="eha-2026" />
-          </label>
+              <label>
+                Project Manager Email
+                <input type="email" value={form.project_manager_email} onChange={e => updateField('project_manager_email', e.target.value)} placeholder="name@pepled.com" />
+              </label>
 
-          <label>
-            Current RMS ID
-            <input value={form.current_rms_id} onChange={e => updateField('current_rms_id', e.target.value)} placeholder="Optional for now" />
-          </label>
+              <label>
+                Operations Contact Name
+                <input value={form.operations_contact_name} onChange={e => updateField('operations_contact_name', e.target.value)} placeholder="Operations contact" />
+              </label>
 
-          <label className="checkboxRow">
-            <input type="checkbox" checked={form.share_enabled} onChange={e => updateField('share_enabled', e.target.checked)} />
-            Published / share link active
-          </label>
+              <label>
+                Operations Contact Phone
+                <input value={form.operations_contact_phone} onChange={e => updateField('operations_contact_phone', e.target.value)} placeholder="+44..." />
+              </label>
 
-          <button className="primaryButton" type="submit">
-            <Plus size={18} /> Create Crew Sheet
-          </button>
-        </form>
+              <label>
+                Emergency Contact Number
+                <input value={form.emergency_contact_number} onChange={e => updateField('emergency_contact_number', e.target.value)} placeholder="+44..." />
+              </label>
+
+              <label>
+                Public Slug
+                <input value={form.public_slug} onChange={e => updateField('public_slug', e.target.value)} placeholder="eha-2026" />
+              </label>
+
+              <label>
+                Current RMS ID
+                <input value={form.current_rms_id} onChange={e => updateField('current_rms_id', e.target.value)} placeholder="Optional for now" />
+              </label>
+
+              <label className="checkboxRow">
+                <input type="checkbox" checked={form.share_enabled} onChange={e => updateField('share_enabled', e.target.checked)} />
+                Published / share link active
+              </label>
+
+              <button className="primaryButton" type="submit">
+                <Plus size={18} /> Create Crew Sheet
+              </button>
+            </form>
+          </div>
+        )}
 
         {message && <p className="adminMessage">{message}</p>}
       </section>
@@ -644,6 +748,9 @@ function AdminPage() {
                   <small>{formatDate(eventRecord.start_date)} → {formatDate(eventRecord.end_date)}</small>
                   <br />
                   <small>Slug: /{eventRecord.public_slug}</small>
+                  <div className={`crewSheetStatusBadge ${getCrewSheetStatusClass(getCrewSheetStatus(eventRecord))}`}>
+                    {getCrewSheetStatusLabel(getCrewSheetStatus(eventRecord))}
+                  </div>
                 </div>
 
                 <div className="adminActions">
@@ -654,6 +761,21 @@ function AdminPage() {
                   <button type="button" onClick={() => copyLink(eventRecord.public_slug)}>
                     <Copy size={16} /> Copy Link
                   </button>
+                  {getCrewSheetStatus(eventRecord) !== 'ready_to_go' && getCrewSheetStatus(eventRecord) !== 'show_complete' && (
+                    <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'ready_to_go')}>
+                      Mark Ready
+                    </button>
+                  )}
+                  {getCrewSheetStatus(eventRecord) !== 'show_complete' && (
+                    <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'show_complete')}>
+                      Mark Show Complete
+                    </button>
+                  )}
+                  {getCrewSheetStatus(eventRecord) !== 'in_progress' && (
+                    <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'in_progress')}>
+                      Reopen
+                    </button>
+                  )}
                   <button type="button" onClick={() => togglePublished(eventRecord)}>
                     {eventRecord.share_enabled ? 'Unpublish' : 'Publish'}
                   </button>
