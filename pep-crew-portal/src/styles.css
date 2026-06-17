@@ -1940,3 +1940,30 @@ th {
     grid-column: auto;
   }
 }
+
+
+/* Public call sheet inline expanding sections */
+.publicSectionTileExpanded {
+  grid-column: 1 / -1;
+}
+
+.publicSectionExpandedContent {
+  grid-column: 1 / -1;
+  margin-top: -4px;
+}
+
+.publicSectionPanelInline {
+  margin: 0;
+  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.06);
+}
+
+.publicSectionPanelInline .publicSectionPanelHeader {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 720px) {
+  .publicSectionTileExpanded,
+  .publicSectionExpandedContent {
+    grid-column: 1 / -1;
+  }
+}
