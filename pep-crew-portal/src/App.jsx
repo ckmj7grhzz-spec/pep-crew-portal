@@ -412,6 +412,7 @@ function AdminPage() {
   const [message, setMessage] = useState('')
   const [showCreateCrewSheet, setShowCreateCrewSheet] = useState(false)
   const [showExistingCrewSheets, setShowExistingCrewSheets] = useState(true)
+  const [crewSheetSearch, setCrewSheetSearch] = useState('')
   const [form, setForm] = useState({
     show_name: '',
     venue: '',
@@ -562,6 +563,29 @@ function AdminPage() {
   const completedCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'show_complete')
   const activeCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) !== 'show_complete')
   const inProgressCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'in_progress' || !eventRecord.crew_sheet_status)
+
+  const crewSheetSearchTerm = crewSheetSearch.trim().toLowerCase()
+  const filteredCrewSheets = crewSheetSearchTerm
+    ? events.filter(eventRecord => {
+        const searchableText = [
+          eventRecord.show_name,
+          eventRecord.venue,
+          eventRecord.public_slug,
+          eventRecord.project_manager,
+          getCrewSheetStatusLabel(getCrewSheetStatus(eventRecord)),
+          getCrewSheetStatus(eventRecord),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+
+        return searchableText.includes(crewSheetSearchTerm)
+      })
+    : events
+
+  const filteredReadyCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'ready_to_go')
+  const filteredCompletedCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'show_complete')
+  const filteredInProgressCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'in_progress' || !eventRecord.crew_sheet_status)
 
   function renderCrewSheetCard(eventRecord) {
     const crewSheetStatus = getCrewSheetStatus(eventRecord)
@@ -820,21 +844,45 @@ function AdminPage() {
         >
           <span>
             <strong>Existing Crew Sheets</strong>
-            <small>{events.length} crew sheet{events.length === 1 ? '' : 's'} across ready, active and completed shows.</small>
+            <small>
+              {crewSheetSearchTerm
+                ? `${filteredCrewSheets.length} of ${events.length} crew sheet${events.length === 1 ? '' : 's'} shown`
+                : `${events.length} crew sheet${events.length === 1 ? '' : 's'} across ready, active and completed shows.`}
+            </small>
           </span>
           <ChevronDown className={showExistingCrewSheets ? 'chevron open' : 'chevron'} />
         </button>
 
         {showExistingCrewSheets && (
           <div className="collapsibleExistingBody">
+            <div className="crewSheetSearchBox">
+              <label>
+                Search Crew Sheets
+                <input
+                  value={crewSheetSearch}
+                  onChange={e => setCrewSheetSearch(e.target.value)}
+                  placeholder="Search by show, venue, slug, PM or status..."
+                />
+              </label>
+              {crewSheetSearch && (
+                <button type="button" onClick={() => setCrewSheetSearch('')}>
+                  Clear
+                </button>
+              )}
+            </div>
+
             {loading ? (
               <p>Loading events...</p>
             ) : events.length ? (
-              <div className="crewSheetGroupedList">
-                {renderCrewSheetGroup('Ready To Go', readyCrewSheets, 'readyCrewSheetGroup', 'No crew sheets are marked ready yet.')}
-                {renderCrewSheetGroup('In Progress', inProgressCrewSheets, 'inProgressCrewSheetGroup', 'No crew sheets are currently in progress.')}
-                {renderCrewSheetGroup('Show Complete', completedCrewSheets, 'completeCrewSheetGroup', 'No completed shows yet.')}
-              </div>
+              filteredCrewSheets.length ? (
+                <div className="crewSheetGroupedList">
+                  {renderCrewSheetGroup('Ready To Go', filteredReadyCrewSheets, 'readyCrewSheetGroup', 'No matching crew sheets are marked ready.')}
+                  {renderCrewSheetGroup('In Progress', filteredInProgressCrewSheets, 'inProgressCrewSheetGroup', 'No matching crew sheets are currently in progress.')}
+                  {renderCrewSheetGroup('Show Complete', filteredCompletedCrewSheets, 'completeCrewSheetGroup', 'No matching completed shows found.')}
+                </div>
+              ) : (
+                <Empty text="No crew sheets match your search." />
+              )
             ) : (
               <Empty text="No crew sheets created yet." />
             )}
