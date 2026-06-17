@@ -3348,7 +3348,6 @@ function CrewPersonalView() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [openPublicSection, setOpenPublicSection] = useState(null)
 
   useEffect(() => {
     async function loadCrewView() {
@@ -3723,6 +3722,7 @@ function PublicCrewSheet() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [openPublicSection, setOpenPublicSection] = useState(null)
 
   useEffect(() => {
     async function loadCrewSheet() {
