@@ -2167,3 +2167,167 @@ th {
     padding: 22px;
   }
 }
+
+/* Admin home message alignment */
+.adminHomeMessage {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin: 0 0 22px !important;
+  color: var(--pep-blue);
+}
+
+/* Existing crew sheets grouped accordion */
+.collapsibleExistingCrewSheetsCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.collapsibleExistingHeader {
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+  color: var(--pep-text);
+  padding: 24px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.collapsibleExistingHeader strong {
+  display: block;
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.collapsibleExistingHeader small {
+  color: var(--pep-muted);
+  font-weight: 800;
+}
+
+.collapsibleExistingHeader.active {
+  background: var(--pep-green);
+  color: #ffffff;
+}
+
+.collapsibleExistingHeader.active small {
+  color: rgba(255,255,255,0.85);
+}
+
+.collapsibleExistingBody {
+  border-top: 1px solid var(--pep-border);
+  padding: 24px 28px 28px;
+}
+
+.crewSheetGroupedList {
+  display: grid;
+  gap: 22px;
+}
+
+.crewSheetStatusGroup {
+  border: 1px solid var(--pep-border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.crewSheetGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  background: var(--pep-soft);
+  border-bottom: 1px solid var(--pep-border);
+}
+
+.crewSheetGroupHeader strong {
+  font-size: 18px;
+}
+
+.crewSheetGroupHeader span {
+  min-width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  background: #ffffff;
+  border: 1px solid var(--pep-border);
+  font-weight: 900;
+}
+
+.readyCrewSheetGroup .crewSheetGroupHeader {
+  background: var(--green-bg);
+  border-bottom-color: var(--green-border);
+  color: var(--green-text);
+}
+
+.readyCrewSheetGroup .crewSheetGroupHeader span {
+  border-color: var(--green-border);
+  color: var(--green-text);
+}
+
+.completeCrewSheetGroup .crewSheetGroupHeader {
+  background: #050505;
+  border-bottom-color: #050505;
+  color: #ffffff;
+}
+
+.completeCrewSheetGroup .crewSheetGroupHeader span {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.35);
+  color: #ffffff;
+}
+
+.compactCrewSheetList {
+  margin-top: 0;
+  padding: 18px;
+}
+
+.crewSheetGroupEmpty {
+  padding: 18px;
+}
+
+.crewSheetCardMain {
+  flex: 1;
+  min-width: 260px;
+}
+
+.crewSheetTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.crewSheetTitleRow strong {
+  margin-bottom: 0;
+}
+
+.crewSheetTitleRow .crewSheetStatusBadge {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .collapsibleExistingHeader {
+    padding: 22px;
+  }
+
+  .collapsibleExistingBody {
+    padding: 22px;
+  }
+
+  .compactCrewSheetList {
+    padding: 14px;
+  }
+
+  .crewSheetTitleRow {
+    align-items: flex-start;
+  }
+}
