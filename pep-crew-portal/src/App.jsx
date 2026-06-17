@@ -483,11 +483,18 @@ function AdminShell({ children }) {
 
   return (
     <>
-      <div className="adminLogoutBar">
-        <button type="button" onClick={logout}>
+      <header className="pepAppHeader">
+        <div className="pepAppHeaderBrand">
+          <img src={pepLogo} alt="Premium Event Productions" className="pepAppHeaderLogo" />
+          <div>
+            <strong>Premium Event Productions</strong>
+            <span>PEP Admin</span>
+          </div>
+        </div>
+        <button type="button" className="pepAppLogoutButton" onClick={logout}>
           <LogOut size={16} /> Logout
         </button>
-      </div>
+      </header>
       {children}
     </>
   )
@@ -1426,19 +1433,7 @@ function AdminPage() {
   }
 
   return (
-    <main className="page">
-      <header className="hero">
-        <img
-  src={pepLogo}
-  alt="Premium Event Productions"
-  className="pepLogo"
-/>
-        <div>
-          <p className="eyebrow">Premium Event Productions</p>
-          <h1>PEP Admin</h1>
-        </div>
-      </header>
-
+    <main className="page adminPortalPage">
       <nav className="portalTopTabs" aria-label="PEP portal sections">
         <button
           type="button"
