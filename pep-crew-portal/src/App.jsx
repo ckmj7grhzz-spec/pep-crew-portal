@@ -214,6 +214,76 @@ function getStaffTypeBadgeClass(type) {
   return 'staffTypeBadge staffBadge'
 }
 
+
+function parseCalendarDate(value) {
+  if (!value) return null
+  const dateText = String(value).includes('T') ? String(value).slice(0, 10) : String(value)
+  const date = new Date(`${dateText}T00:00:00`)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function formatCalendarDateInput(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function startOfCalendarDay(date) {
+  const next = new Date(date)
+  next.setHours(0, 0, 0, 0)
+  return next
+}
+
+function addCalendarDays(date, amount) {
+  const next = new Date(date)
+  next.setDate(next.getDate() + amount)
+  return next
+}
+
+function startOfCalendarWeek(date) {
+  const next = startOfCalendarDay(date)
+  const day = next.getDay() || 7
+  next.setDate(next.getDate() - day + 1)
+  return next
+}
+
+function endOfCalendarWeek(date) {
+  return addCalendarDays(startOfCalendarWeek(date), 6)
+}
+
+function startOfCalendarMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+function endOfCalendarMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0)
+}
+
+function formatShortCalendarDate(date) {
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
+function isSameCalendarDate(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+function eventOverlapsDate(eventRecord, date) {
+  const target = startOfCalendarDay(date)
+  const start = parseCalendarDate(eventRecord.start_date)
+  const end = parseCalendarDate(eventRecord.end_date) || start
+  if (!start) return false
+  return startOfCalendarDay(start) <= target && startOfCalendarDay(end) >= target
+}
+
+function eventOverlapsRange(eventRecord, rangeStart, rangeEnd) {
+  const start = parseCalendarDate(eventRecord.start_date)
+  const end = parseCalendarDate(eventRecord.end_date) || start
+  if (!start) return false
+  return startOfCalendarDay(start) <= startOfCalendarDay(rangeEnd) && startOfCalendarDay(end) >= startOfCalendarDay(rangeStart)
+}
+
 function parseCsv(text) {
   const rows = []
   let current = ''
@@ -453,6 +523,8 @@ function AdminPage() {
   const [showExistingCrewSheets, setShowExistingCrewSheets] = useState(() => readStoredValue('pep.showExistingCrewSheets', true))
   const [activePortalTab, setActivePortalTab] = useState(() => readStoredValue('pep.activePortalTab', 'crew_sheets'))
   const [crewSheetSearch, setCrewSheetSearch] = useState('')
+  const [calendarView, setCalendarView] = useState(() => readStoredValue('pep.calendarView', 'month'))
+  const [calendarFocusDate, setCalendarFocusDate] = useState(() => readStoredValue('pep.calendarFocusDate', formatCalendarDateInput(new Date())))
   const [staffMembers, setStaffMembers] = useState([])
   const [staffLoading, setStaffLoading] = useState(true)
   const [staffSearch, setStaffSearch] = useState('')
@@ -504,6 +576,14 @@ function AdminPage() {
   useEffect(() => {
     writeStoredValue('pep.activePortalTab', activePortalTab)
   }, [activePortalTab])
+
+  useEffect(() => {
+    writeStoredValue('pep.calendarView', calendarView)
+  }, [calendarView])
+
+  useEffect(() => {
+    writeStoredValue('pep.calendarFocusDate', calendarFocusDate)
+  }, [calendarFocusDate])
 
   useEffect(() => {
     writeStoredValue('pep.showCreateCrewSheet', showCreateCrewSheet)
@@ -829,6 +909,215 @@ function AdminPage() {
   const inactiveStaffMembers = filteredStaffMembers.filter(member => member.active === false)
   const fullTimeStaff = staffMembers.filter(member => getStaffEmploymentType(member) === 'Full Time' && member.active !== false)
   const freelancerStaff = staffMembers.filter(member => ['Freelancer', 'Contractor'].includes(getStaffEmploymentType(member)) && member.active !== false)
+
+
+  const calendarFocus = parseCalendarDate(calendarFocusDate) || new Date()
+
+  function changeCalendarView(view) {
+    setCalendarView(view)
+  }
+
+  function moveCalendar(direction) {
+    const focus = parseCalendarDate(calendarFocusDate) || new Date()
+    let next = focus
+
+    if (calendarView === 'month') next = new Date(focus.getFullYear(), focus.getMonth() + direction, 1)
+    if (calendarView === 'two_week') next = addCalendarDays(focus, direction * 14)
+    if (calendarView === 'week') next = addCalendarDays(focus, direction * 7)
+    if (calendarView === 'day') next = addCalendarDays(focus, direction)
+
+    setCalendarFocusDate(formatCalendarDateInput(next))
+  }
+
+  function getCalendarRangeLabel() {
+    const focus = parseCalendarDate(calendarFocusDate) || new Date()
+
+    if (calendarView === 'month') {
+      return focus.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+    }
+
+    if (calendarView === 'two_week') {
+      const start = startOfCalendarWeek(focus)
+      const end = addCalendarDays(start, 13)
+      return `${formatShortCalendarDate(start)} → ${formatShortCalendarDate(end)} ${end.getFullYear()}`
+    }
+
+    if (calendarView === 'week') {
+      const start = startOfCalendarWeek(focus)
+      const end = endOfCalendarWeek(focus)
+      return `${formatShortCalendarDate(start)} → ${formatShortCalendarDate(end)} ${end.getFullYear()}`
+    }
+
+    return focus.toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  }
+
+  function renderCalendarEventPill(eventRecord) {
+    const status = getCrewSheetStatus(eventRecord)
+    return (
+      <a
+        key={`${eventRecord.id}-${eventRecord.public_slug}`}
+        className={`calendarEventPill ${status === 'ready_to_go' ? 'readyCalendarEvent' : status === 'show_complete' ? 'completeCalendarEvent' : ''}`}
+        href={`/admin/event/${eventRecord.public_slug}`}
+        title={`${eventRecord.show_name}${eventRecord.venue ? ` — ${eventRecord.venue}` : ''}`}
+      >
+        <strong>{eventRecord.show_name}</strong>
+        {eventRecord.venue && <small>{eventRecord.venue}</small>}
+      </a>
+    )
+  }
+
+  function renderCalendarDayCell(day, options = {}) {
+    const dayEvents = events.filter(eventRecord => eventOverlapsDate(eventRecord, day))
+    const isToday = isSameCalendarDate(day, new Date())
+    const isOutsideMonth = options.monthView && day.getMonth() !== calendarFocus.getMonth()
+
+    return (
+      <div
+        className={`calendarDayCell ${isToday ? 'todayCalendarCell' : ''} ${isOutsideMonth ? 'outsideCalendarMonth' : ''}`}
+        key={formatCalendarDateInput(day)}
+      >
+        <div className="calendarDayHeader">
+          <strong>{day.getDate()}</strong>
+          <span>{day.toLocaleDateString('en-GB', { weekday: 'short' })}</span>
+        </div>
+        <div className="calendarDayEvents">
+          {dayEvents.length ? dayEvents.map(eventRecord => renderCalendarEventPill(eventRecord)) : <small className="calendarNoEvents">No events</small>}
+        </div>
+      </div>
+    )
+  }
+
+  function renderMonthCalendar() {
+    const monthStart = startOfCalendarMonth(calendarFocus)
+    const monthEnd = endOfCalendarMonth(calendarFocus)
+    const gridStart = startOfCalendarWeek(monthStart)
+    const gridEnd = endOfCalendarWeek(monthEnd)
+    const days = []
+
+    for (let date = gridStart; date <= gridEnd; date = addCalendarDays(date, 1)) {
+      days.push(new Date(date))
+    }
+
+    return (
+      <div className="calendarMonthGrid">
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(dayName => <div className="calendarWeekday" key={dayName}>{dayName}</div>)}
+        {days.map(day => renderCalendarDayCell(day, { monthView: true }))}
+      </div>
+    )
+  }
+
+  function renderRollingCalendar(daysToShow) {
+    const start = calendarView === 'day' ? startOfCalendarDay(calendarFocus) : startOfCalendarWeek(calendarFocus)
+    const days = Array.from({ length: daysToShow }, (_, index) => addCalendarDays(start, index))
+
+    return (
+      <div className={daysToShow === 1 ? 'calendarDayView' : 'calendarRollingGrid'}>
+        {days.map(day => renderCalendarDayCell(day))}
+      </div>
+    )
+  }
+
+  function renderOperationsCalendar() {
+    const focus = parseCalendarDate(calendarFocusDate) || new Date()
+    let rangeStart = startOfCalendarMonth(focus)
+    let rangeEnd = endOfCalendarMonth(focus)
+
+    if (calendarView === 'two_week') {
+      rangeStart = startOfCalendarWeek(focus)
+      rangeEnd = addCalendarDays(rangeStart, 13)
+    }
+
+    if (calendarView === 'week') {
+      rangeStart = startOfCalendarWeek(focus)
+      rangeEnd = endOfCalendarWeek(focus)
+    }
+
+    if (calendarView === 'day') {
+      rangeStart = startOfCalendarDay(focus)
+      rangeEnd = startOfCalendarDay(focus)
+    }
+
+    const visibleEvents = events.filter(eventRecord => eventOverlapsRange(eventRecord, rangeStart, rangeEnd))
+    const readyVisible = visibleEvents.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'ready_to_go')
+    const inProgressVisible = visibleEvents.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'in_progress' || !eventRecord.crew_sheet_status)
+    const completeVisible = visibleEvents.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'show_complete')
+
+    return (
+      <>
+        <section className="eventCard operationsCalendarCard">
+          <div className="calendarHeaderTop">
+            <div>
+              <p className="eyebrowDark">Operations Calendar</p>
+              <h2>{getCalendarRangeLabel()}</h2>
+              <p>View existing crew sheets across monthly, two-weekly, weekly and daily planning views.</p>
+            </div>
+            <div className="calendarNavigationActions">
+              <button type="button" onClick={() => moveCalendar(-1)}>Previous</button>
+              <button type="button" onClick={() => setCalendarFocusDate(formatCalendarDateInput(new Date()))}>Today</button>
+              <button type="button" onClick={() => moveCalendar(1)}>Next</button>
+            </div>
+          </div>
+
+          <div className="calendarToolbar">
+            <div className="calendarViewTabs" role="tablist" aria-label="Calendar views">
+              <button type="button" className={calendarView === 'month' ? 'active' : ''} onClick={() => changeCalendarView('month')}>Monthly</button>
+              <button type="button" className={calendarView === 'two_week' ? 'active' : ''} onClick={() => changeCalendarView('two_week')}>Two-weekly</button>
+              <button type="button" className={calendarView === 'week' ? 'active' : ''} onClick={() => changeCalendarView('week')}>Weekly</button>
+              <button type="button" className={calendarView === 'day' ? 'active' : ''} onClick={() => changeCalendarView('day')}>Daily</button>
+            </div>
+
+            <label className="calendarDatePicker">
+              Jump to date
+              <input type="date" value={calendarFocusDate} onChange={e => setCalendarFocusDate(e.target.value)} />
+            </label>
+          </div>
+
+          <div className="calendarOverviewGrid">
+            <div><strong>{visibleEvents.length}</strong><span>Events in view</span></div>
+            <div className={readyVisible.length ? 'statusGreen' : ''}><strong>{readyVisible.length}</strong><span>Ready To Go</span></div>
+            <div><strong>{inProgressVisible.length}</strong><span>In Progress</span></div>
+            <div className={completeVisible.length ? 'statusComplete' : ''}><strong>{completeVisible.length}</strong><span>Show Complete</span></div>
+          </div>
+
+          {loading ? (
+            <p>Loading calendar...</p>
+          ) : (
+            <div className="calendarViewPanel">
+              {calendarView === 'month' && renderMonthCalendar()}
+              {calendarView === 'two_week' && renderRollingCalendar(14)}
+              {calendarView === 'week' && renderRollingCalendar(7)}
+              {calendarView === 'day' && renderRollingCalendar(1)}
+            </div>
+          )}
+        </section>
+
+        <section className="eventCard calendarListCard">
+          <p className="eyebrowDark">Event list</p>
+          <h2>Events in this view</h2>
+          {visibleEvents.length ? (
+            <div className="calendarEventList">
+              {visibleEvents.map(eventRecord => (
+                <a className="calendarEventListItem" href={`/admin/event/${eventRecord.public_slug}`} key={eventRecord.id}>
+                  <div>
+                    <strong>{eventRecord.show_name}</strong>
+                    <span>{eventRecord.venue || 'Venue TBC'}</span>
+                  </div>
+                  <small>{formatDate(eventRecord.start_date)} → {formatDate(eventRecord.end_date)}</small>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <Empty text="No crew sheets fall within this calendar view." />
+          )}
+        </section>
+      </>
+    )
+  }
 
   function renderStaffMemberCard(member) {
     return (
@@ -1234,28 +1523,7 @@ function AdminPage() {
         </>
       )}
 
-      {activePortalTab === 'operations_calendar' && (
-        <section className="eventCard portalPlaceholderCard">
-          <p className="eyebrowDark">Operations Calendar</p>
-          <h2>Calendar system coming soon</h2>
-          <p>This area will become the internal scheduling hub for PEP events, staff availability, leave, travel days and operational conflicts.</p>
-
-          <div className="portalPlaceholderGrid">
-            <div>
-              <strong>Event Calendar</strong>
-              <span>View build days, show days, derigs and travel days.</span>
-            </div>
-            <div>
-              <strong>Availability Tracking</strong>
-              <span>Check who is free, unavailable or already assigned.</span>
-            </div>
-            <div>
-              <strong>Leave Visibility</strong>
-              <span>Show approved holiday and leave alongside event dates.</span>
-            </div>
-          </div>
-        </section>
-      )}
+      {activePortalTab === 'operations_calendar' && renderOperationsCalendar()}
 
       {activePortalTab === 'staff' && (
         <>
