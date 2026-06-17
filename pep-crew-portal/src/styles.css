@@ -3169,3 +3169,75 @@ th {
     padding: 12px;
   }
 }
+
+/* Staff directory theme refinement */
+.staffOverviewGrid > div:nth-child(2) {
+  background: var(--green-bg) !important;
+  border-color: var(--green-border) !important;
+}
+
+.staffOverviewGrid > div:nth-child(2) strong,
+.staffOverviewGrid > div:nth-child(2) span,
+.staffOverviewGrid > div:nth-child(2) small {
+  color: var(--green-text) !important;
+}
+
+.staffOverviewGrid > div:nth-child(3) {
+  background: #eff6ff !important;
+  border-color: #bfdbfe !important;
+}
+
+.staffOverviewGrid > div:nth-child(3) strong,
+.staffOverviewGrid > div:nth-child(3) span,
+.staffOverviewGrid > div:nth-child(3) small {
+  color: #1d4ed8 !important;
+}
+
+.staffOverviewGrid > div:nth-child(4) {
+  background: #111111 !important;
+  border-color: #111111 !important;
+}
+
+.staffOverviewGrid > div:nth-child(4) strong,
+.staffOverviewGrid > div:nth-child(4) span,
+.staffOverviewGrid > div:nth-child(4) small {
+  color: #ffffff !important;
+}
+
+/* Keep active/expanded staff section headers consistent with the rest of the portal */
+.staffGroupDefault .staffGroupHeader.open,
+.staffGroupFreelancer .staffGroupHeader.open,
+.staffGroupInactive .staffGroupHeader.open {
+  background: var(--pep-green) !important;
+  color: #ffffff !important;
+  border-bottom-color: rgba(255,255,255,0.18) !important;
+}
+
+.staffGroupDefault .staffGroupHeader.open .staffGroupHeaderText small,
+.staffGroupFreelancer .staffGroupHeader.open .staffGroupHeaderText small,
+.staffGroupInactive .staffGroupHeader.open .staffGroupHeaderText small,
+.staffGroupDefault .staffGroupHeader.open .chevron,
+.staffGroupFreelancer .staffGroupHeader.open .chevron,
+.staffGroupInactive .staffGroupHeader.open .chevron {
+  color: rgba(255,255,255,0.82) !important;
+}
+
+.staffGroupDefault .staffGroupHeader.open .staffGroupCount,
+.staffGroupFreelancer .staffGroupHeader.open .staffGroupCount,
+.staffGroupInactive .staffGroupHeader.open .staffGroupCount {
+  background: rgba(255,255,255,0.14) !important;
+  border-color: rgba(255,255,255,0.26) !important;
+  color: #ffffff !important;
+}
+
+.inactiveBadge {
+  color: #ffffff !important;
+  background: #111111 !important;
+  border-color: #111111 !important;
+}
+
+.staffGroupInactive .staffMemberCard,
+.inactiveStaffMemberCard {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
