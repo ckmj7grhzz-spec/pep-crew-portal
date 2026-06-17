@@ -1021,11 +1021,12 @@ function AdminPage() {
         <div className="calendarContinuousDays">
           {days.map(day => {
             const isToday = isSameCalendarDate(day, new Date())
+            const isWeekend = day.getDay() === 0 || day.getDay() === 6
             const isOutsideMonth = options.monthView && day.getMonth() !== calendarFocus.getMonth()
 
             return (
               <div
-                className={`calendarContinuousDay ${isToday ? 'todayCalendarCell' : ''} ${isOutsideMonth ? 'outsideCalendarMonth' : ''}`}
+                className={`calendarContinuousDay ${isWeekend ? 'weekendCalendarDay' : 'weekdayCalendarDay'} ${isToday ? 'todayCalendarCell' : ''} ${isOutsideMonth ? 'outsideCalendarMonth' : ''}`}
                 key={formatCalendarDateInput(day)}
               >
                 <strong>{day.getDate()}</strong>
