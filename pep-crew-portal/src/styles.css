@@ -3305,6 +3305,40 @@ th {
   padding-top: 16px;
 }
 
+.calendarViewControlGroup {
+  display: grid;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.calendarMonthJumpBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.calendarMonthJumpBar button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.calendarMonthJumpBar button:hover {
+  border-color: var(--pep-green);
+}
+
+.calendarMonthJumpBar button.active {
+  background: var(--pep-green);
+  border-color: var(--pep-green);
+  color: #ffffff;
+}
+
 .calendarDatePicker {
   display: grid;
   gap: 8px;
@@ -4347,5 +4381,17 @@ th {
     margin-right: -12px;
     padding: 10px 12px;
     position: static;
+  }
+}
+
+
+@media (max-width: 720px) {
+  .calendarToolbar {
+    display: grid;
+    align-items: stretch;
+  }
+
+  .calendarMonthJumpBar button {
+    flex: 1 1 calc(25% - 8px);
   }
 }
