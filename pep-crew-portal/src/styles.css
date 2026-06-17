@@ -4693,3 +4693,37 @@ button.calendarEventListItem {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+/* Calendar drawer status badges */
+.calendarStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  margin-top: 10px;
+  text-transform: uppercase;
+}
+
+.calendarStatusBadge-in_progress {
+  background: #fff7ed;
+  border: 1px solid #fb923c;
+  color: #9a3412;
+}
+
+.calendarStatusBadge-ready_to_go {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #166534;
+}
+
+.calendarStatusBadge-show_complete {
+  background: #050505;
+  border: 1px solid #050505;
+  color: #ffffff;
+}
