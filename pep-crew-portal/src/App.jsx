@@ -533,6 +533,9 @@ function AdminPage() {
   const [calendarView, setCalendarView] = useState(() => readStoredValue('pep.calendarView', 'month'))
   const [calendarFocusDate, setCalendarFocusDate] = useState(() => readStoredValue('pep.calendarFocusDate', formatCalendarDateInput(new Date())))
   const [showCalendarResources, setShowCalendarResources] = useState(() => readStoredValue('pep.showCalendarResources', true))
+  const [selectedCalendarEvent, setSelectedCalendarEvent] = useState(null)
+  const [calendarEventCounts, setCalendarEventCounts] = useState(null)
+  const [calendarEventCountsLoading, setCalendarEventCountsLoading] = useState(false)
   const [calendarFilters, setCalendarFilters] = useState(() => {
     const defaults = {
       projects: true,
@@ -1017,6 +1020,112 @@ function AdminPage() {
     return events
   }
 
+  async function openCalendarEventDetails(eventRecord) {
+    setSelectedCalendarEvent(eventRecord)
+    setCalendarEventCounts(null)
+    setCalendarEventCountsLoading(true)
+
+    try {
+      const countTable = tableName =>
+        supabase
+          .from(tableName)
+          .select('id', { count: 'exact', head: true })
+          .eq('event_id', eventRecord.id)
+
+      const [crewResult, flightsResult, hotelsResult, transfersResult, documentsResult] = await Promise.all([
+        countTable('crew'),
+        countTable('flights'),
+        countTable('hotels'),
+        countTable('transfers'),
+        countTable('documents'),
+      ])
+
+      setCalendarEventCounts({
+        crew: crewResult.count || 0,
+        flights: flightsResult.count || 0,
+        hotels: hotelsResult.count || 0,
+        transfers: transfersResult.count || 0,
+        documents: documentsResult.count || 0,
+      })
+    } catch (error) {
+      setCalendarEventCounts({
+        crew: 0,
+        flights: 0,
+        hotels: 0,
+        transfers: 0,
+        documents: 0,
+      })
+    } finally {
+      setCalendarEventCountsLoading(false)
+    }
+  }
+
+  function closeCalendarEventDetails() {
+    setSelectedCalendarEvent(null)
+    setCalendarEventCounts(null)
+    setCalendarEventCountsLoading(false)
+  }
+
+  function renderCalendarEventDetailDrawer() {
+    if (!selectedCalendarEvent) return null
+
+    const status = getCrewSheetStatus(selectedCalendarEvent)
+    const statusLabel = getCrewSheetStatusLabel(status)
+
+    return (
+      <aside className="calendarEventDrawer" aria-label="Calendar event details">
+        <div className="calendarEventDrawerHeader">
+          <div>
+            <p className="eyebrowDark">Calendar Item</p>
+            <h2>{selectedCalendarEvent.show_name}</h2>
+            <span className={`crewSheetStatusBadge ${getCrewSheetStatusClass(status)}`}>{statusLabel}</span>
+          </div>
+          <button type="button" className="calendarEventDrawerClose" onClick={closeCalendarEventDetails}>×</button>
+        </div>
+
+        <div className="calendarEventDrawerBody">
+          <div className="calendarEventDrawerSection">
+            <strong>Venue</strong>
+            <span>{selectedCalendarEvent.venue || 'Venue TBC'}</span>
+          </div>
+
+          <div className="calendarEventDrawerGrid">
+            <div>
+              <strong>Start</strong>
+              <span>{formatDate(selectedCalendarEvent.start_date) || 'TBC'}</span>
+            </div>
+            <div>
+              <strong>End</strong>
+              <span>{formatDate(selectedCalendarEvent.end_date) || 'TBC'}</span>
+            </div>
+          </div>
+
+          <div className="calendarEventDrawerSection">
+            <strong>Project Manager</strong>
+            <span>{selectedCalendarEvent.project_manager || 'Not assigned'}</span>
+          </div>
+
+          <div className="calendarEventDrawerStats">
+            <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.crew ?? 0}</strong><span>Crew</span></div>
+            <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.flights ?? 0}</strong><span>Flights</span></div>
+            <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.hotels ?? 0}</strong><span>Hotels</span></div>
+            <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.transfers ?? 0}</strong><span>Transfers</span></div>
+            <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.documents ?? 0}</strong><span>Docs</span></div>
+          </div>
+
+          <div className="calendarEventDrawerActions">
+            <a className="primaryButton" href={`/admin/event/${selectedCalendarEvent.public_slug}`}>
+              Open Crew Sheet
+            </a>
+            <button type="button" className="secondaryButton" onClick={closeCalendarEventDetails}>
+              Close
+            </button>
+          </div>
+        </div>
+      </aside>
+    )
+  }
+
   function renderCalendarKeySidebar() {
     const projectCount = events.length
     const resourceGroups = [
@@ -1063,15 +1172,16 @@ function AdminPage() {
 
   function renderCalendarEventPill(eventRecord) {
     return (
-      <a
+      <button
+        type="button"
         key={`${eventRecord.id}-${eventRecord.public_slug}`}
         className={`calendarEventPill ${getCalendarEventClass(eventRecord)}`}
-        href={`/admin/event/${eventRecord.public_slug}`}
+        onClick={() => openCalendarEventDetails(eventRecord)}
         title={`${eventRecord.show_name}${eventRecord.venue ? ` — ${eventRecord.venue}` : ''}`}
       >
         <strong>{eventRecord.show_name}</strong>
         {eventRecord.venue && <small>{eventRecord.venue}</small>}
-      </a>
+      </button>
     )
   }
 
@@ -1086,10 +1196,11 @@ function AdminPage() {
     const continuesAfter = eventEnd > weekEnd
 
     return (
-      <a
+      <button
+        type="button"
         key={`${eventRecord.id}-${formatCalendarDateInput(weekStart)}`}
         className={`calendarEventBar ${getCalendarEventClass(eventRecord)} ${continuesBefore ? 'continuesBefore' : ''} ${continuesAfter ? 'continuesAfter' : ''}`}
-        href={`/admin/event/${eventRecord.public_slug}`}
+        onClick={() => openCalendarEventDetails(eventRecord)}
         title={`${eventRecord.show_name}${eventRecord.venue ? ` — ${eventRecord.venue}` : ''}`}
         style={{ gridColumn: `${startCol} / ${endCol}` }}
       >
@@ -1099,7 +1210,7 @@ function AdminPage() {
           {eventRecord.venue && <small>{eventRecord.venue}</small>}
         </span>
         {continuesAfter && <span className="calendarContinuationMark">→</span>}
-      </a>
+      </button>
     )
   }
 
@@ -1176,7 +1287,7 @@ function AdminPage() {
     const days = Array.from({ length: daysToShow }, (_, index) => addCalendarDays(start, index))
 
     if (daysToShow === 1) {
-      const dayEvents = events.filter(eventRecord => eventOverlapsDate(eventRecord, start))
+      const dayEvents = getCalendarSourceEvents().filter(eventRecord => eventOverlapsDate(eventRecord, start))
 
       return (
         <div className="calendarDayView">
@@ -1291,7 +1402,7 @@ function AdminPage() {
                   Show Resources
                 </button>
               )}
-              <div className={showCalendarResources ? 'calendarWorkspace' : 'calendarWorkspace calendarWorkspaceFull'}>
+              <div className={`${showCalendarResources ? 'calendarWorkspace' : 'calendarWorkspace calendarWorkspaceFull'} ${selectedCalendarEvent ? 'calendarWorkspaceWithDrawer' : ''}`}>
                 {showCalendarResources && renderCalendarKeySidebar()}
                 <div className="calendarViewPanel">
                   {calendarView === 'month' && renderMonthCalendar()}
@@ -1299,6 +1410,7 @@ function AdminPage() {
                   {calendarView === 'week' && renderRollingCalendar(7)}
                   {calendarView === 'day' && renderRollingCalendar(1)}
                 </div>
+                {renderCalendarEventDetailDrawer()}
               </div>
             </>
           )}
@@ -1310,13 +1422,13 @@ function AdminPage() {
           {visibleEvents.length ? (
             <div className="calendarEventList">
               {visibleEvents.map(eventRecord => (
-                <a className="calendarEventListItem" href={`/admin/event/${eventRecord.public_slug}`} key={eventRecord.id}>
+                <button type="button" className="calendarEventListItem" onClick={() => openCalendarEventDetails(eventRecord)} key={eventRecord.id}>
                   <div>
                     <strong>{eventRecord.show_name}</strong>
                     <span>{eventRecord.venue || 'Venue TBC'}</span>
                   </div>
                   <small>{formatDate(eventRecord.start_date)} → {formatDate(eventRecord.end_date)}</small>
-                </a>
+                </button>
               ))}
             </div>
           ) : (
