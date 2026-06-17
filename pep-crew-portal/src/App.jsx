@@ -525,6 +525,19 @@ function AdminPage() {
   const [crewSheetSearch, setCrewSheetSearch] = useState('')
   const [calendarView, setCalendarView] = useState(() => readStoredValue('pep.calendarView', 'month'))
   const [calendarFocusDate, setCalendarFocusDate] = useState(() => readStoredValue('pep.calendarFocusDate', formatCalendarDateInput(new Date())))
+  const [calendarFilters, setCalendarFilters] = useState(() => {
+    const defaults = {
+      projects: true,
+      dry_hire: true,
+      crew: false,
+      freelancers: false,
+      rooms: false,
+      vehicles: false,
+      led_trailers: false,
+    }
+    const stored = readStoredValue('pep.calendarFilters', null)
+    return stored && typeof stored === 'object' ? { ...defaults, ...stored } : defaults
+  })
   const [staffMembers, setStaffMembers] = useState([])
   const [staffLoading, setStaffLoading] = useState(true)
   const [staffSearch, setStaffSearch] = useState('')
@@ -584,6 +597,10 @@ function AdminPage() {
   useEffect(() => {
     writeStoredValue('pep.calendarFocusDate', calendarFocusDate)
   }, [calendarFocusDate])
+
+  useEffect(() => {
+    writeStoredValue('pep.calendarFilters', calendarFilters)
+  }, [calendarFilters])
 
   useEffect(() => {
     writeStoredValue('pep.showCreateCrewSheet', showCreateCrewSheet)
@@ -958,9 +975,59 @@ function AdminPage() {
 
   function getCalendarEventClass(eventRecord) {
     const status = getCrewSheetStatus(eventRecord)
-    if (status === 'ready_to_go') return 'readyCalendarEvent'
     if (status === 'show_complete') return 'completeCalendarEvent'
-    return ''
+    return 'projectCalendarEvent'
+  }
+
+  function toggleCalendarFilter(key) {
+    setCalendarFilters(previous => ({
+      ...previous,
+      [key]: !previous[key],
+    }))
+  }
+
+  function getCalendarSourceEvents() {
+    if (!calendarFilters.projects) return []
+    return events
+  }
+
+  function renderCalendarKeySidebar() {
+    const projectCount = events.length
+    const resourceGroups = [
+      { key: 'projects', label: 'Projects', count: projectCount, className: 'projectKey' },
+      { key: 'dry_hire', label: 'Dry Hire', count: 0, className: 'dryHireKey', comingSoon: true },
+      { key: 'crew', label: 'Crew', count: 0, className: 'crewKey', comingSoon: true },
+      { key: 'freelancers', label: 'Freelancers', count: 0, className: 'freelancerKey', comingSoon: true },
+      { key: 'rooms', label: 'Office Rooms', count: 0, className: 'roomKey', comingSoon: true },
+      { key: 'vehicles', label: 'Vehicles', count: 0, className: 'vehicleKey', comingSoon: true },
+      { key: 'led_trailers', label: 'LED Trailers', count: 0, className: 'trailerKey', comingSoon: true },
+    ]
+
+    return (
+      <aside className="calendarKeySidebar">
+        <div className="calendarKeyHeader">
+          <p className="eyebrowDark">Calendar Key</p>
+          <h3>Resources</h3>
+        </div>
+
+        <div className="calendarKeyList">
+          {resourceGroups.map(group => (
+            <label className={`calendarKeyItem ${group.className} ${calendarFilters[group.key] ? 'active' : ''}`} key={group.key}>
+              <input
+                type="checkbox"
+                checked={!!calendarFilters[group.key]}
+                onChange={() => toggleCalendarFilter(group.key)}
+              />
+              <span className="calendarKeyColour"></span>
+              <span className="calendarKeyText">
+                <strong>{group.label}</strong>
+                <small>{group.comingSoon ? 'Coming later' : `${group.count} live`}</small>
+              </span>
+            </label>
+          ))}
+        </div>
+      </aside>
+    )
   }
 
   function renderCalendarEventPill(eventRecord) {
@@ -1008,7 +1075,7 @@ function AdminPage() {
   function renderCalendarWeekRow(days, options = {}) {
     const weekStart = startOfCalendarDay(days[0])
     const weekEnd = startOfCalendarDay(days[days.length - 1])
-    const weekEvents = events
+    const weekEvents = getCalendarSourceEvents()
       .filter(eventRecord => eventOverlapsRange(eventRecord, weekStart, weekEnd))
       .sort((a, b) => {
         const aStart = parseCalendarDate(a.start_date) || weekStart
@@ -1037,11 +1104,7 @@ function AdminPage() {
         </div>
 
         <div className="calendarContinuousEvents">
-          {weekEvents.length ? (
-            weekEvents.map(eventRecord => renderCalendarEventBar(eventRecord, weekStart, weekEnd))
-          ) : (
-            <small className="calendarNoEvents calendarNoEventsFull">No events scheduled this week</small>
-          )}
+          {weekEvents.map(eventRecord => renderCalendarEventBar(eventRecord, weekStart, weekEnd))}
         </div>
       </div>
     )
@@ -1067,7 +1130,9 @@ function AdminPage() {
       <div className="calendarContinuousScroll">
         <div className="calendarContinuousGrid">
           <div className="calendarContinuousWeekdays">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(dayName => <div className="calendarWeekday" key={dayName}>{dayName}</div>)}
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((dayName, index) => (
+              <div className={`calendarWeekday ${index >= 5 ? 'weekendCalendarWeekday' : 'weekdayCalendarWeekday'}`} key={dayName}>{dayName}</div>
+            ))}
           </div>
           {weeks.map(weekDays => renderCalendarWeekRow(weekDays, { monthView: true }))}
         </div>
@@ -1089,7 +1154,7 @@ function AdminPage() {
               <strong>{start.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
             </div>
             <div className="calendarDayEvents">
-              {dayEvents.length ? dayEvents.map(eventRecord => renderCalendarEventPill(eventRecord)) : <small className="calendarNoEvents">No events</small>}
+              {dayEvents.map(eventRecord => renderCalendarEventPill(eventRecord))}
             </div>
           </div>
         </div>
@@ -1105,7 +1170,9 @@ function AdminPage() {
       <div className="calendarContinuousScroll">
         <div className="calendarContinuousGrid">
           <div className="calendarContinuousWeekdays">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(dayName => <div className="calendarWeekday" key={dayName}>{dayName}</div>)}
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((dayName, index) => (
+              <div className={`calendarWeekday ${index >= 5 ? 'weekendCalendarWeekday' : 'weekdayCalendarWeekday'}`} key={dayName}>{dayName}</div>
+            ))}
           </div>
           {weeks.map(weekDays => renderCalendarWeekRow(weekDays))}
         </div>
@@ -1133,7 +1200,7 @@ function AdminPage() {
       rangeEnd = startOfCalendarDay(focus)
     }
 
-    const visibleEvents = events.filter(eventRecord => eventOverlapsRange(eventRecord, rangeStart, rangeEnd))
+    const visibleEvents = getCalendarSourceEvents().filter(eventRecord => eventOverlapsRange(eventRecord, rangeStart, rangeEnd))
     const readyVisible = visibleEvents.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'ready_to_go')
     const inProgressVisible = visibleEvents.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'in_progress' || !eventRecord.crew_sheet_status)
     const completeVisible = visibleEvents.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'show_complete')
@@ -1178,11 +1245,14 @@ function AdminPage() {
           {loading ? (
             <p>Loading calendar...</p>
           ) : (
-            <div className="calendarViewPanel">
-              {calendarView === 'month' && renderMonthCalendar()}
-              {calendarView === 'two_week' && renderRollingCalendar(14)}
-              {calendarView === 'week' && renderRollingCalendar(7)}
-              {calendarView === 'day' && renderRollingCalendar(1)}
+            <div className="calendarWorkspace">
+              {renderCalendarKeySidebar()}
+              <div className="calendarViewPanel">
+                {calendarView === 'month' && renderMonthCalendar()}
+                {calendarView === 'two_week' && renderRollingCalendar(14)}
+                {calendarView === 'week' && renderRollingCalendar(7)}
+                {calendarView === 'day' && renderRollingCalendar(1)}
+              </div>
             </div>
           )}
         </section>
@@ -1203,7 +1273,7 @@ function AdminPage() {
               ))}
             </div>
           ) : (
-            <Empty text="No crew sheets fall within this calendar view." />
+            <Empty text="No visible calendar items in this view." />
           )}
         </section>
       </>
