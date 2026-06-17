@@ -197,6 +197,23 @@ function EventContactsCard({ event, compact = false }) {
   )
 }
 
+
+function getStaffEmploymentType(memberOrType) {
+  const rawType = typeof memberOrType === 'string'
+    ? memberOrType
+    : memberOrType?.employment_type
+
+  if (!rawType || rawType === 'Staff') return 'Full Time'
+  return rawType
+}
+
+function getStaffTypeBadgeClass(type) {
+  const cleanType = getStaffEmploymentType(type)
+  if (cleanType === 'Freelancer') return 'staffTypeBadge freelancerBadge'
+  if (cleanType === 'Contractor') return 'staffTypeBadge contractorBadge'
+  return 'staffTypeBadge staffBadge'
+}
+
 function parseCsv(text) {
   const rows = []
   let current = ''
@@ -452,7 +469,7 @@ function AdminPage() {
     department: '',
     phone: '',
     email: '',
-    employment_type: 'Staff',
+    employment_type: 'Full Time',
     skills: '',
     notes: '',
     active: true,
@@ -544,7 +561,7 @@ function AdminPage() {
       department: '',
       phone: '',
       email: '',
-      employment_type: 'Staff',
+      employment_type: 'Full Time',
       skills: '',
       notes: '',
       active: true,
@@ -560,7 +577,7 @@ function AdminPage() {
       department: member.department || '',
       phone: member.phone || '',
       email: member.email || '',
-      employment_type: member.employment_type || 'Staff',
+      employment_type: getStaffEmploymentType(member),
       skills: member.skills || '',
       notes: member.notes || '',
       active: member.active !== false,
@@ -810,8 +827,8 @@ function AdminPage() {
 
   const activeStaffMembers = filteredStaffMembers.filter(member => member.active !== false)
   const inactiveStaffMembers = filteredStaffMembers.filter(member => member.active === false)
-  const fullTimeStaff = staffMembers.filter(member => member.employment_type === 'Staff' && member.active !== false)
-  const freelancerStaff = staffMembers.filter(member => member.employment_type === 'Freelancer' && member.active !== false)
+  const fullTimeStaff = staffMembers.filter(member => getStaffEmploymentType(member) === 'Full Time' && member.active !== false)
+  const freelancerStaff = staffMembers.filter(member => ['Freelancer', 'Contractor'].includes(getStaffEmploymentType(member)) && member.active !== false)
 
   function renderStaffMemberCard(member) {
     return (
@@ -821,7 +838,7 @@ function AdminPage() {
             <div className="staffMemberTitleRow">
               <strong>{member.name}</strong>
               <span className={member.employment_type === 'Freelancer' ? 'staffTypeBadge freelancerBadge' : 'staffTypeBadge staffBadge'}>
-                {member.employment_type || 'Staff'}
+                {getStaffEmploymentType(member)}
               </span>
               {member.active === false && <span className="staffTypeBadge inactiveBadge">Inactive</span>}
             </div>
@@ -1256,11 +1273,11 @@ function AdminPage() {
               </div>
               <div>
                 <strong>{fullTimeStaff.length}</strong>
-                <span>Staff</span>
+                <span>Full Time Staff</span>
               </div>
               <div>
                 <strong>{freelancerStaff.length}</strong>
-                <span>Freelancers</span>
+                <span>Freelancers / Contractors</span>
               </div>
               <div>
                 <strong>{staffMembers.filter(member => member.active === false).length}</strong>
@@ -1300,19 +1317,35 @@ function AdminPage() {
 
               <label>
                 Role
-                <input value={staffForm.role} onChange={e => updateStaffField('role', e.target.value)} placeholder="Project Manager / LED Technician" />
+                <input value={staffForm.role} onChange={e => updateStaffField('role', e.target.value)} placeholder="Project Manager / Accounts / Warehouse Manager / LED Technician" />
               </label>
 
               <label>
                 Department
-                <input value={staffForm.department} onChange={e => updateStaffField('department', e.target.value)} placeholder="LED / Video / Audio / Ops" />
+                <input
+                  value={staffForm.department}
+                  onChange={e => updateStaffField('department', e.target.value)}
+                  placeholder="Technical / Operations / Finance / Admin"
+                  list="staff-department-options"
+                />
+                <datalist id="staff-department-options">
+                  <option value="Technical" />
+                  <option value="Operations" />
+                  <option value="Project Management" />
+                  <option value="Warehouse" />
+                  <option value="Finance" />
+                  <option value="Admin" />
+                  <option value="Sales" />
+                  <option value="Other" />
+                </datalist>
               </label>
 
               <label>
                 Employment Type
                 <select value={staffForm.employment_type} onChange={e => updateStaffField('employment_type', e.target.value)}>
-                  <option value="Staff">Staff</option>
+                  <option value="Full Time">Full Time</option>
                   <option value="Freelancer">Freelancer</option>
+                  <option value="Contractor">Contractor</option>
                 </select>
               </label>
 
@@ -1328,7 +1361,7 @@ function AdminPage() {
 
               <label>
                 Skills
-                <textarea value={staffForm.skills} onChange={e => updateStaffField('skills', e.target.value)} placeholder="LED, NovaStar, Brompton, Pixera..." />
+                <textarea value={staffForm.skills} onChange={e => updateStaffField('skills', e.target.value)} placeholder="LED, Video, Audio, Lighting, Project Management, Warehouse..." />
               </label>
 
               <label>
@@ -1378,8 +1411,8 @@ function AdminPage() {
             ) : staffMembers.length ? (
               filteredStaffMembers.length ? (
                 <div className="staffGroupedList">
-                  {renderStaffGroup('Full Time Staff', activeStaffMembers.filter(member => member.employment_type !== 'Freelancer'), 'No matching full-time staff members found.', 'staff')}
-                  {renderStaffGroup('Freelancers', activeStaffMembers.filter(member => member.employment_type === 'Freelancer'), 'No matching freelancers found.', 'freelancers', 'freelancer')}
+                  {renderStaffGroup('Full Time Staff', activeStaffMembers.filter(member => getStaffEmploymentType(member) === 'Full Time'), 'No matching full-time staff members found.', 'staff')}
+                  {renderStaffGroup('Freelancers / Contractors', activeStaffMembers.filter(member => ['Freelancer', 'Contractor'].includes(getStaffEmploymentType(member))), 'No matching freelancers or contractors found.', 'freelancers', 'freelancer')}
                   {renderStaffGroup('Inactive', inactiveStaffMembers, 'No inactive staff records found.', 'inactive', 'inactive')}
                 </div>
               ) : (
