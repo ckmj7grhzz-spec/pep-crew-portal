@@ -2871,3 +2871,90 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+/* Staff directory v2 - searchable expandable groups */
+.staffGroupedList {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.staffGroup {
+  border: 1px solid var(--pep-border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.staffGroupHeader {
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+  color: var(--pep-text);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.staffGroupHeader:hover {
+  background: #f8fafc;
+}
+
+.staffGroupHeader.open {
+  border-bottom: 1px solid var(--pep-border);
+}
+
+.staffGroupHeader span {
+  display: grid;
+  gap: 4px;
+}
+
+.staffGroupHeader strong {
+  font-size: 20px;
+}
+
+.staffGroupHeader small {
+  color: var(--pep-muted);
+  font-weight: 800;
+}
+
+.staffGroupFreelancer .staffGroupHeader.open {
+  background: #eff6ff;
+}
+
+.staffGroupInactive .staffGroupHeader.open {
+  background: #111111;
+  color: #ffffff;
+  border-bottom-color: rgba(255,255,255,0.18);
+}
+
+.staffGroupInactive .staffGroupHeader.open small {
+  color: rgba(255,255,255,0.72);
+}
+
+.staffGroupInactive .staffGroupHeader.open .chevron {
+  color: #ffffff;
+}
+
+.staffGroup .staffList {
+  padding: 16px;
+}
+
+.staffGroupEmpty {
+  padding: 18px 20px;
+}
+
+@media (max-width: 720px) {
+  .staffGroupHeader {
+    padding: 16px;
+  }
+
+  .staffGroup .staffList {
+    padding: 12px;
+  }
+}
