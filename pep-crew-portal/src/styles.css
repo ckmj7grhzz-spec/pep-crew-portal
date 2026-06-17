@@ -4408,3 +4408,36 @@ th {
     position: static;
   }
 }
+
+
+/* Calendar compact navigation cleanup */
+.operationsCalendarCard {
+  gap: 12px;
+}
+
+.calendarToolbar {
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 0;
+  align-items: flex-end;
+}
+
+.calendarNavGroup {
+  gap: 8px;
+}
+
+.calendarMonthJumpRow {
+  margin-top: 6px;
+}
+
+.calendarOverviewGrid {
+  margin-top: 2px;
+}
+
+.adminPortalPage .calendarToolbar {
+  padding-top: 0;
+}
+
+.adminPortalPage .operationsCalendarCard {
+  padding-top: 16px;
+}
