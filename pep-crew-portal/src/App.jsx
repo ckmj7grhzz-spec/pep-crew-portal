@@ -414,6 +414,21 @@ function AdminPage() {
   const [showExistingCrewSheets, setShowExistingCrewSheets] = useState(true)
   const [activePortalTab, setActivePortalTab] = useState('crew_sheets')
   const [crewSheetSearch, setCrewSheetSearch] = useState('')
+  const [staffMembers, setStaffMembers] = useState([])
+  const [staffLoading, setStaffLoading] = useState(true)
+  const [staffSearch, setStaffSearch] = useState('')
+  const [editingStaffId, setEditingStaffId] = useState(null)
+  const [staffForm, setStaffForm] = useState({
+    name: '',
+    role: '',
+    department: '',
+    phone: '',
+    email: '',
+    employment_type: 'Staff',
+    skills: '',
+    notes: '',
+    active: true,
+  })
   const [form, setForm] = useState({
     show_name: '',
     venue: '',
@@ -438,6 +453,7 @@ function AdminPage() {
 
   useEffect(() => {
     loadEvents()
+    loadStaffMembers()
   }, [])
 
   async function loadEvents() {
@@ -452,6 +468,125 @@ function AdminPage() {
     else setEvents(data || [])
 
     setLoading(false)
+  }
+
+  async function loadStaffMembers() {
+    setStaffLoading(true)
+
+    const { data, error } = await supabase
+      .from('staff_members')
+      .select('*')
+      .order('name', { ascending: true })
+
+    if (error) setMessage(`Could not load staff: ${error.message}`)
+    else setStaffMembers(data || [])
+
+    setStaffLoading(false)
+  }
+
+  function updateStaffField(field, value) {
+    setStaffForm({ ...staffForm, [field]: value })
+  }
+
+  function resetStaffForm() {
+    setEditingStaffId(null)
+    setStaffForm({
+      name: '',
+      role: '',
+      department: '',
+      phone: '',
+      email: '',
+      employment_type: 'Staff',
+      skills: '',
+      notes: '',
+      active: true,
+    })
+  }
+
+  function startEditStaff(member) {
+    setEditingStaffId(member.id)
+    setStaffForm({
+      name: member.name || '',
+      role: member.role || '',
+      department: member.department || '',
+      phone: member.phone || '',
+      email: member.email || '',
+      employment_type: member.employment_type || 'Staff',
+      skills: member.skills || '',
+      notes: member.notes || '',
+      active: member.active !== false,
+    })
+  }
+
+  async function saveStaffMember(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!staffForm.name) {
+      setMessage('Staff name is required.')
+      return
+    }
+
+    const payload = { ...staffForm }
+
+    if (editingStaffId) {
+      const { error } = await supabase
+        .from('staff_members')
+        .update(payload)
+        .eq('id', editingStaffId)
+
+      if (error) {
+        setMessage(`Could not update staff member: ${error.message}`)
+        return
+      }
+
+      setMessage('Staff member updated.')
+      resetStaffForm()
+      await loadStaffMembers()
+      return
+    }
+
+    const { error } = await supabase
+      .from('staff_members')
+      .insert([payload])
+
+    if (error) {
+      setMessage(`Could not add staff member: ${error.message}`)
+      return
+    }
+
+    setMessage('Staff member added.')
+    resetStaffForm()
+    await loadStaffMembers()
+  }
+
+  async function toggleStaffActive(member) {
+    const { error } = await supabase
+      .from('staff_members')
+      .update({ active: member.active === false })
+      .eq('id', member.id)
+
+    if (error) {
+      setMessage(`Could not update staff status: ${error.message}`)
+      return
+    }
+
+    await loadStaffMembers()
+  }
+
+  async function deleteStaffMember(id) {
+    const confirmed = window.confirm('Delete this staff member?')
+    if (!confirmed) return
+
+    const { error } = await supabase.from('staff_members').delete().eq('id', id)
+
+    if (error) {
+      setMessage(`Could not delete staff member: ${error.message}`)
+      return
+    }
+
+    setMessage('Staff member deleted.')
+    await loadStaffMembers()
   }
 
   function updateField(field, value) {
@@ -587,6 +722,79 @@ function AdminPage() {
   const filteredReadyCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'ready_to_go')
   const filteredCompletedCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'show_complete')
   const filteredInProgressCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'in_progress' || !eventRecord.crew_sheet_status)
+
+  const staffSearchTerm = staffSearch.trim().toLowerCase()
+  const filteredStaffMembers = staffSearchTerm
+    ? staffMembers.filter(member => {
+        const searchableText = [
+          member.name,
+          member.role,
+          member.department,
+          member.phone,
+          member.email,
+          member.employment_type,
+          member.skills,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+
+        return searchableText.includes(staffSearchTerm)
+      })
+    : staffMembers
+
+  const activeStaffMembers = filteredStaffMembers.filter(member => member.active !== false)
+  const inactiveStaffMembers = filteredStaffMembers.filter(member => member.active === false)
+  const fullTimeStaff = staffMembers.filter(member => member.employment_type === 'Staff' && member.active !== false)
+  const freelancerStaff = staffMembers.filter(member => member.employment_type === 'Freelancer' && member.active !== false)
+
+  function renderStaffMemberCard(member) {
+    return (
+      <div className={member.active === false ? 'staffMemberCard inactiveStaffMemberCard' : 'staffMemberCard'} key={member.id}>
+        <div className="staffMemberMain">
+          <div>
+            <div className="staffMemberTitleRow">
+              <strong>{member.name}</strong>
+              <span className={member.employment_type === 'Freelancer' ? 'staffTypeBadge freelancerBadge' : 'staffTypeBadge staffBadge'}>
+                {member.employment_type || 'Staff'}
+              </span>
+              {member.active === false && <span className="staffTypeBadge inactiveBadge">Inactive</span>}
+            </div>
+            <p>{member.role || 'No role set'}{member.department ? ` · ${member.department}` : ''}</p>
+            <small>{member.phone || 'No phone'}{member.email ? ` · ${member.email}` : ''}</small>
+            {member.skills && <p><small>Skills: {member.skills}</small></p>}
+            {member.notes && <p><small>Notes: {member.notes}</small></p>}
+          </div>
+        </div>
+
+        <div className="adminActions">
+          <button type="button" onClick={() => startEditStaff(member)}>Edit</button>
+          <button type="button" onClick={() => toggleStaffActive(member)}>
+            {member.active === false ? 'Make Active' : 'Make Inactive'}
+          </button>
+          <button type="button" onClick={() => deleteStaffMember(member.id)}>Delete</button>
+        </div>
+      </div>
+    )
+  }
+
+  function renderStaffGroup(title, records, emptyText) {
+    return (
+      <div className="staffGroup">
+        <div className="staffGroupHeader">
+          <strong>{title}</strong>
+          <span>{records.length}</span>
+        </div>
+        {records.length ? (
+          <div className="staffList">
+            {records.map(member => renderStaffMemberCard(member))}
+          </div>
+        ) : (
+          <p className="empty staffGroupEmpty">{emptyText}</p>
+        )}
+      </div>
+    )
+  }
 
   function renderCrewSheetCard(eventRecord) {
     const crewSheetStatus = getCrewSheetStatus(eventRecord)
@@ -950,26 +1158,145 @@ function AdminPage() {
       )}
 
       {activePortalTab === 'staff' && (
-        <section className="eventCard portalPlaceholderCard">
-          <p className="eyebrowDark">Staff Management</p>
-          <h2>Staff database coming soon</h2>
-          <p>This will be kept separate from the functional calendar so adding and managing staff remains clean and quick.</p>
+        <>
+          <section className="eventCard staffOverviewDashboard">
+            <div>
+              <p className="eyebrowDark">Staff Management</p>
+              <h2>People Database</h2>
+              <p>Manage full-time staff and freelancers separately from the operations calendar.</p>
+            </div>
 
-          <div className="portalPlaceholderGrid">
-            <div>
-              <strong>Staff Profiles</strong>
-              <span>Create full-time staff and freelancer records.</span>
+            <div className="adminOverviewGrid staffOverviewGrid">
+              <div>
+                <strong>{staffMembers.length}</strong>
+                <span>Total People</span>
+              </div>
+              <div>
+                <strong>{fullTimeStaff.length}</strong>
+                <span>Staff</span>
+              </div>
+              <div>
+                <strong>{freelancerStaff.length}</strong>
+                <span>Freelancers</span>
+              </div>
+              <div>
+                <strong>{staffMembers.filter(member => member.active === false).length}</strong>
+                <span>Inactive</span>
+              </div>
             </div>
-            <div>
-              <strong>Skills & Departments</strong>
-              <span>Track roles, departments, skills, certifications and notes.</span>
+          </section>
+
+          {message && <p className="adminMessage adminHomeMessage">{message}</p>}
+
+          <section className="eventCard staffManagementCard">
+            <div className="staffSectionHeader">
+              <div>
+                <p className="eyebrowDark">Add / Edit</p>
+                <h2>{editingStaffId ? 'Edit Staff Member' : 'Add Staff or Freelancer'}</h2>
+              </div>
+              {editingStaffId && (
+                <button type="button" className="secondaryButton" onClick={resetStaffForm}>
+                  Cancel Edit
+                </button>
+              )}
             </div>
-            <div>
-              <strong>Leave Requests</strong>
-              <span>Manage holiday and leave under each staff member.</span>
+
+            <form onSubmit={saveStaffMember} className="adminForm staffForm">
+              <label>
+                Name
+                <input value={staffForm.name} onChange={e => updateStaffField('name', e.target.value)} placeholder="Liam Howard" />
+              </label>
+
+              <label>
+                Role
+                <input value={staffForm.role} onChange={e => updateStaffField('role', e.target.value)} placeholder="Project Manager / LED Technician" />
+              </label>
+
+              <label>
+                Department
+                <input value={staffForm.department} onChange={e => updateStaffField('department', e.target.value)} placeholder="LED / Video / Audio / Ops" />
+              </label>
+
+              <label>
+                Employment Type
+                <select value={staffForm.employment_type} onChange={e => updateStaffField('employment_type', e.target.value)}>
+                  <option value="Staff">Staff</option>
+                  <option value="Freelancer">Freelancer</option>
+                </select>
+              </label>
+
+              <label>
+                Phone
+                <input value={staffForm.phone} onChange={e => updateStaffField('phone', e.target.value)} placeholder="+44..." />
+              </label>
+
+              <label>
+                Email
+                <input type="email" value={staffForm.email} onChange={e => updateStaffField('email', e.target.value)} placeholder="name@pepled.com" />
+              </label>
+
+              <label>
+                Skills
+                <textarea value={staffForm.skills} onChange={e => updateStaffField('skills', e.target.value)} placeholder="LED, NovaStar, Brompton, Pixera..." />
+              </label>
+
+              <label>
+                Notes
+                <textarea value={staffForm.notes} onChange={e => updateStaffField('notes', e.target.value)} placeholder="Internal notes, preferences, certifications..." />
+              </label>
+
+              <label className="checkboxRow">
+                <input type="checkbox" checked={staffForm.active} onChange={e => updateStaffField('active', e.target.checked)} />
+                Active
+              </label>
+
+              <button className="primaryButton" type="submit">
+                <Plus size={18} /> {editingStaffId ? 'Save Staff Member' : 'Add Staff Member'}
+              </button>
+            </form>
+          </section>
+
+          <section className="eventCard staffDirectoryCard">
+            <div className="staffSectionHeader">
+              <div>
+                <p className="eyebrowDark">Directory</p>
+                <h2>Staff & Freelancers</h2>
+              </div>
             </div>
-          </div>
-        </section>
+
+            <div className="crewSheetSearchBox staffSearchBox">
+              <label>
+                Search Staff
+                <input
+                  value={staffSearch}
+                  onChange={e => setStaffSearch(e.target.value)}
+                  placeholder="Search by name, role, department, phone, email or skill..."
+                />
+              </label>
+              {staffSearch && (
+                <button type="button" onClick={() => setStaffSearch('')}>
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {staffLoading ? (
+              <p>Loading staff...</p>
+            ) : staffMembers.length ? (
+              filteredStaffMembers.length ? (
+                <div className="staffGroupedList">
+                  {renderStaffGroup('Staff', activeStaffMembers.filter(member => member.employment_type !== 'Freelancer'), 'No matching staff members found.')}
+                  {renderStaffGroup('Freelancers', activeStaffMembers.filter(member => member.employment_type === 'Freelancer'), 'No matching freelancers found.')}
+                  {renderStaffGroup('Inactive', inactiveStaffMembers, 'No inactive staff records found.')}
+                </div>
+              ) : (
+                <Empty text="No staff records match your search." />
+              )
+            ) : (
+              <Empty text="No staff or freelancer records created yet." />
+            )}
+          </section>
+        </>
       )}
 
       {activePortalTab === 'reports' && (
