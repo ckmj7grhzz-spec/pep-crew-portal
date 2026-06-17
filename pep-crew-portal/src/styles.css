@@ -1794,3 +1794,49 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Collapsible overview sections */
+.collapsibleOverviewCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.collapsibleOverviewHeader {
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+  color: var(--pep-text);
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.collapsibleOverviewHeader:hover {
+  background: #f8fafc;
+}
+
+.collapsibleOverviewHeader h2 {
+  margin: 0 0 4px;
+}
+
+.collapsibleOverviewHeader small {
+  color: var(--pep-muted);
+  font-weight: 800;
+}
+
+.collapsibleOverviewBody {
+  border-top: 1px solid var(--pep-border);
+  padding: 24px 28px 28px;
+}
+
+@media (max-width: 720px) {
+  .collapsibleOverviewHeader,
+  .collapsibleOverviewBody {
+    padding: 20px 22px;
+  }
+}
