@@ -5218,3 +5218,19 @@ button.calendarEventListItem {
   color: #334155;
   font-weight: 800;
 }
+
+/* Resource calendar management refinement */
+.resourceCalendarEditNotice {
+  grid-column: 1 / -1;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 900;
+}
+
+.resourceCalendarSettingsCard .staffSectionHeader h2,
+.calendarColourSettingsCard .staffSectionHeader h2 {
+  margin-bottom: 6px;
+}
