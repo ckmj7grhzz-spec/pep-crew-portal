@@ -791,12 +791,16 @@ function AdminPage() {
     }))
   }
 
-  function resetResourceCalendarForm() {
+  function resetResourceCalendarForm(options = {}) {
+    const nextCategory = options.keepCategory
+      ? resourceCalendarForm.category
+      : 'vehicles'
+
     setEditingResourceCalendarId(null)
     setResourceCalendarForm({
-      category: 'vehicles',
+      category: nextCategory,
       name: '',
-      colour: '#111827',
+      colour: getCalendarCategoryColour(nextCategory),
       active: true,
     })
   }
@@ -854,7 +858,11 @@ function AdminPage() {
     }
 
     setMessage('Resource calendar created.')
-    resetResourceCalendarForm()
+    setOpenResourceCalendarGroups(current => ({
+      ...current,
+      [resourceCalendarForm.category]: true,
+    }))
+    resetResourceCalendarForm({ keepCategory: true })
     await loadResourceCalendars()
   }
 
