@@ -412,6 +412,7 @@ function AdminPage() {
   const [message, setMessage] = useState('')
   const [showCreateCrewSheet, setShowCreateCrewSheet] = useState(false)
   const [showExistingCrewSheets, setShowExistingCrewSheets] = useState(true)
+  const [activePortalTab, setActivePortalTab] = useState('crew_sheets')
   const [crewSheetSearch, setCrewSheetSearch] = useState('')
   const [form, setForm] = useState({
     show_name: '',
@@ -680,6 +681,39 @@ function AdminPage() {
         </div>
       </header>
 
+      <nav className="portalTopTabs" aria-label="PEP portal sections">
+        <button
+          type="button"
+          className={activePortalTab === 'crew_sheets' ? 'active' : ''}
+          onClick={() => setActivePortalTab('crew_sheets')}
+        >
+          Crew Sheets
+        </button>
+        <button
+          type="button"
+          className={activePortalTab === 'operations_calendar' ? 'active' : ''}
+          onClick={() => setActivePortalTab('operations_calendar')}
+        >
+          Operations Calendar
+        </button>
+        <button
+          type="button"
+          className={activePortalTab === 'staff' ? 'active' : ''}
+          onClick={() => setActivePortalTab('staff')}
+        >
+          Staff
+        </button>
+        <button
+          type="button"
+          className={activePortalTab === 'reports' ? 'active' : ''}
+          onClick={() => setActivePortalTab('reports')}
+        >
+          Reports
+        </button>
+      </nav>
+
+      {activePortalTab === 'crew_sheets' && (
+        <>
       <section className="eventCard adminOverviewDashboard">
         <div>
           <p className="eyebrowDark">Admin Overview</p>
@@ -889,6 +923,77 @@ function AdminPage() {
           </div>
         )}
       </section>
+        </>
+      )}
+
+      {activePortalTab === 'operations_calendar' && (
+        <section className="eventCard portalPlaceholderCard">
+          <p className="eyebrowDark">Operations Calendar</p>
+          <h2>Calendar system coming soon</h2>
+          <p>This area will become the internal scheduling hub for PEP events, staff availability, leave, travel days and operational conflicts.</p>
+
+          <div className="portalPlaceholderGrid">
+            <div>
+              <strong>Event Calendar</strong>
+              <span>View build days, show days, derigs and travel days.</span>
+            </div>
+            <div>
+              <strong>Availability Tracking</strong>
+              <span>Check who is free, unavailable or already assigned.</span>
+            </div>
+            <div>
+              <strong>Leave Visibility</strong>
+              <span>Show approved holiday and leave alongside event dates.</span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activePortalTab === 'staff' && (
+        <section className="eventCard portalPlaceholderCard">
+          <p className="eyebrowDark">Staff Management</p>
+          <h2>Staff database coming soon</h2>
+          <p>This will be kept separate from the functional calendar so adding and managing staff remains clean and quick.</p>
+
+          <div className="portalPlaceholderGrid">
+            <div>
+              <strong>Staff Profiles</strong>
+              <span>Create full-time staff and freelancer records.</span>
+            </div>
+            <div>
+              <strong>Skills & Departments</strong>
+              <span>Track roles, departments, skills, certifications and notes.</span>
+            </div>
+            <div>
+              <strong>Leave Requests</strong>
+              <span>Manage holiday and leave under each staff member.</span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activePortalTab === 'reports' && (
+        <section className="eventCard portalPlaceholderCard">
+          <p className="eyebrowDark">Reports</p>
+          <h2>Reports coming soon</h2>
+          <p>This area will later show staff utilisation, upcoming jobs, readiness summaries and conflict reports.</p>
+
+          <div className="portalPlaceholderGrid">
+            <div>
+              <strong>Upcoming Shows</strong>
+              <span>Summarise future events and their readiness state.</span>
+            </div>
+            <div>
+              <strong>Utilisation</strong>
+              <span>See who is heavily booked and who has availability.</span>
+            </div>
+            <div>
+              <strong>Conflict Reports</strong>
+              <span>Highlight staff, travel or scheduling clashes.</span>
+            </div>
+          </div>
+        </section>
+      )}
     </main>
   )
 }
