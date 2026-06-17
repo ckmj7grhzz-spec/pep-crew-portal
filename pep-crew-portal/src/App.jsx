@@ -956,12 +956,18 @@ function AdminPage() {
     })
   }
 
-  function renderCalendarEventPill(eventRecord) {
+  function getCalendarEventClass(eventRecord) {
     const status = getCrewSheetStatus(eventRecord)
+    if (status === 'ready_to_go') return 'readyCalendarEvent'
+    if (status === 'show_complete') return 'completeCalendarEvent'
+    return ''
+  }
+
+  function renderCalendarEventPill(eventRecord) {
     return (
       <a
         key={`${eventRecord.id}-${eventRecord.public_slug}`}
-        className={`calendarEventPill ${status === 'ready_to_go' ? 'readyCalendarEvent' : status === 'show_complete' ? 'completeCalendarEvent' : ''}`}
+        className={`calendarEventPill ${getCalendarEventClass(eventRecord)}`}
         href={`/admin/event/${eventRecord.public_slug}`}
         title={`${eventRecord.show_name}${eventRecord.venue ? ` — ${eventRecord.venue}` : ''}`}
       >
@@ -971,22 +977,70 @@ function AdminPage() {
     )
   }
 
-  function renderCalendarDayCell(day, options = {}) {
-    const dayEvents = events.filter(eventRecord => eventOverlapsDate(eventRecord, day))
-    const isToday = isSameCalendarDate(day, new Date())
-    const isOutsideMonth = options.monthView && day.getMonth() !== calendarFocus.getMonth()
+  function renderCalendarEventBar(eventRecord, weekStart, weekEnd) {
+    const eventStart = startOfCalendarDay(parseCalendarDate(eventRecord.start_date))
+    const eventEnd = startOfCalendarDay(parseCalendarDate(eventRecord.end_date) || eventStart)
+    const segmentStart = eventStart < weekStart ? weekStart : eventStart
+    const segmentEnd = eventEnd > weekEnd ? weekEnd : eventEnd
+    const startCol = Math.round((segmentStart - weekStart) / 86400000) + 1
+    const endCol = Math.round((segmentEnd - weekStart) / 86400000) + 2
+    const continuesBefore = eventStart < weekStart
+    const continuesAfter = eventEnd > weekEnd
 
     return (
-      <div
-        className={`calendarDayCell ${isToday ? 'todayCalendarCell' : ''} ${isOutsideMonth ? 'outsideCalendarMonth' : ''}`}
-        key={formatCalendarDateInput(day)}
+      <a
+        key={`${eventRecord.id}-${formatCalendarDateInput(weekStart)}`}
+        className={`calendarEventBar ${getCalendarEventClass(eventRecord)} ${continuesBefore ? 'continuesBefore' : ''} ${continuesAfter ? 'continuesAfter' : ''}`}
+        href={`/admin/event/${eventRecord.public_slug}`}
+        title={`${eventRecord.show_name}${eventRecord.venue ? ` — ${eventRecord.venue}` : ''}`}
+        style={{ gridColumn: `${startCol} / ${endCol}` }}
       >
-        <div className="calendarDayHeader">
-          <strong>{day.getDate()}</strong>
-          <span>{day.toLocaleDateString('en-GB', { weekday: 'short' })}</span>
+        {continuesBefore && <span className="calendarContinuationMark">←</span>}
+        <span className="calendarEventBarText">
+          <strong>{eventRecord.show_name}</strong>
+          {eventRecord.venue && <small>{eventRecord.venue}</small>}
+        </span>
+        {continuesAfter && <span className="calendarContinuationMark">→</span>}
+      </a>
+    )
+  }
+
+  function renderCalendarWeekRow(days, options = {}) {
+    const weekStart = startOfCalendarDay(days[0])
+    const weekEnd = startOfCalendarDay(days[days.length - 1])
+    const weekEvents = events
+      .filter(eventRecord => eventOverlapsRange(eventRecord, weekStart, weekEnd))
+      .sort((a, b) => {
+        const aStart = parseCalendarDate(a.start_date) || weekStart
+        const bStart = parseCalendarDate(b.start_date) || weekStart
+        return aStart - bStart
+      })
+
+    return (
+      <div className="calendarContinuousWeek" key={`${formatCalendarDateInput(weekStart)}-${formatCalendarDateInput(weekEnd)}`}>
+        <div className="calendarContinuousDays">
+          {days.map(day => {
+            const isToday = isSameCalendarDate(day, new Date())
+            const isOutsideMonth = options.monthView && day.getMonth() !== calendarFocus.getMonth()
+
+            return (
+              <div
+                className={`calendarContinuousDay ${isToday ? 'todayCalendarCell' : ''} ${isOutsideMonth ? 'outsideCalendarMonth' : ''}`}
+                key={formatCalendarDateInput(day)}
+              >
+                <strong>{day.getDate()}</strong>
+                <span>{day.toLocaleDateString('en-GB', { weekday: 'short' })}</span>
+              </div>
+            )
+          })}
         </div>
-        <div className="calendarDayEvents">
-          {dayEvents.length ? dayEvents.map(eventRecord => renderCalendarEventPill(eventRecord)) : <small className="calendarNoEvents">No events</small>}
+
+        <div className="calendarContinuousEvents">
+          {weekEvents.length ? (
+            weekEvents.map(eventRecord => renderCalendarEventBar(eventRecord, weekStart, weekEnd))
+          ) : (
+            <small className="calendarNoEvents calendarNoEventsFull">No events scheduled this week</small>
+          )}
         </div>
       </div>
     )
@@ -1003,10 +1057,19 @@ function AdminPage() {
       days.push(new Date(date))
     }
 
+    const weeks = []
+    for (let index = 0; index < days.length; index += 7) {
+      weeks.push(days.slice(index, index + 7))
+    }
+
     return (
-      <div className="calendarMonthGrid">
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(dayName => <div className="calendarWeekday" key={dayName}>{dayName}</div>)}
-        {days.map(day => renderCalendarDayCell(day, { monthView: true }))}
+      <div className="calendarContinuousScroll">
+        <div className="calendarContinuousGrid">
+          <div className="calendarContinuousWeekdays">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(dayName => <div className="calendarWeekday" key={dayName}>{dayName}</div>)}
+          </div>
+          {weeks.map(weekDays => renderCalendarWeekRow(weekDays, { monthView: true }))}
+        </div>
       </div>
     )
   }
@@ -1015,9 +1078,36 @@ function AdminPage() {
     const start = calendarView === 'day' ? startOfCalendarDay(calendarFocus) : startOfCalendarWeek(calendarFocus)
     const days = Array.from({ length: daysToShow }, (_, index) => addCalendarDays(start, index))
 
+    if (daysToShow === 1) {
+      const dayEvents = events.filter(eventRecord => eventOverlapsDate(eventRecord, start))
+
+      return (
+        <div className="calendarDayView">
+          <div className="calendarDayCell todayCalendarCell">
+            <div className="calendarDayHeader">
+              <strong>{start.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
+            </div>
+            <div className="calendarDayEvents">
+              {dayEvents.length ? dayEvents.map(eventRecord => renderCalendarEventPill(eventRecord)) : <small className="calendarNoEvents">No events</small>}
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    const weeks = []
+    for (let index = 0; index < days.length; index += 7) {
+      weeks.push(days.slice(index, index + 7))
+    }
+
     return (
-      <div className={daysToShow === 1 ? 'calendarDayView' : 'calendarRollingGrid'}>
-        {days.map(day => renderCalendarDayCell(day))}
+      <div className="calendarContinuousScroll">
+        <div className="calendarContinuousGrid">
+          <div className="calendarContinuousWeekdays">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(dayName => <div className="calendarWeekday" key={dayName}>{dayName}</div>)}
+          </div>
+          {weeks.map(weekDays => renderCalendarWeekRow(weekDays))}
+        </div>
       </div>
     )
   }
