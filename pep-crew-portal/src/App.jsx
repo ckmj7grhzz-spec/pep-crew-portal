@@ -3767,6 +3767,261 @@ function PublicCrewSheet() {
   if (loading) return <main className="page"><p>Loading PEP crew sheet...</p></main>
   if (error) return <main className="page"><p>{error}</p></main>
 
+  function renderPublicSectionContent(sectionId) {
+    return (
+      <section className="eventCard publicSectionPanel publicSectionPanelInline">
+                {sectionId === 'crew' && (
+                  <>
+                    <div className="publicSectionPanelHeader">
+                      <p className="eyebrowDark">Crew</p>
+                      <h2>Crew Members</h2>
+                    </div>
+      
+                    {data.crew.length ? (
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Mobile</th>
+                            <th>Hotel</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.crew.map(x => (
+                            <tr key={x.id}>
+                              <td>
+                                <a href={`/${slug}/crew/${x.id}`}>{x.name}</a>
+                              </td>
+                              <td>{x.role}</td>
+                              <td>{x.mobile}</td>
+                              <td>{x.hotel} {x.room_number}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <Empty text="No crew added yet." />
+                    )}
+                  </>
+                )}
+      
+                {sectionId === 'flights' && (
+                  <>
+                    <div className="publicSectionPanelHeader">
+                      <p className="eyebrowDark">Flights</p>
+                      <h2>Flight Information</h2>
+                    </div>
+      
+                    {data.flights.length ? (
+                      data.flights.map(x => (
+                        <div className="item" key={x.id}>
+                          <strong>{x.crew_name}</strong>
+                          <p>{x.airline} {x.flight_number}: {x.departure_airport} → {x.arrival_airport}</p>
+      
+                          {x.departure_time && <small>Departure: {formatDateTime(x.departure_time)}</small>}
+      
+                          {x.arrival_time && (
+                            <small>
+                              <br />
+                              Arrival: {formatDateTime(x.arrival_time)}
+                            </small>
+                          )}
+      
+                          {x.booking_reference && (
+                            <small>
+                              <br />
+                              Booking Ref: {x.booking_reference}
+                            </small>
+                          )}
+      
+                          {x.notes && <p>{x.notes}</p>}
+                        </div>
+                      ))
+                    ) : (
+                      <Empty text="No flights added yet." />
+                    )}
+                  </>
+                )}
+      
+                {sectionId === 'transfers' && (
+                  <>
+                    <div className="publicSectionPanelHeader">
+                      <p className="eyebrowDark">Transfers</p>
+                      <h2>Transfer Information</h2>
+                    </div>
+      
+                    {data.transfers.length ? (
+                      data.transfers.map(x => (
+                        <div className="item" key={x.id}>
+                          <strong>{x.transfer_type}</strong>
+                          <p>{x.pickup_location} → {x.destination}</p>
+                          <div className="locationButtonRow">
+                            {x.pickup_maps_url && <a href={x.pickup_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Pickup Maps</a>}
+                            {x.pickup_what3words && <a href={`https://what3words.com/${String(x.pickup_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Pickup What3Words</a>}
+                            {x.destination_maps_url && <a href={x.destination_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Destination Maps</a>}
+                            {x.destination_what3words && <a href={`https://what3words.com/${String(x.destination_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Destination What3Words</a>}
+                          </div>
+                          <small>
+                            {formatDate(x.date)}
+                            {x.time && ` at ${formatTime(x.time)}`}
+                            {(x.passenger || x.passengers) && ` | ${x.passenger || x.passengers}`}
+                          </small>
+                          {x.driver_name && (
+                            <small>
+                              <br />
+                              Driver: {x.driver_name}
+                              {x.driver_phone && ` | ${x.driver_phone}`}
+                            </small>
+                          )}
+                          {x.vehicle && (
+                            <small>
+                              <br />
+                              Vehicle: {x.vehicle}
+                            </small>
+                          )}
+                          {x.notes && <p>{x.notes}</p>}
+                        </div>
+                      ))
+                    ) : (
+                      <Empty text="No transfers added yet." />
+                    )}
+                  </>
+                )}
+      
+                {sectionId === 'hotels' && (
+                  <>
+                    <div className="publicSectionPanelHeader">
+                      <p className="eyebrowDark">Hotels</p>
+                      <h2>Hotel Information</h2>
+                    </div>
+      
+                    {data.hotels.length ? (
+                      data.hotels.map(x => (
+                        <div className="item" key={x.id}>
+                          <strong>{x.guest_name}</strong>
+                          <p>{x.hotel_name}</p>
+                          {x.address && <p>{x.address}</p>}
+                          <div className="locationButtonRow">
+                            {x.maps_url && <a href={x.maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Hotel Maps</a>}
+                            {x.what3words && <a href={`https://what3words.com/${String(x.what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Hotel What3Words</a>}
+                          </div>
+                          <small>
+                            Check-in: {formatDate(x.check_in)}
+                            {x.check_out && (
+                              <>
+                                <br />
+                                Check-out: {formatDate(x.check_out)}
+                              </>
+                            )}
+                            {x.room_number && (
+                              <>
+                                <br />
+                                Room: {x.room_number}
+                              </>
+                            )}
+                          </small>
+                          {x.booking_reference && (
+                            <small>
+                              <br />
+                              Booking Ref: {x.booking_reference}
+                            </small>
+                          )}
+                          {x.hotel_contact && (
+                            <small>
+                              <br />
+                              Hotel Contact: {x.hotel_contact}
+                            </small>
+                          )}
+                          {x.notes && <p>{x.notes}</p>}
+                        </div>
+                      ))
+                    ) : (
+                      <Empty text="No hotels added yet." />
+                    )}
+                  </>
+                )}
+      
+                {sectionId === 'schedule' && (
+                  <>
+                    <div className="publicSectionPanelHeader">
+                      <p className="eyebrowDark">Schedule</p>
+                      <h2>Event Schedule</h2>
+                    </div>
+      
+                    {data.schedule_items.length ? (
+                      data.schedule_items.map(x => (
+                        <div className="item" key={x.id}>
+                          <strong>{x.activity}</strong>
+                          <p>{x.location}</p>
+                          <small>
+                            {formatDate(x.date)}
+                            {x.start_time && ` | ${formatTime(x.start_time)}`}
+                            {x.end_time && ` - ${formatTime(x.end_time)}`}
+                          </small>
+                          {x.assigned_crew && (
+                            <small>
+                              <br />
+                              Assigned Crew: {x.assigned_crew}
+                            </small>
+                          )}
+                          {x.notes && <p>{x.notes}</p>}
+                        </div>
+                      ))
+                    ) : (
+                      <Empty text="No schedule added yet." />
+                    )}
+                  </>
+                )}
+      
+                {sectionId === 'documents' && (
+                  <>
+                    <div className="publicSectionPanelHeader">
+                      <p className="eyebrowDark">Documents</p>
+                      <h2>Event Documents</h2>
+                    </div>
+      
+                    {data.documents.length ? (
+                      data.documents.map(x => (
+                        <div className="item" key={x.id}>
+                          <strong>{x.document_name}</strong>
+                          <div className="documentMetaRow">
+                            <span>{x.category || 'Uncategorised'}</span>
+                            {x.file_size ? <span>{formatFileSize(x.file_size)}</span> : null}
+                          </div>
+                          {x.file_url && <DocumentPreviewLinks url={x.file_url} label={x.document_name} />}
+                          {x.notes && <p>{x.notes}</p>}
+                        </div>
+                      ))
+                    ) : (
+                      <Empty text="No documents added yet." />
+                    )}
+                  </>
+                )}
+      
+                {sectionId === 'notes' && (
+                  <>
+                    <div className="publicSectionPanelHeader">
+                      <p className="eyebrowDark">Notes</p>
+                      <h2>Event Notes</h2>
+                    </div>
+      
+                    {data.notes.length ? (
+                      data.notes.map(x => (
+                        <div className="item" key={x.id}>
+                          <strong>{x.title}</strong>
+                          <p>{x.content}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <Empty text="No notes added yet." />
+                    )}
+                  </>
+                )}
+              </section>
+    )
+  }
+
   return (
     <main className="page">
       <header className="hero">
@@ -3854,277 +4109,37 @@ function PublicCrewSheet() {
         ].map(section => {
           const Icon = section.Icon
           const isOpen = openPublicSection === section.id
+          const tileClassName = [
+            'publicSectionTile',
+            section.fullWidth || isOpen ? 'publicSectionTileFull' : '',
+            isOpen ? 'active publicSectionTileExpanded' : '',
+          ].filter(Boolean).join(' ')
 
           return (
-            <button
-              type="button"
-              key={section.id}
-              className={section.fullWidth ? `publicSectionTile publicSectionTileFull ${isOpen ? 'active' : ''}` : `publicSectionTile ${isOpen ? 'active' : ''}`}
-              onClick={() => setOpenPublicSection(isOpen ? null : section.id)}
-            >
-              <span className="publicSectionIcon"><Icon size={24} /></span>
-              <span>
-                <strong>{section.title}</strong>
-                <small>{section.subtitle}</small>
-              </span>
-              <ChevronDown className={isOpen ? 'chevron open' : 'chevron'} />
-            </button>
+            <React.Fragment key={section.id}>
+              <button
+                type="button"
+                className={tileClassName}
+                onClick={() => setOpenPublicSection(isOpen ? null : section.id)}
+              >
+                <span className="publicSectionIcon"><Icon size={24} /></span>
+                <span>
+                  <strong>{section.title}</strong>
+                  <small>{section.subtitle}</small>
+                </span>
+                <ChevronDown className={isOpen ? 'chevron open' : 'chevron'} />
+              </button>
+
+              {isOpen && (
+                <div className="publicSectionExpandedContent">
+                  {renderPublicSectionContent(section.id)}
+                </div>
+              )}
+            </React.Fragment>
           )
         })}
       </div>
 
-      {openPublicSection && (
-        <section className="eventCard publicSectionPanel">
-          {openPublicSection === 'crew' && (
-            <>
-              <div className="publicSectionPanelHeader">
-                <p className="eyebrowDark">Crew</p>
-                <h2>Crew Members</h2>
-              </div>
-
-              {data.crew.length ? (
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Role</th>
-                      <th>Mobile</th>
-                      <th>Hotel</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.crew.map(x => (
-                      <tr key={x.id}>
-                        <td>
-                          <a href={`/${slug}/crew/${x.id}`}>{x.name}</a>
-                        </td>
-                        <td>{x.role}</td>
-                        <td>{x.mobile}</td>
-                        <td>{x.hotel} {x.room_number}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <Empty text="No crew added yet." />
-              )}
-            </>
-          )}
-
-          {openPublicSection === 'flights' && (
-            <>
-              <div className="publicSectionPanelHeader">
-                <p className="eyebrowDark">Flights</p>
-                <h2>Flight Information</h2>
-              </div>
-
-              {data.flights.length ? (
-                data.flights.map(x => (
-                  <div className="item" key={x.id}>
-                    <strong>{x.crew_name}</strong>
-                    <p>{x.airline} {x.flight_number}: {x.departure_airport} → {x.arrival_airport}</p>
-
-                    {x.departure_time && <small>Departure: {formatDateTime(x.departure_time)}</small>}
-
-                    {x.arrival_time && (
-                      <small>
-                        <br />
-                        Arrival: {formatDateTime(x.arrival_time)}
-                      </small>
-                    )}
-
-                    {x.booking_reference && (
-                      <small>
-                        <br />
-                        Booking Ref: {x.booking_reference}
-                      </small>
-                    )}
-
-                    {x.notes && <p>{x.notes}</p>}
-                  </div>
-                ))
-              ) : (
-                <Empty text="No flights added yet." />
-              )}
-            </>
-          )}
-
-          {openPublicSection === 'transfers' && (
-            <>
-              <div className="publicSectionPanelHeader">
-                <p className="eyebrowDark">Transfers</p>
-                <h2>Transfer Information</h2>
-              </div>
-
-              {data.transfers.length ? (
-                data.transfers.map(x => (
-                  <div className="item" key={x.id}>
-                    <strong>{x.transfer_type}</strong>
-                    <p>{x.pickup_location} → {x.destination}</p>
-                    <div className="locationButtonRow">
-                      {x.pickup_maps_url && <a href={x.pickup_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Pickup Maps</a>}
-                      {x.pickup_what3words && <a href={`https://what3words.com/${String(x.pickup_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Pickup What3Words</a>}
-                      {x.destination_maps_url && <a href={x.destination_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Destination Maps</a>}
-                      {x.destination_what3words && <a href={`https://what3words.com/${String(x.destination_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Destination What3Words</a>}
-                    </div>
-                    <small>
-                      {formatDate(x.date)}
-                      {x.time && ` at ${formatTime(x.time)}`}
-                      {(x.passenger || x.passengers) && ` | ${x.passenger || x.passengers}`}
-                    </small>
-                    {x.driver_name && (
-                      <small>
-                        <br />
-                        Driver: {x.driver_name}
-                        {x.driver_phone && ` | ${x.driver_phone}`}
-                      </small>
-                    )}
-                    {x.vehicle && (
-                      <small>
-                        <br />
-                        Vehicle: {x.vehicle}
-                      </small>
-                    )}
-                    {x.notes && <p>{x.notes}</p>}
-                  </div>
-                ))
-              ) : (
-                <Empty text="No transfers added yet." />
-              )}
-            </>
-          )}
-
-          {openPublicSection === 'hotels' && (
-            <>
-              <div className="publicSectionPanelHeader">
-                <p className="eyebrowDark">Hotels</p>
-                <h2>Hotel Information</h2>
-              </div>
-
-              {data.hotels.length ? (
-                data.hotels.map(x => (
-                  <div className="item" key={x.id}>
-                    <strong>{x.guest_name}</strong>
-                    <p>{x.hotel_name}</p>
-                    {x.address && <p>{x.address}</p>}
-                    <div className="locationButtonRow">
-                      {x.maps_url && <a href={x.maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Hotel Maps</a>}
-                      {x.what3words && <a href={`https://what3words.com/${String(x.what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// Hotel What3Words</a>}
-                    </div>
-                    <small>
-                      Check-in: {formatDate(x.check_in)}
-                      {x.check_out && (
-                        <>
-                          <br />
-                          Check-out: {formatDate(x.check_out)}
-                        </>
-                      )}
-                      {x.room_number && (
-                        <>
-                          <br />
-                          Room: {x.room_number}
-                        </>
-                      )}
-                    </small>
-                    {x.booking_reference && (
-                      <small>
-                        <br />
-                        Booking Ref: {x.booking_reference}
-                      </small>
-                    )}
-                    {x.hotel_contact && (
-                      <small>
-                        <br />
-                        Hotel Contact: {x.hotel_contact}
-                      </small>
-                    )}
-                    {x.notes && <p>{x.notes}</p>}
-                  </div>
-                ))
-              ) : (
-                <Empty text="No hotels added yet." />
-              )}
-            </>
-          )}
-
-          {openPublicSection === 'schedule' && (
-            <>
-              <div className="publicSectionPanelHeader">
-                <p className="eyebrowDark">Schedule</p>
-                <h2>Event Schedule</h2>
-              </div>
-
-              {data.schedule_items.length ? (
-                data.schedule_items.map(x => (
-                  <div className="item" key={x.id}>
-                    <strong>{x.activity}</strong>
-                    <p>{x.location}</p>
-                    <small>
-                      {formatDate(x.date)}
-                      {x.start_time && ` | ${formatTime(x.start_time)}`}
-                      {x.end_time && ` - ${formatTime(x.end_time)}`}
-                    </small>
-                    {x.assigned_crew && (
-                      <small>
-                        <br />
-                        Assigned Crew: {x.assigned_crew}
-                      </small>
-                    )}
-                    {x.notes && <p>{x.notes}</p>}
-                  </div>
-                ))
-              ) : (
-                <Empty text="No schedule added yet." />
-              )}
-            </>
-          )}
-
-          {openPublicSection === 'documents' && (
-            <>
-              <div className="publicSectionPanelHeader">
-                <p className="eyebrowDark">Documents</p>
-                <h2>Event Documents</h2>
-              </div>
-
-              {data.documents.length ? (
-                data.documents.map(x => (
-                  <div className="item" key={x.id}>
-                    <strong>{x.document_name}</strong>
-                    <div className="documentMetaRow">
-                      <span>{x.category || 'Uncategorised'}</span>
-                      {x.file_size ? <span>{formatFileSize(x.file_size)}</span> : null}
-                    </div>
-                    {x.file_url && <DocumentPreviewLinks url={x.file_url} label={x.document_name} />}
-                    {x.notes && <p>{x.notes}</p>}
-                  </div>
-                ))
-              ) : (
-                <Empty text="No documents added yet." />
-              )}
-            </>
-          )}
-
-          {openPublicSection === 'notes' && (
-            <>
-              <div className="publicSectionPanelHeader">
-                <p className="eyebrowDark">Notes</p>
-                <h2>Event Notes</h2>
-              </div>
-
-              {data.notes.length ? (
-                data.notes.map(x => (
-                  <div className="item" key={x.id}>
-                    <strong>{x.title}</strong>
-                    <p>{x.content}</p>
-                  </div>
-                ))
-              ) : (
-                <Empty text="No notes added yet." />
-              )}
-            </>
-          )}
-        </section>
-      )}
     </main>
   )
 }
