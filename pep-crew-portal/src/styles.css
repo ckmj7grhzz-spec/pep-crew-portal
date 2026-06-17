@@ -4441,3 +4441,64 @@ th {
 .adminPortalPage .operationsCalendarCard {
   padding-top: 16px;
 }
+
+
+/* Calendar V3 - collapsible resource sidebar */
+.calendarKeyHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.calendarResourceToggleButton,
+.calendarResourceShowButton {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: var(--pep-text);
+  border-radius: 999px;
+  padding: 9px 13px;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+}
+
+.calendarResourceToggleButton:hover,
+.calendarResourceShowButton:hover {
+  border-color: var(--pep-green);
+  background: #f8fafc;
+}
+
+.calendarResourceShowButton {
+  margin-bottom: 12px;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: var(--pep-blue);
+}
+
+.calendarWorkspace.calendarWorkspaceFull {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.calendarWorkspace.calendarWorkspaceFull .calendarViewPanel {
+  width: 100%;
+}
+
+.adminPortalPage .calendarWorkspace.calendarWorkspaceFull .calendarContinuousGrid {
+  min-width: 1180px;
+}
+
+@media (min-width: 1440px) {
+  .adminPortalPage .calendarWorkspace.calendarWorkspaceFull .calendarContinuousGrid {
+    min-width: 1280px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .calendarResourceShowButton {
+    width: 100%;
+  }
+}
