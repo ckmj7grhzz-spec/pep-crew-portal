@@ -417,6 +417,11 @@ function AdminPage() {
   const [staffMembers, setStaffMembers] = useState([])
   const [staffLoading, setStaffLoading] = useState(true)
   const [staffSearch, setStaffSearch] = useState('')
+  const [openStaffGroups, setOpenStaffGroups] = useState({
+    staff: true,
+    freelancers: true,
+    inactive: false,
+  })
   const [editingStaffId, setEditingStaffId] = useState(null)
   const [staffForm, setStaffForm] = useState({
     name: '',
@@ -778,19 +783,34 @@ function AdminPage() {
     )
   }
 
-  function renderStaffGroup(title, records, emptyText) {
+  function toggleStaffGroup(groupKey) {
+    setOpenStaffGroups(current => ({
+      ...current,
+      [groupKey]: !current[groupKey],
+    }))
+  }
+
+  function renderStaffGroup(title, records, emptyText, groupKey, tone = 'default') {
+    const isOpen = openStaffGroups[groupKey] !== false
+
     return (
-      <div className="staffGroup">
-        <div className="staffGroupHeader">
-          <strong>{title}</strong>
-          <span>{records.length}</span>
-        </div>
-        {records.length ? (
-          <div className="staffList">
-            {records.map(member => renderStaffMemberCard(member))}
-          </div>
-        ) : (
-          <p className="empty staffGroupEmpty">{emptyText}</p>
+      <div className={`staffGroup staffGroup${tone === 'freelancer' ? 'Freelancer' : tone === 'inactive' ? 'Inactive' : 'Default'}`}>
+        <button type="button" className={isOpen ? 'staffGroupHeader open' : 'staffGroupHeader'} onClick={() => toggleStaffGroup(groupKey)}>
+          <span>
+            <strong>{title}</strong>
+            <small>{records.length} {records.length === 1 ? 'record' : 'records'}</small>
+          </span>
+          <ChevronDown className={isOpen ? 'chevron open' : 'chevron'} />
+        </button>
+
+        {isOpen && (
+          records.length ? (
+            <div className="staffList">
+              {records.map(member => renderStaffMemberCard(member))}
+            </div>
+          ) : (
+            <p className="empty staffGroupEmpty">{emptyText}</p>
+          )
         )}
       </div>
     )
@@ -1285,9 +1305,9 @@ function AdminPage() {
             ) : staffMembers.length ? (
               filteredStaffMembers.length ? (
                 <div className="staffGroupedList">
-                  {renderStaffGroup('Staff', activeStaffMembers.filter(member => member.employment_type !== 'Freelancer'), 'No matching staff members found.')}
-                  {renderStaffGroup('Freelancers', activeStaffMembers.filter(member => member.employment_type === 'Freelancer'), 'No matching freelancers found.')}
-                  {renderStaffGroup('Inactive', inactiveStaffMembers, 'No inactive staff records found.')}
+                  {renderStaffGroup('Full Time Staff', activeStaffMembers.filter(member => member.employment_type !== 'Freelancer'), 'No matching full-time staff members found.', 'staff')}
+                  {renderStaffGroup('Freelancers', activeStaffMembers.filter(member => member.employment_type === 'Freelancer'), 'No matching freelancers found.', 'freelancers', 'freelancer')}
+                  {renderStaffGroup('Inactive', inactiveStaffMembers, 'No inactive staff records found.', 'inactive', 'inactive')}
                 </div>
               ) : (
                 <Empty text="No staff records match your search." />
