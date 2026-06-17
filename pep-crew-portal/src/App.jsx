@@ -151,6 +151,52 @@ function DocumentPreviewLinks({ url, label = 'document' }) {
   )
 }
 
+
+function EventContactsCard({ event, compact = false }) {
+  if (!event) return null
+
+  const hasProjectManager = event.project_manager || event.project_manager_phone || event.project_manager_email
+  const hasOperations = event.operations_contact_name || event.operations_contact_phone
+  const hasEmergency = event.emergency_contact_number
+
+  if (!hasProjectManager && !hasOperations && !hasEmergency) return null
+
+  return (
+    <section className={compact ? 'eventContactsCard compactEventContactsCard' : 'eventCard eventContactsCard'}>
+      <div className="eventContactsHeader">
+        <p className="eyebrowDark">Event Contacts</p>
+        <h2>Key Contacts</h2>
+      </div>
+
+      <div className="eventContactsGrid">
+        {hasProjectManager && (
+          <div>
+            <strong>Project Manager</strong>
+            {event.project_manager && <span>{event.project_manager}</span>}
+            {event.project_manager_phone && <a href={`tel:${event.project_manager_phone}`}>{event.project_manager_phone}</a>}
+            {event.project_manager_email && <a href={`mailto:${event.project_manager_email}`}>{event.project_manager_email}</a>}
+          </div>
+        )}
+
+        {hasOperations && (
+          <div>
+            <strong>Operations Contact</strong>
+            {event.operations_contact_name && <span>{event.operations_contact_name}</span>}
+            {event.operations_contact_phone && <a href={`tel:${event.operations_contact_phone}`}>{event.operations_contact_phone}</a>}
+          </div>
+        )}
+
+        {hasEmergency && (
+          <div className="eventEmergencyContact">
+            <strong>Emergency Contact</strong>
+            <a href={`tel:${event.emergency_contact_number}`}>{event.emergency_contact_number}</a>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 function parseCsv(text) {
   const rows = []
   let current = ''
@@ -371,6 +417,11 @@ function AdminPage() {
     start_date: '',
     end_date: '',
     project_manager: '',
+    project_manager_phone: '',
+    project_manager_email: '',
+    operations_contact_name: '',
+    operations_contact_phone: '',
+    emergency_contact_number: '',
     public_slug: '',
     share_enabled: true,
     current_rms_id: '',
@@ -531,6 +582,31 @@ function AdminPage() {
           </label>
 
           <label>
+            Project Manager Phone
+            <input value={form.project_manager_phone} onChange={e => updateField('project_manager_phone', e.target.value)} placeholder="+44..." />
+          </label>
+
+          <label>
+            Project Manager Email
+            <input type="email" value={form.project_manager_email} onChange={e => updateField('project_manager_email', e.target.value)} placeholder="name@pepled.com" />
+          </label>
+
+          <label>
+            Operations Contact Name
+            <input value={form.operations_contact_name} onChange={e => updateField('operations_contact_name', e.target.value)} placeholder="Operations contact" />
+          </label>
+
+          <label>
+            Operations Contact Phone
+            <input value={form.operations_contact_phone} onChange={e => updateField('operations_contact_phone', e.target.value)} placeholder="+44..." />
+          </label>
+
+          <label>
+            Emergency Contact Number
+            <input value={form.emergency_contact_number} onChange={e => updateField('emergency_contact_number', e.target.value)} placeholder="+44..." />
+          </label>
+
+          <label>
             Public Slug
             <input value={form.public_slug} onChange={e => updateField('public_slug', e.target.value)} placeholder="eha-2026" />
           </label>
@@ -602,6 +678,12 @@ function EventManagerPage() {
     venue_what3words: '',
     venue_access_notes: '',
     loading_bay_notes: '',
+    project_manager: '',
+    project_manager_phone: '',
+    project_manager_email: '',
+    operations_contact_name: '',
+    operations_contact_phone: '',
+    emergency_contact_number: '',
   })
   const [crew, setCrew] = useState([])
   const [flights, setFlights] = useState([])
@@ -721,6 +803,12 @@ function EventManagerPage() {
       venue_what3words: eventData.venue_what3words || '',
       venue_access_notes: eventData.venue_access_notes || '',
       loading_bay_notes: eventData.loading_bay_notes || '',
+      project_manager: eventData.project_manager || '',
+      project_manager_phone: eventData.project_manager_phone || '',
+      project_manager_email: eventData.project_manager_email || '',
+      operations_contact_name: eventData.operations_contact_name || '',
+      operations_contact_phone: eventData.operations_contact_phone || '',
+      emergency_contact_number: eventData.emergency_contact_number || '',
     })
 
     const { data: crewData, error: crewError } = await supabase
@@ -2262,7 +2350,42 @@ function EventManagerPage() {
                 <input value={eventLocationForm.loading_bay_notes} onChange={e => updateEventLocationField('loading_bay_notes', e.target.value)} placeholder="Loading bay 3, vehicle pass required" />
               </label>
 
-              <button className="primaryButton" type="submit">Save Location Details</button>
+              <div className="formSectionTitle">
+                <strong>Event Contacts</strong>
+                <span>Shown on the public call sheet and crew personal view.</span>
+              </div>
+
+              <label>
+                Project Manager Name
+                <input value={eventLocationForm.project_manager} onChange={e => updateEventLocationField('project_manager', e.target.value)} placeholder="Liam Howard" />
+              </label>
+
+              <label>
+                Project Manager Phone
+                <input value={eventLocationForm.project_manager_phone} onChange={e => updateEventLocationField('project_manager_phone', e.target.value)} placeholder="+44..." />
+              </label>
+
+              <label>
+                Project Manager Email
+                <input type="email" value={eventLocationForm.project_manager_email} onChange={e => updateEventLocationField('project_manager_email', e.target.value)} placeholder="name@pepled.com" />
+              </label>
+
+              <label>
+                Operations Contact Name
+                <input value={eventLocationForm.operations_contact_name} onChange={e => updateEventLocationField('operations_contact_name', e.target.value)} placeholder="Operations contact" />
+              </label>
+
+              <label>
+                Operations Contact Phone
+                <input value={eventLocationForm.operations_contact_phone} onChange={e => updateEventLocationField('operations_contact_phone', e.target.value)} placeholder="+44..." />
+              </label>
+
+              <label>
+                Emergency Contact Number
+                <input value={eventLocationForm.emergency_contact_number} onChange={e => updateEventLocationField('emergency_contact_number', e.target.value)} placeholder="+44..." />
+              </label>
+
+              <button className="primaryButton" type="submit">Save Location & Contact Details</button>
             </form>
           </section>
 
@@ -3374,6 +3497,8 @@ function CrewPersonalView() {
         {member.notes && <p><strong>Your Notes:</strong> {member.notes}</p>}
       </section>
 
+      <EventContactsCard event={event} />
+
       <section className="eventCard crewTodayCard">
         <p className="eyebrowDark">At a Glance</p>
         <h2>Your key details</h2>
@@ -3691,6 +3816,8 @@ function PublicCrewSheet() {
             {event.loading_bay_notes && <p><strong>Loading Bay:</strong> {event.loading_bay_notes}</p>}
           </div>
         )}
+
+        <EventContactsCard event={event} compact />
       </section>
 
       <div className="accordionStack">
