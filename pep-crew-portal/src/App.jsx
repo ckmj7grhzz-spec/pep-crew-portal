@@ -383,7 +383,6 @@ function LoginPage({ onLogin }) {
           <button className="primaryButton" type="submit">Login</button>
         </form>
 
-        {message && <p className="adminMessage">{message}</p>}
       </section>
     </main>
   )
@@ -412,6 +411,7 @@ function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [showCreateCrewSheet, setShowCreateCrewSheet] = useState(false)
+  const [showExistingCrewSheets, setShowExistingCrewSheets] = useState(true)
   const [form, setForm] = useState({
     show_name: '',
     venue: '',
@@ -563,6 +563,85 @@ function AdminPage() {
   const activeCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) !== 'show_complete')
   const inProgressCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'in_progress' || !eventRecord.crew_sheet_status)
 
+  function renderCrewSheetCard(eventRecord) {
+    const crewSheetStatus = getCrewSheetStatus(eventRecord)
+    const crewSheetCardClass = crewSheetStatus === 'ready_to_go'
+      ? 'adminListItem crewSheetReadyCard'
+      : crewSheetStatus === 'show_complete'
+        ? 'adminListItem crewSheetCompleteCard'
+        : 'adminListItem'
+
+    return (
+      <div className={crewSheetCardClass} key={eventRecord.id}>
+        <div className="crewSheetCardMain">
+          <div>
+            <div className="crewSheetTitleRow">
+              <strong>{eventRecord.show_name}</strong>
+              <span className={`crewSheetStatusBadge ${getCrewSheetStatusClass(crewSheetStatus)}`}>
+                {getCrewSheetStatusLabel(crewSheetStatus)}
+              </span>
+            </div>
+            <p>{eventRecord.venue}</p>
+            <small>{formatDate(eventRecord.start_date)} → {formatDate(eventRecord.end_date)}</small>
+            <br />
+            <small>Slug: /{eventRecord.public_slug}</small>
+          </div>
+        </div>
+
+        <div className="adminActions">
+          <a href={`/admin/event/${eventRecord.public_slug}`}>
+            <Settings size={16} /> Manage
+          </a>
+          <a href={`/${eventRecord.public_slug}`} target="_blank" rel="noreferrer">Open</a>
+          <button type="button" onClick={() => copyLink(eventRecord.public_slug)}>
+            <Copy size={16} /> Copy Link
+          </button>
+          {crewSheetStatus === 'in_progress' && (
+            <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'ready_to_go')}>
+              Mark Ready
+            </button>
+          )}
+          {crewSheetStatus === 'ready_to_go' && (
+            <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'in_progress')}>
+              Mark In Progress
+            </button>
+          )}
+          {crewSheetStatus !== 'show_complete' && (
+            <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'show_complete')}>
+              Mark Show Complete
+            </button>
+          )}
+          {crewSheetStatus === 'show_complete' && (
+            <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'in_progress')}>
+              Reopen
+            </button>
+          )}
+          <button type="button" onClick={() => togglePublished(eventRecord)}>
+            {eventRecord.share_enabled ? 'Unpublish' : 'Publish'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  function renderCrewSheetGroup(title, records, className, emptyText) {
+    return (
+      <div className={`crewSheetStatusGroup ${className}`}>
+        <div className="crewSheetGroupHeader">
+          <strong>{title}</strong>
+          <span>{records.length}</span>
+        </div>
+        {records.length ? (
+          <div className="adminList compactCrewSheetList">
+            {records.map(eventRecord => renderCrewSheetCard(eventRecord))}
+          </div>
+        ) : (
+          <p className="empty crewSheetGroupEmpty">{emptyText}</p>
+        )}
+      </div>
+    )
+  }
+
   return (
     <main className="page">
       <header className="hero">
@@ -614,6 +693,8 @@ function AdminPage() {
           </div>
         )}
       </section>
+
+      {message && <p className="adminMessage adminHomeMessage">{message}</p>}
 
       <section className="eventCard collapsibleCreateCard">
         <button
@@ -729,75 +810,35 @@ function AdminPage() {
             </form>
           </div>
         )}
-
-        {message && <p className="adminMessage">{message}</p>}
       </section>
 
-      <section className="eventCard">
-        <h2>Existing Crew Sheets</h2>
+      <section className="eventCard collapsibleExistingCrewSheetsCard">
+        <button
+          type="button"
+          className={showExistingCrewSheets ? 'collapsibleExistingHeader active' : 'collapsibleExistingHeader'}
+          onClick={() => setShowExistingCrewSheets(!showExistingCrewSheets)}
+        >
+          <span>
+            <strong>Existing Crew Sheets</strong>
+            <small>{events.length} crew sheet{events.length === 1 ? '' : 's'} across ready, active and completed shows.</small>
+          </span>
+          <ChevronDown className={showExistingCrewSheets ? 'chevron open' : 'chevron'} />
+        </button>
 
-        {loading ? (
-          <p>Loading events...</p>
-        ) : events.length ? (
-          <div className="adminList">
-            {events.map(eventRecord => {
-              const crewSheetStatus = getCrewSheetStatus(eventRecord)
-              const crewSheetCardClass = crewSheetStatus === 'ready_to_go'
-                ? 'adminListItem crewSheetReadyCard'
-                : crewSheetStatus === 'show_complete'
-                  ? 'adminListItem crewSheetCompleteCard'
-                  : 'adminListItem'
-
-              return (
-              <div className={crewSheetCardClass} key={eventRecord.id}>
-                <div>
-                  <strong>{eventRecord.show_name}</strong>
-                  <p>{eventRecord.venue}</p>
-                  <small>{formatDate(eventRecord.start_date)} → {formatDate(eventRecord.end_date)}</small>
-                  <br />
-                  <small>Slug: /{eventRecord.public_slug}</small>
-                  <div className={`crewSheetStatusBadge ${getCrewSheetStatusClass(crewSheetStatus)}`}>
-                    {getCrewSheetStatusLabel(crewSheetStatus)}
-                  </div>
-                </div>
-
-                <div className="adminActions">
-                  <a href={`/admin/event/${eventRecord.public_slug}`}>
-                    <Settings size={16} /> Manage
-                  </a>
-                  <a href={`/${eventRecord.public_slug}`} target="_blank" rel="noreferrer">Open</a>
-                  <button type="button" onClick={() => copyLink(eventRecord.public_slug)}>
-                    <Copy size={16} /> Copy Link
-                  </button>
-                  {crewSheetStatus === 'in_progress' && (
-                    <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'ready_to_go')}>
-                      Mark Ready
-                    </button>
-                  )}
-                  {crewSheetStatus === 'ready_to_go' && (
-                    <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'in_progress')}>
-                      Mark In Progress
-                    </button>
-                  )}
-                  {crewSheetStatus !== 'show_complete' && (
-                    <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'show_complete')}>
-                      Mark Show Complete
-                    </button>
-                  )}
-                  {crewSheetStatus === 'show_complete' && (
-                    <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'in_progress')}>
-                      Reopen
-                    </button>
-                  )}
-                  <button type="button" onClick={() => togglePublished(eventRecord)}>
-                    {eventRecord.share_enabled ? 'Unpublish' : 'Publish'}
-                  </button>
-                </div>
+        {showExistingCrewSheets && (
+          <div className="collapsibleExistingBody">
+            {loading ? (
+              <p>Loading events...</p>
+            ) : events.length ? (
+              <div className="crewSheetGroupedList">
+                {renderCrewSheetGroup('Ready To Go', readyCrewSheets, 'readyCrewSheetGroup', 'No crew sheets are marked ready yet.')}
+                {renderCrewSheetGroup('In Progress', inProgressCrewSheets, 'inProgressCrewSheetGroup', 'No crew sheets are currently in progress.')}
+                {renderCrewSheetGroup('Show Complete', completedCrewSheets, 'completeCrewSheetGroup', 'No completed shows yet.')}
               </div>
-            )})}
+            ) : (
+              <Empty text="No crew sheets created yet." />
+            )}
           </div>
-        ) : (
-          <Empty text="No crew sheets created yet." />
         )}
       </section>
     </main>
