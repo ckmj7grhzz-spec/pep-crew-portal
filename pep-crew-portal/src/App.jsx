@@ -1078,7 +1078,7 @@ function AdminPage() {
           <div>
             <p className="eyebrowDark">Calendar Item</p>
             <h2>{selectedCalendarEvent.show_name}</h2>
-            <span className={`crewSheetStatusBadge ${getCrewSheetStatusClass(status)}`}>{statusLabel}</span>
+            <span className={`calendarStatusBadge calendarStatusBadge-${status}`}>{statusLabel}</span>
           </div>
           <button type="button" className="calendarEventDrawerClose" onClick={closeCalendarEventDetails}>×</button>
         </div>
