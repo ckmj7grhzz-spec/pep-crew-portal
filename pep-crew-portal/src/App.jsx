@@ -579,6 +579,7 @@ function AdminPage() {
     colour: '#111827',
     active: true,
   })
+  const [editingResourceCalendarId, setEditingResourceCalendarId] = useState(null)
   const [calendarFilters, setCalendarFilters] = useState(() => {
     const defaults = {
       projects: true,
@@ -790,6 +791,26 @@ function AdminPage() {
     }))
   }
 
+  function resetResourceCalendarForm() {
+    setEditingResourceCalendarId(null)
+    setResourceCalendarForm({
+      category: 'vehicles',
+      name: '',
+      colour: '#111827',
+      active: true,
+    })
+  }
+
+  function startEditResourceCalendar(calendarRecord) {
+    setEditingResourceCalendarId(calendarRecord.id)
+    setResourceCalendarForm({
+      category: calendarRecord.category || 'vehicles',
+      name: calendarRecord.name || '',
+      colour: calendarRecord.colour || getCalendarCategoryColour(calendarRecord.category),
+      active: calendarRecord.active !== false,
+    })
+  }
+
   async function saveResourceCalendar(e) {
     e.preventDefault()
     setMessage('')
@@ -799,14 +820,33 @@ function AdminPage() {
       return
     }
 
+    const payload = {
+      category: resourceCalendarForm.category,
+      name: resourceCalendarForm.name.trim(),
+      colour: resourceCalendarForm.colour || getCalendarCategoryColour(resourceCalendarForm.category),
+      active: resourceCalendarForm.active !== false,
+    }
+
+    if (editingResourceCalendarId) {
+      const { error } = await supabase
+        .from('resource_calendars')
+        .update(payload)
+        .eq('id', editingResourceCalendarId)
+
+      if (error) {
+        setMessage(`Could not update resource calendar: ${error.message}`)
+        return
+      }
+
+      setMessage('Resource calendar updated.')
+      resetResourceCalendarForm()
+      await loadResourceCalendars()
+      return
+    }
+
     const { error } = await supabase
       .from('resource_calendars')
-      .insert([{
-        category: resourceCalendarForm.category,
-        name: resourceCalendarForm.name.trim(),
-        colour: resourceCalendarForm.colour || getCalendarCategoryColour(resourceCalendarForm.category),
-        active: resourceCalendarForm.active !== false,
-      }])
+      .insert([payload])
 
     if (error) {
       setMessage(`Could not create resource calendar: ${error.message}`)
@@ -814,12 +854,7 @@ function AdminPage() {
     }
 
     setMessage('Resource calendar created.')
-    setResourceCalendarForm({
-      category: 'vehicles',
-      name: '',
-      colour: '#111827',
-      active: true,
-    })
+    resetResourceCalendarForm()
     await loadResourceCalendars()
   }
 
@@ -2301,7 +2336,7 @@ function AdminPage() {
           <section className="eventCard settingsOverviewCard">
             <p className="eyebrowDark">Settings</p>
             <h2>Portal Settings</h2>
-            <p>Manage shared calendar colours for projects, resources and future Current RMS data.</p>
+            <p>Manage parent calendars, sub-calendars and the colours used across the Operations Calendar.</p>
           </section>
 
           {message && <p className="adminMessage adminHomeMessage">{message}</p>}
@@ -2310,8 +2345,8 @@ function AdminPage() {
             <div className="staffSectionHeader">
               <div>
                 <p className="eyebrowDark">Calendar Colours</p>
-                <h2>Resource Colour Key</h2>
-                <p>These colours control the calendar key and project/resource event bars. They can be changed at any time.</p>
+                <h2>Parent Calendar Colours</h2>
+                <p>These are the parent calendar colours for Projects, Dry Hire, Crew, Freelancers, Vehicles, Rooms and LED Trailers.</p>
               </div>
             </div>
 
@@ -2341,12 +2376,18 @@ function AdminPage() {
             <div className="staffSectionHeader">
               <div>
                 <p className="eyebrowDark">Resource Calendars</p>
-                <h2>Sub-calendars</h2>
-                <p>Create sub-calendars under Crew, Freelancers, Vehicles, Rooms, LED Trailers, Dry Hire or Projects. Each can inherit the parent category colour or use its own colour.</p>
+                <h2>Sub-calendar Management</h2>
+                <p>Create, edit, deactivate or delete sub-calendars under each parent calendar.</p>
               </div>
             </div>
 
             <form onSubmit={saveResourceCalendar} className="resourceCalendarForm">
+              {editingResourceCalendarId && (
+                <div className="resourceCalendarEditNotice">
+                  Editing sub-calendar. Save changes or cancel to create a new one.
+                </div>
+              )}
+
               <label>
                 Parent calendar
                 <select value={resourceCalendarForm.category} onChange={e => updateResourceCalendarField('category', e.target.value)}>
@@ -2371,7 +2412,10 @@ function AdminPage() {
                 Active
               </label>
 
-              <button className="primaryButton" type="submit">Create Sub-calendar</button>
+              <button className="primaryButton" type="submit">{editingResourceCalendarId ? 'Save Sub-calendar' : 'Create Sub-calendar'}</button>
+              {editingResourceCalendarId && (
+                <button type="button" className="secondaryButton" onClick={resetResourceCalendarForm}>Cancel Edit</button>
+              )}
             </form>
 
             <div className="resourceCalendarList">
@@ -2410,6 +2454,9 @@ function AdminPage() {
                             </div>
 
                             <div className="resourceCalendarRowActions">
+                              <button type="button" onClick={() => startEditResourceCalendar(resource)}>
+                                Edit
+                              </button>
                               <button type="button" onClick={() => toggleResourceCalendarActive(resource)}>
                                 {resource.active === false ? 'Activate' : 'Deactivate'}
                               </button>
