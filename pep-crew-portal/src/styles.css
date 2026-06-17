@@ -2478,3 +2478,217 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+/* Compact desktop density pass
+   Keeps mobile layouts unchanged while making desktop feel closer to 80-85% browser zoom. */
+@media (min-width: 900px) {
+  .page {
+    max-width: 1180px;
+    padding: 18px 20px 36px;
+  }
+
+  .hero {
+    padding: 20px 24px;
+    border-radius: 18px;
+    gap: 20px;
+  }
+
+  .pepLogo {
+    width: 150px;
+  }
+
+  h1 {
+    font-size: 32px;
+  }
+
+  .eventCard {
+    margin: 16px 0;
+    padding: 22px;
+    border-radius: 16px;
+  }
+
+  .eventCard h2 {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+
+  .eventCard p {
+    margin-bottom: 12px;
+    line-height: 1.45;
+  }
+
+  .managerHeaderCard {
+    padding: 16px 20px;
+  }
+
+  .managerHeaderTop {
+    grid-template-columns: 150px 1fr auto;
+    gap: 18px;
+  }
+
+  .managerLogo {
+    width: 140px;
+  }
+
+  .managerTitle h1 {
+    font-size: 28px;
+  }
+
+  .compactControlCard {
+    padding: 20px;
+  }
+
+  .tabs,
+  .portalHomeTabs {
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .tabs button,
+  .portalHomeTabs button {
+    padding: 10px 16px;
+    min-height: 42px;
+    font-size: 14px;
+  }
+
+  .statsGrid,
+  .dashboardSummary,
+  .overviewGrid,
+  .eventGrid,
+  .adminDashboardGrid,
+  .portalDashboardGrid {
+    gap: 12px;
+  }
+
+  .statsGrid div,
+  .dashboardSummary div,
+  .overviewGrid div,
+  .adminDashboardCard,
+  .portalDashboardCard {
+    padding: 14px 16px;
+    min-height: 88px;
+    border-radius: 14px;
+  }
+
+  .statsGrid strong,
+  .dashboardSummary strong,
+  .adminDashboardCard strong,
+  .portalDashboardCard strong {
+    font-size: 28px;
+  }
+
+  .adminForm {
+    gap: 14px 16px;
+    margin-top: 18px;
+  }
+
+  .adminForm label {
+    gap: 7px;
+  }
+
+  .adminForm input,
+  .adminForm select,
+  .adminForm textarea {
+    min-height: 42px;
+    padding: 11px 13px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    min-height: 42px;
+    padding: 11px 16px;
+    border-radius: 10px;
+  }
+
+  .adminList {
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .adminListItem,
+  .crewSheetCard,
+  .crewSheetStatusCard {
+    padding: 16px 18px;
+    border-radius: 14px;
+  }
+
+  .adminActions {
+    gap: 8px;
+  }
+
+  .adminActions a,
+  .adminActions button {
+    padding: 9px 12px;
+    border-radius: 9px;
+    font-size: 13px;
+  }
+
+  .accordionHeader,
+  .portalSectionHeader,
+  .crewSheetGroupHeader,
+  .createCrewSheetHeader,
+  .existingCrewSheetsHeader {
+    padding: 16px 18px;
+  }
+
+  .accordionBody,
+  .portalSectionBody,
+  .crewSheetGroupBody,
+  .createCrewSheetBody,
+  .existingCrewSheetsBody {
+    padding: 16px 18px;
+  }
+
+  .iconWrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .headingBlock strong {
+    font-size: 19px;
+  }
+
+  th,
+  td {
+    padding: 9px 10px;
+  }
+
+  .globalSearchBox,
+  .filterBar,
+  .crewSheetSearchBox,
+  .adminCrewSheetSearch {
+    gap: 10px;
+    margin: 12px 0 16px;
+  }
+
+  .globalSearchBox input,
+  .filterBar input,
+  .filterBar select,
+  .crewSheetSearchBox input,
+  .adminCrewSheetSearch input {
+    min-height: 42px;
+    padding: 11px 13px;
+    border-radius: 10px;
+  }
+
+  .publicSheetGrid,
+  .publicSectionGrid {
+    gap: 12px;
+  }
+
+  .publicSheetTile,
+  .publicSectionTile,
+  .publicSheetSectionCard {
+    padding: 16px 18px;
+    border-radius: 14px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .page {
+    max-width: 1160px;
+  }
+}
