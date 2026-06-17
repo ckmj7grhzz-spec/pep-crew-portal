@@ -1902,8 +1902,44 @@ function EventManagerPage() {
   const crewNamesWithTransfers = new Set(transfers.map(transfer => transfer.passenger || transfer.passengers).filter(Boolean))
 
   const missingFlights = crew.filter(member => !crewNamesWithFlights.has(member.name))
-  const missingHotels = crew.filter(member => !crewNamesWithHotels.has(member.name))
   const missingTransfers = crew.filter(member => !crewNamesWithTransfers.has(member.name))
+
+  const crewMissingMobile = crew.filter(member => !String(member.mobile || '').trim())
+  const crewMissingEmail = crew.filter(member => !String(member.email || '').trim())
+
+  const flightCriticalIssues = flights.flatMap(flight => {
+    const owner = flight.crew_name || flight.flight_number || 'Flight'
+    const issues = []
+
+    if (!String(flight.booking_reference || '').trim()) issues.push(`${owner} is missing a flight booking reference`)
+    if (!String(flight.departure_time || '').trim()) issues.push(`${owner} is missing a departure time`)
+    if (!String(flight.arrival_time || '').trim()) issues.push(`${owner} is missing an arrival time`)
+    if (!String(flight.flight_number || '').trim()) issues.push(`${owner} is missing a flight number`)
+    if (!String(flight.departure_airport || '').trim()) issues.push(`${owner} is missing a departure airport`)
+    if (!String(flight.arrival_airport || '').trim()) issues.push(`${owner} is missing an arrival airport`)
+
+    return issues
+  })
+
+  const transferCriticalIssues = transfers.flatMap(transfer => {
+    const owner = transfer.passenger || transfer.passengers || 'Transfer'
+    const issues = []
+
+    if (!String(transfer.pickup_location || '').trim()) issues.push(`${owner} transfer is missing a pickup location`)
+    if (!String(transfer.destination || '').trim()) issues.push(`${owner} transfer is missing a destination`)
+
+    return issues
+  })
+
+  const transferWarningIssues = transfers.flatMap(transfer => {
+    const owner = transfer.passenger || transfer.passengers || 'Transfer'
+    const issues = []
+
+    if (!String(transfer.driver_name || '').trim()) issues.push(`${owner} transfer is missing a driver name`)
+    if (!String(transfer.vehicle || '').trim()) issues.push(`${owner} transfer is missing a vehicle`)
+
+    return issues
+  })
 
   const readinessChecks = [
     ...crew.map(member => ({
@@ -1913,17 +1949,45 @@ function EventManagerPage() {
       complete: crewNamesWithFlights.has(member.name),
     })),
     ...crew.map(member => ({
-      type: 'Hotel',
-      name: member.name,
-      issue: 'No hotel assigned',
-      complete: crewNamesWithHotels.has(member.name),
-    })),
-    ...crew.map(member => ({
       type: 'Transfer',
       name: member.name,
       issue: 'No transfer assigned',
       complete: crewNamesWithTransfers.has(member.name),
     })),
+    ...flights.flatMap(flight => [
+      {
+        type: 'Flight Reference',
+        name: flight.crew_name || flight.flight_number || 'Flight',
+        issue: 'Missing booking reference',
+        complete: Boolean(String(flight.booking_reference || '').trim()),
+      },
+      {
+        type: 'Flight Departure',
+        name: flight.crew_name || flight.flight_number || 'Flight',
+        issue: 'Missing departure time',
+        complete: Boolean(String(flight.departure_time || '').trim()),
+      },
+      {
+        type: 'Flight Arrival',
+        name: flight.crew_name || flight.flight_number || 'Flight',
+        issue: 'Missing arrival time',
+        complete: Boolean(String(flight.arrival_time || '').trim()),
+      },
+    ]),
+    ...transfers.flatMap(transfer => [
+      {
+        type: 'Transfer Pickup',
+        name: transfer.passenger || transfer.passengers || 'Transfer',
+        issue: 'Missing pickup location',
+        complete: Boolean(String(transfer.pickup_location || '').trim()),
+      },
+      {
+        type: 'Transfer Destination',
+        name: transfer.passenger || transfer.passengers || 'Transfer',
+        issue: 'Missing destination',
+        complete: Boolean(String(transfer.destination || '').trim()),
+      },
+    ]),
   ]
 
   const completedChecks = readinessChecks.filter(check => check.complete).length
@@ -1950,73 +2014,22 @@ function EventManagerPage() {
       : 'High risk'
 
   const flightCompletion = crew.length ? Math.round((crewNamesWithFlights.size / crew.length) * 100) : 100
-  const hotelCompletion = crew.length ? Math.round((crewNamesWithHotels.size / crew.length) * 100) : 100
+  const hotelCompletion = hotels.length ? 100 : 100
   const transferCompletion = crew.length ? Math.round((crewNamesWithTransfers.size / crew.length) * 100) : 100
 
-
-  const crewMissingMobile = crew.filter(member => !String(member.mobile || '').trim())
-  const crewMissingEmail = crew.filter(member => !String(member.email || '').trim())
-  const crewMissingRole = crew.filter(member => !String(member.role || '').trim())
-
-  const incompleteFlights = flights.filter(flight =>
-    !String(flight.flight_number || '').trim() ||
-    !String(flight.departure_airport || '').trim() ||
-    !String(flight.arrival_airport || '').trim() ||
-    !String(flight.departure_time || '').trim() ||
-    !String(flight.arrival_time || '').trim()
-  )
-
-  const incompleteHotels = hotels.filter(hotel =>
-    !String(hotel.hotel_name || '').trim() ||
-    !String(hotel.check_in || '').trim() ||
-    !String(hotel.check_out || '').trim() ||
-    !String(hotel.room_number || '').trim()
-  )
-
-  const incompleteTransfers = transfers.filter(transfer =>
-    !String(transfer.pickup_location || '').trim() ||
-    !String(transfer.destination || '').trim() ||
-    !String(transfer.date || '').trim() ||
-    !String(transfer.time || '').trim()
-  )
-
   const publicDocuments = documents.filter(document => document.is_public !== false)
-  const documentSearchText = documents
-    .map(document => `${document.document_name || ''} ${document.category || ''} ${document.notes || ''}`)
-    .join(' ')
-    .toLowerCase()
-
-  const requiredDocuments = [
-    {
-      label: 'RAMS / Risk Assessment',
-      complete: documentSearchText.includes('rams') || documentSearchText.includes('risk assessment'),
-    },
-    {
-      label: 'Method Statement',
-      complete: documentSearchText.includes('method statement') || documentSearchText.includes('method'),
-    },
-    {
-      label: 'Build Drawings / Plans',
-      complete: documentSearchText.includes('drawing') || documentSearchText.includes('plan'),
-    },
-  ]
-
-  const missingRequiredDocuments = requiredDocuments.filter(document => !document.complete)
 
   const readinessCriticalIssues = [
     ...missingFlights.map(member => `${member.name} has no flight assigned`),
-    ...missingHotels.map(member => `${member.name} has no hotel assigned`),
     ...missingTransfers.map(member => `${member.name} has no transfer assigned`),
-    ...crewMissingMobile.map(member => `${member.name} is missing a mobile number`),
-    ...crewMissingEmail.map(member => `${member.name} is missing an email address`),
-    ...missingRequiredDocuments.map(document => `${document.label} missing`),
+    ...flightCriticalIssues,
+    ...transferCriticalIssues,
   ]
 
   const readinessWarningIssues = [
-    ...crewMissingRole.map(member => `${member.name} is missing a role`),
-    ...incompleteFlights.map(flight => `${flight.crew_name || 'Flight'} has incomplete flight details`),
-    ...incompleteHotels.map(hotel => `${hotel.guest_name || 'Hotel booking'} has incomplete hotel details`),
-    ...incompleteTransfers.map(transfer => `${transfer.passenger || 'Transfer'} has incomplete transfer details`),
+    ...crewMissingMobile.map(member => `${member.name} is missing a mobile number`),
+    ...crewMissingEmail.map(member => `${member.name} is missing an email address`),
+    ...transferWarningIssues,
   ]
 
   const readiness2StatusClass = readinessCriticalIssues.length
@@ -2035,59 +2048,46 @@ function EventManagerPage() {
     ? `${readinessCriticalIssues.length} critical issue${readinessCriticalIssues.length === 1 ? '' : 's'} need attention before this event is ready.`
     : readinessWarningIssues.length
       ? `${readinessWarningIssues.length} warning${readinessWarningIssues.length === 1 ? '' : 's'} to review before crew deployment.`
-      : 'All core crew, travel, accommodation, transfer and document checks are complete.'
+      : 'All core crew, flight and transfer checks are complete.'
 
   const readiness2Sections = [
     {
       title: 'Crew Details',
       subtitle: `${crew.length} crew assigned`,
-      className: crewMissingMobile.length || crewMissingEmail.length ? 'statusRed' : crewMissingRole.length ? 'statusOrange' : 'statusGreen',
+      className: crewMissingMobile.length || crewMissingEmail.length ? 'statusOrange' : 'statusGreen',
       issues: [
         ...crewMissingMobile.map(member => `${member.name} missing mobile`),
         ...crewMissingEmail.map(member => `${member.name} missing email`),
-        ...crewMissingRole.map(member => `${member.name} missing role`),
       ],
-      completeText: 'All crew have contact details and roles.',
+      completeText: 'All crew have contact details.',
     },
     {
       title: 'Flights',
       subtitle: `${crewNamesWithFlights.size}/${crew.length} crew booked`,
-      className: missingFlights.length ? 'statusRed' : incompleteFlights.length ? 'statusOrange' : 'statusGreen',
+      className: missingFlights.length || flightCriticalIssues.length ? 'statusRed' : 'statusGreen',
       issues: [
         ...missingFlights.map(member => `${member.name} has no flight assigned`),
-        ...incompleteFlights.map(flight => `${flight.crew_name || 'Flight'} has incomplete flight details`),
+        ...flightCriticalIssues,
       ],
-      completeText: 'All crew have flight records.',
-    },
-    {
-      title: 'Hotels',
-      subtitle: `${crewNamesWithHotels.size}/${crew.length} crew booked`,
-      className: missingHotels.length ? 'statusRed' : incompleteHotels.length ? 'statusOrange' : 'statusGreen',
-      issues: [
-        ...missingHotels.map(member => `${member.name} has no hotel assigned`),
-        ...incompleteHotels.map(hotel => `${hotel.guest_name || 'Hotel booking'} has incomplete hotel details`),
-      ],
-      completeText: 'All crew have accommodation records.',
+      completeText: 'All crew have usable flight records.',
     },
     {
       title: 'Transfers',
       subtitle: `${crewNamesWithTransfers.size}/${crew.length} crew covered`,
-      className: missingTransfers.length ? 'statusRed' : incompleteTransfers.length ? 'statusOrange' : 'statusGreen',
+      className: missingTransfers.length || transferCriticalIssues.length ? 'statusRed' : transferWarningIssues.length ? 'statusOrange' : 'statusGreen',
       issues: [
         ...missingTransfers.map(member => `${member.name} has no transfer assigned`),
-        ...incompleteTransfers.map(transfer => `${transfer.passenger || 'Transfer'} has incomplete transfer details`),
+        ...transferCriticalIssues,
+        ...transferWarningIssues,
       ],
       completeText: 'All crew have transfer records.',
     },
     {
       title: 'Documents',
       subtitle: `${publicDocuments.length} public / ${documents.length} total`,
-      className: missingRequiredDocuments.length ? 'statusRed' : documents.length ? 'statusGreen' : 'statusOrange',
-      issues: [
-        ...missingRequiredDocuments.map(document => `${document.label} missing`),
-        ...(documents.length ? [] : ['No documents uploaded yet']),
-      ],
-      completeText: 'Required document types are present.',
+      className: 'statusGreen',
+      issues: [],
+      completeText: documents.length ? 'Documents are uploaded and managed separately.' : 'No document checks required for readiness.',
     },
   ]
 
