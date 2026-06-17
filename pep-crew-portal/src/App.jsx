@@ -563,6 +563,15 @@ function AdminPage() {
   })
   const [resourceCalendars, setResourceCalendars] = useState([])
   const [resourceCalendarLoading, setResourceCalendarLoading] = useState(true)
+  const [openResourceCalendarGroups, setOpenResourceCalendarGroups] = useState(() => readStoredValue('pep.openResourceCalendarGroups', {
+    projects: true,
+    dry_hire: true,
+    crew: true,
+    freelancers: true,
+    rooms: false,
+    vehicles: false,
+    led_trailers: false,
+  }))
   const [resourceCalendarForm, setResourceCalendarForm] = useState({
     category: 'vehicles',
     name: '',
@@ -652,6 +661,10 @@ function AdminPage() {
   useEffect(() => {
     writeStoredValue('pep.calendarFilters', calendarFilters)
   }, [calendarFilters])
+
+  useEffect(() => {
+    writeStoredValue('pep.openResourceCalendarGroups', openResourceCalendarGroups)
+  }, [openResourceCalendarGroups])
 
   useEffect(() => {
     writeStoredValue('pep.calendarSettings', calendarSettings)
@@ -1211,6 +1224,13 @@ function AdminPage() {
     setShowCalendarResources(previous => !previous)
   }
 
+  function toggleResourceCalendarGroup(category) {
+    setOpenResourceCalendarGroups(previous => ({
+      ...previous,
+      [category]: !previous[category],
+    }))
+  }
+
   function getCalendarSourceEvents() {
     if (!calendarFilters.projects) return []
     return events
@@ -1352,21 +1372,34 @@ function AdminPage() {
             const liveCountLabel = group.key === 'projects' ? `${group.count} live` : `${subCalendars.length} sub-calendar${subCalendars.length === 1 ? '' : 's'}`
 
             return (
-              <div className="calendarKeyGroup" key={group.key}>
-                <label className={`calendarKeyItem ${group.className} ${calendarFilters[group.key] ? 'active' : ''}`} style={{ '--calendar-key-colour': getCalendarCategoryColour(group.key) }}>
-                  <input
-                    type="checkbox"
-                    checked={!!calendarFilters[group.key]}
-                    onChange={() => toggleCalendarFilter(group.key)}
-                  />
-                  <span className="calendarKeyColour"></span>
-                  <span className="calendarKeyText">
-                    <strong>{group.label}</strong>
-                    <small>{liveCountLabel}</small>
-                  </span>
-                </label>
+              <div className={openResourceCalendarGroups[group.key] ? 'calendarKeyGroup open' : 'calendarKeyGroup'} key={group.key}>
+                <div className="calendarKeyGroupHeader">
+                  <label className={`calendarKeyItem ${group.className} ${calendarFilters[group.key] ? 'active' : ''}`} style={{ '--calendar-key-colour': getCalendarCategoryColour(group.key) }}>
+                    <input
+                      type="checkbox"
+                      checked={!!calendarFilters[group.key]}
+                      onChange={() => toggleCalendarFilter(group.key)}
+                    />
+                    <span className="calendarKeyColour"></span>
+                    <span className="calendarKeyText">
+                      <strong>{group.label}</strong>
+                      <small>{liveCountLabel}</small>
+                    </span>
+                  </label>
 
-                {subCalendars.length > 0 && (
+                  {subCalendars.length > 0 && (
+                    <button
+                      type="button"
+                      className="calendarSubCalendarToggle"
+                      onClick={() => toggleResourceCalendarGroup(group.key)}
+                      aria-label={`${openResourceCalendarGroups[group.key] ? 'Collapse' : 'Expand'} ${group.label} sub-calendars`}
+                    >
+                      {openResourceCalendarGroups[group.key] ? 'Hide' : 'Show'}
+                    </button>
+                  )}
+                </div>
+
+                {subCalendars.length > 0 && openResourceCalendarGroups[group.key] && (
                   <div className="calendarSubCalendarList">
                     {subCalendars.map(resource => (
                       <div className={resource.active === false ? 'calendarSubCalendarItem inactive' : 'calendarSubCalendarItem'} key={resource.id} style={{ '--calendar-key-colour': resource.colour || getCalendarCategoryColour(resource.category) }}>
@@ -2317,14 +2350,21 @@ function AdminPage() {
                   if (!categoryResources.length) return null
 
                   return (
-                    <div className="resourceCalendarGroup" key={category}>
-                      <div className="resourceCalendarGroupHeader" style={{ '--calendar-key-colour': getCalendarCategoryColour(category) }}>
+                    <div className={openResourceCalendarGroups[category] ? 'resourceCalendarGroup open' : 'resourceCalendarGroup'} key={category}>
+                      <button
+                        type="button"
+                        className="resourceCalendarGroupHeader"
+                        style={{ '--calendar-key-colour': getCalendarCategoryColour(category) }}
+                        onClick={() => toggleResourceCalendarGroup(category)}
+                      >
                         <span className="calendarKeyColour"></span>
                         <strong>{label}</strong>
                         <small>{categoryResources.length} sub-calendar{categoryResources.length === 1 ? '' : 's'}</small>
-                      </div>
+                        <span className="resourceCalendarGroupChevron">{openResourceCalendarGroups[category] ? 'Hide' : 'Show'}</span>
+                      </button>
 
-                      <div className="resourceCalendarRows">
+                      {openResourceCalendarGroups[category] && (
+                        <div className="resourceCalendarRows">
                         {categoryResources.map(resource => (
                           <div className={resource.active === false ? 'resourceCalendarRow inactive' : 'resourceCalendarRow'} key={resource.id}>
                             <div className="resourceCalendarNameBlock" style={{ '--calendar-key-colour': resource.colour || getCalendarCategoryColour(resource.category) }}>
@@ -2345,7 +2385,8 @@ function AdminPage() {
                             </div>
                           </div>
                         ))}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })
