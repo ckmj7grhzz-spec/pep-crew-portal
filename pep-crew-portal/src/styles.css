@@ -3296,6 +3296,65 @@ th {
   box-shadow: 0 4px 12px rgba(22, 163, 74, 0.22);
 }
 
+.calendarNavGroup {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.calendarMonthJumpRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.calendarMonthJumpRow button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: var(--pep-text);
+  border-radius: 999px;
+  padding: 8px 11px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  min-height: 36px;
+}
+
+.calendarMonthJumpRow button:hover {
+  border-color: var(--pep-green);
+  transform: translateY(-1px);
+}
+
+.calendarMonthJumpRow button.currentMonth {
+  background: #eff6ff;
+  border-color: #1d4ed8;
+  color: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.16);
+}
+
+.calendarMonthJumpRow button.selectedMonth {
+  background: var(--pep-green);
+  border-color: var(--pep-green);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.22);
+}
+
+.calendarMonthJumpRow button.selectedMonth.currentMonth {
+  background: var(--pep-green);
+  border-color: var(--pep-green);
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.22), 0 4px 12px rgba(22, 163, 74, 0.22);
+}
+
+.calendarMonthJumpRow .todayMonthJumpButton {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
 .calendarToolbar {
   display: flex;
   justify-content: space-between;
@@ -3303,40 +3362,6 @@ th {
   align-items: flex-end;
   border-top: 1px solid var(--pep-border);
   padding-top: 16px;
-}
-
-.calendarViewControlGroup {
-  display: grid;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-}
-
-.calendarMonthJumpBar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.calendarMonthJumpBar button {
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #334155;
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 13px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.calendarMonthJumpBar button:hover {
-  border-color: var(--pep-green);
-}
-
-.calendarMonthJumpBar button.active {
-  background: var(--pep-green);
-  border-color: var(--pep-green);
-  color: #ffffff;
 }
 
 .calendarDatePicker {
@@ -4381,17 +4406,5 @@ th {
     margin-right: -12px;
     padding: 10px 12px;
     position: static;
-  }
-}
-
-
-@media (max-width: 720px) {
-  .calendarToolbar {
-    display: grid;
-    align-items: stretch;
-  }
-
-  .calendarMonthJumpBar button {
-    flex: 1 1 calc(25% - 8px);
   }
 }
