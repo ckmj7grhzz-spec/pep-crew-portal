@@ -696,7 +696,7 @@ function EventManagerPage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [showCriticalIssues, setShowCriticalIssues] = useState(false)
   const [showWarningIssues, setShowWarningIssues] = useState(false)
-  const [showOperationalChecks, setShowOperationalChecks] = useState(false)
+  const [showPassedChecks, setShowPassedChecks] = useState(false)
   const [showVenueLocation, setShowVenueLocation] = useState(false)
   const [globalSearch, setGlobalSearch] = useState('')
   const [editingCrewId, setEditingCrewId] = useState(null)
@@ -2121,6 +2121,24 @@ function EventManagerPage() {
     ...transferWarningIssues,
   ]
 
+  const readinessPassedChecks = [
+    ...readinessChecks
+      .filter(check => check.complete)
+      .map(check => `${check.name} - ${check.type} complete`),
+    ...crew
+      .filter(member => String(member.mobile || '').trim())
+      .map(member => `${member.name} has mobile number`),
+    ...crew
+      .filter(member => String(member.email || '').trim())
+      .map(member => `${member.name} has email address`),
+    ...transfers
+      .filter(transfer => String(transfer.driver_name || '').trim())
+      .map(transfer => `${transfer.passenger || transfer.passengers || 'Transfer'} has driver assigned`),
+    ...transfers
+      .filter(transfer => String(transfer.vehicle || '').trim())
+      .map(transfer => `${transfer.passenger || transfer.passengers || 'Transfer'} has vehicle assigned`),
+  ]
+
   const readiness2StatusClass = readinessCriticalIssues.length
     ? 'statusRed'
     : readinessWarningIssues.length
@@ -2328,8 +2346,8 @@ function EventManagerPage() {
               onClick={() => setShowVenueLocation(!showVenueLocation)}
             >
               <span>
-                <h2>Venue Location</h2>
-                <small>Maps, access notes, loading bay details and event contacts</small>
+                <h2>Venue Information</h2>
+                <small>Venue details, maps, access notes, loading bay details and event contacts</small>
               </span>
               <ChevronDown className={showVenueLocation ? 'chevron open' : 'chevron'} />
             </button>
@@ -2404,7 +2422,7 @@ function EventManagerPage() {
                     <input value={eventLocationForm.emergency_contact_number} onChange={e => updateEventLocationField('emergency_contact_number', e.target.value)} placeholder="+44..." />
                   </label>
 
-                  <button className="primaryButton" type="submit">Save Location & Contact Details</button>
+                  <button className="primaryButton" type="submit">Save Venue & Contact Details</button>
                 </form>
               </div>
             )}
@@ -2412,120 +2430,101 @@ function EventManagerPage() {
 
           <section className={`eventCard readiness2Hero ${readiness2StatusClass}`}>
             <div>
-              <p className="eyebrowDark">Event Readiness 2.0</p>
+              <p className="eyebrowDark">Event Readiness</p>
               <h2>{readiness2Title}</h2>
               <p>{readiness2Summary}</p>
             </div>
 
-            <div className="readiness2MetaGrid readiness2ClickableGrid">
+            <div className="readinessBar">
+              <span style={{ width: `${readinessScore}%`, background: getStatusColour(readinessScore) }}></span>
+            </div>
+
+            <div className="readinessUnifiedSummary">
               <div>
                 <strong>{readinessScore}%</strong>
                 <span>Travel readiness</span>
               </div>
+              <div>
+                <strong>{readinessCriticalIssues.length}</strong>
+                <span>Critical issues</span>
+              </div>
+              <div>
+                <strong>{readinessWarningIssues.length}</strong>
+                <span>Warnings</span>
+              </div>
+              <div>
+                <strong>{readinessPassedChecks.length}</strong>
+                <span>Passed checks</span>
+              </div>
+            </div>
+
+            <div className="readinessUnifiedList">
               <button
                 type="button"
-                className="readiness2MetaButton"
+                className={readinessCriticalIssues.length ? 'readinessUnifiedRow statusRed' : 'readinessUnifiedRow statusGreen'}
                 onClick={() => setShowCriticalIssues(!showCriticalIssues)}
               >
-                <strong>{readinessCriticalIssues.length}</strong>
-                <span>Critical issues {showCriticalIssues ? '▲' : '▼'}</span>
+                <span>🔴 Critical Issues</span>
+                <strong>{readinessCriticalIssues.length} {showCriticalIssues ? '▲' : '▼'}</strong>
               </button>
+
+              {showCriticalIssues && (
+                <div className="readinessUnifiedDrawer">
+                  {readinessCriticalIssues.length ? (
+                    <ul>
+                      {readinessCriticalIssues.map(issue => <li key={issue}>⚠ {issue}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="readiness2Complete">✓ No critical issues found.</p>
+                  )}
+                </div>
+              )}
+
               <button
                 type="button"
-                className="readiness2MetaButton"
+                className={readinessWarningIssues.length ? 'readinessUnifiedRow statusOrange' : 'readinessUnifiedRow statusGreen'}
                 onClick={() => setShowWarningIssues(!showWarningIssues)}
               >
-                <strong>{readinessWarningIssues.length}</strong>
-                <span>Warnings {showWarningIssues ? '▲' : '▼'}</span>
+                <span>🟠 Warnings</span>
+                <strong>{readinessWarningIssues.length} {showWarningIssues ? '▲' : '▼'}</strong>
               </button>
-            </div>
 
-            {(showCriticalIssues || showWarningIssues) && (
-              <div className="readiness2IssueDrawer">
-                {showCriticalIssues && (
-                  <div className={readinessCriticalIssues.length ? 'statusRed readiness2IssuePanel' : 'statusGreen readiness2IssuePanel'}>
-                    <h3>Critical Issues</h3>
-                    {readinessCriticalIssues.length ? (
-                      <ul>
-                        {readinessCriticalIssues.map(issue => <li key={issue}>⚠ {issue}</li>)}
-                      </ul>
-                    ) : (
-                      <p>No critical issues found.</p>
-                    )}
-                  </div>
-                )}
+              {showWarningIssues && (
+                <div className="readinessUnifiedDrawer">
+                  {readinessWarningIssues.length ? (
+                    <ul>
+                      {readinessWarningIssues.map(issue => <li key={issue}>⚠ {issue}</li>)}
+                    </ul>
+                  ) : (
+                    <p className="readiness2Complete">✓ No warnings found.</p>
+                  )}
+                </div>
+              )}
 
-                {showWarningIssues && (
-                  <div className={readinessWarningIssues.length ? 'statusOrange readiness2IssuePanel' : 'statusGreen readiness2IssuePanel'}>
-                    <h3>Warnings</h3>
-                    {readinessWarningIssues.length ? (
-                      <ul>
-                        {readinessWarningIssues.map(issue => <li key={issue}>⚠ {issue}</li>)}
-                      </ul>
-                    ) : (
-                      <p>No warnings found.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="readinessBar">
-              <span style={{ width: `${readinessScore}%`, background: getStatusColour(readinessScore) }}></span>
-            </div>
-          </section>
-
-          <section className="eventCard readiness2Card readiness2CompactCard">
-            <div className="readiness2Header readiness2CompactHeader">
-              <div>
-                <h2>Operational Checks</h2>
-                <p>Compact overview of crew, travel, accommodation, transfer and document readiness.</p>
-              </div>
               <button
                 type="button"
-                className="secondaryButton"
-                onClick={() => setShowOperationalChecks(!showOperationalChecks)}
+                className="readinessUnifiedRow statusGreen"
+                onClick={() => setShowPassedChecks(!showPassedChecks)}
               >
-                {showOperationalChecks ? 'Hide Details' : 'Show Details'}
+                <span>🟢 Passed Checks</span>
+                <strong>{readinessPassedChecks.length} {showPassedChecks ? '▲' : '▼'}</strong>
               </button>
-            </div>
 
-            <div className="readiness2SummaryGrid">
-              {readiness2Sections.map(section => (
-                <div className={`readiness2SummaryPill ${section.className}`} key={section.title}>
-                  <strong>{section.issues.length}</strong>
-                  <span>{section.title}</span>
+              {showPassedChecks && (
+                <div className="readinessUnifiedDrawer">
+                  {readinessPassedChecks.length ? (
+                    <ul>
+                      {readinessPassedChecks.slice(0, 30).map(check => <li key={check}>✓ {check}</li>)}
+                      {readinessPassedChecks.length > 30 && <li>+ {readinessPassedChecks.length - 30} more passed check{readinessPassedChecks.length - 30 === 1 ? '' : 's'}</li>}
+                    </ul>
+                  ) : (
+                    <p className="readiness2Complete">No passed checks yet.</p>
+                  )}
                 </div>
-              ))}
+              )}
             </div>
-
-            {showOperationalChecks && (
-              <div className="readiness2Grid">
-                {readiness2Sections.map(section => (
-                  <div className={`readiness2Section ${section.className}`} key={section.title}>
-                    <div className="readiness2SectionTop">
-                      <div>
-                        <h3>{section.title}</h3>
-                        <small>{section.subtitle}</small>
-                      </div>
-                      <strong>{section.issues.length}</strong>
-                    </div>
-
-                    {section.issues.length ? (
-                      <ul>
-                        {section.issues.slice(0, 8).map(issue => (
-                          <li key={issue}>⚠ {issue}</li>
-                        ))}
-                        {section.issues.length > 8 && <li>+ {section.issues.length - 8} more issue{section.issues.length - 8 === 1 ? '' : 's'}</li>}
-                      </ul>
-                    ) : (
-                      <p className="readiness2Complete">✓ {section.completeText}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
           </section>
+
         </>
       )}
 
