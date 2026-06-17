@@ -3201,7 +3201,6 @@ function CrewPersonalView() {
     transfers: [],
     hotels: [],
     schedule_items: [],
-    documents: [],
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -3266,11 +3265,6 @@ function CrewPersonalView() {
         .order('date', { ascending: true })
         .order('start_time', { ascending: true })
 
-      const { data: documents } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('event_id', eventData.id)
-        .eq('is_public', true)
 
       const filteredTransfers = (transfers || []).filter(item => {
         const passenger = String(item.passenger || item.passengers || '').toLowerCase()
@@ -3287,7 +3281,6 @@ function CrewPersonalView() {
         hotels: hotels || [],
         transfers: filteredTransfers,
         schedule_items: filteredSchedule,
-        documents: documents || [],
       })
 
       setLoading(false)
@@ -3563,30 +3556,6 @@ function CrewPersonalView() {
           )}
         </section>
 
-        <section className="eventCard crewSectionCard crewDocumentsSection">
-          <div className="crewSectionHeader">
-            <FileText size={24} />
-            <div>
-              <p className="eyebrowDark">Documents</p>
-              <h2>Event Documents</h2>
-            </div>
-          </div>
-          {data.documents.length ? (
-            data.documents.map(x => (
-              <div className="crewTimelineItem" key={x.id}>
-                <strong>{x.document_name}</strong>
-                <div className="documentMetaRow">
-                  <span>{x.category || 'Uncategorised'}</span>
-                  {x.file_size ? <span>{formatFileSize(x.file_size)}</span> : null}
-                </div>
-                {x.file_url && <DocumentPreviewLinks url={x.file_url} label={x.document_name} />}
-                {x.notes && <p>{x.notes}</p>}
-              </div>
-            ))
-          ) : (
-            <Empty text="No public documents available yet." />
-          )}
-        </section>
       </div>
     </main>
   )
