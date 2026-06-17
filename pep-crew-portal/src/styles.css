@@ -4995,3 +4995,83 @@ button.calendarEventListItem {
     justify-content: flex-start;
   }
 }
+
+/* Resource calendar collapsible groups */
+.calendarKeyGroupHeader {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.calendarKeyGroupHeader .calendarKeyItem {
+  flex: 1;
+  margin: 0;
+}
+
+.calendarSubCalendarToggle {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: var(--pep-text);
+  border-radius: 12px;
+  padding: 0 10px;
+  min-width: 58px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.calendarSubCalendarToggle:hover {
+  border-color: var(--pep-green);
+  color: var(--pep-green);
+}
+
+.calendarKeyGroup.open .calendarSubCalendarToggle {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.resourceCalendarGroupHeader {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--pep-border);
+  cursor: pointer;
+  text-align: left;
+}
+
+.resourceCalendarGroupHeader:hover {
+  background: #f1f5f9;
+}
+
+.resourceCalendarGroup.open .resourceCalendarGroupHeader {
+  background: #f0fdf4;
+  border-bottom-color: #bbf7d0;
+}
+
+.resourceCalendarGroupChevron {
+  margin-left: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: var(--pep-text);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.resourceCalendarGroup.open .resourceCalendarGroupChevron {
+  background: #ffffff;
+  color: #166534;
+  border-color: #86efac;
+}
+
+@media (max-width: 720px) {
+  .calendarKeyGroupHeader {
+    align-items: stretch;
+  }
+
+  .calendarSubCalendarToggle {
+    min-width: 52px;
+    padding: 0 8px;
+  }
+}
