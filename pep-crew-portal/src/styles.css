@@ -4695,19 +4695,94 @@ button.calendarEventListItem {
 }
 
 
-/* Calendar drawer status badges */
+/* Calendar colour settings and dynamic calendar colours */
+.calendarColourSettingsForm {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.calendarColourSettingRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  border: 1px solid var(--pep-border);
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.calendarColourSettingRow span {
+  display: grid;
+  gap: 3px;
+}
+
+.calendarColourSettingRow strong {
+  font-size: 16px;
+  color: var(--pep-text);
+}
+
+.calendarColourSettingRow small {
+  color: var(--pep-muted);
+  font-weight: 800;
+}
+
+.calendarColourSettingRow input[type="color"],
+.staffForm input[type="color"] {
+  width: 64px;
+  min-height: 42px;
+  height: 42px;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.calendarColourSettingsActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.calendarKeyItem .calendarKeyColour {
+  background: var(--calendar-key-colour, var(--pep-green)) !important;
+}
+
+.calendarEventBar.projectCalendarEvent,
+.calendarEventPill.projectCalendarEvent {
+  background: var(--calendar-event-colour, var(--pep-green)) !important;
+  border-color: var(--calendar-event-colour, var(--pep-green)) !important;
+}
+
+.calendarEventBar.completeCalendarEvent,
+.calendarEventPill.completeCalendarEvent {
+  background: #050505 !important;
+  border-color: #050505 !important;
+}
+
+.staffMemberCard {
+  border-left: 6px solid var(--staff-calendar-colour, var(--pep-green));
+}
+
+.staffColourSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--staff-calendar-colour, var(--pep-green));
+  border: 2px solid rgba(15, 23, 42, 0.12);
+  flex: 0 0 auto;
+}
+
 .calendarStatusBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: fit-content;
   padding: 8px 14px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 900;
   letter-spacing: 0.03em;
   margin-top: 10px;
-  text-transform: uppercase;
 }
 
 .calendarStatusBadge-in_progress {
@@ -4726,4 +4801,10 @@ button.calendarEventListItem {
   background: #050505;
   border: 1px solid #050505;
   color: #ffffff;
+}
+
+@media (max-width: 720px) {
+  .calendarColourSettingRow {
+    display: grid;
+  }
 }
