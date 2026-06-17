@@ -2958,3 +2958,214 @@ th {
     padding: 12px;
   }
 }
+
+/* Staff directory polish + persistent header states */
+.collapsibleStaffFormCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.collapsibleStaffFormHeader {
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+  color: var(--pep-text);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.collapsibleStaffFormHeader:hover {
+  background: #f8fafc;
+}
+
+.collapsibleStaffFormHeader.active {
+  background: var(--pep-green);
+  color: #ffffff;
+}
+
+.collapsibleStaffFormHeader span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.collapsibleStaffFormHeader strong {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.collapsibleStaffFormHeader small {
+  color: var(--pep-muted);
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.collapsibleStaffFormHeader.active small,
+.collapsibleStaffFormHeader.active .chevron {
+  color: rgba(255,255,255,0.82);
+}
+
+.collapsibleStaffFormBody {
+  border-top: 1px solid var(--pep-border);
+  padding: 24px;
+}
+
+.staffCancelEditButton {
+  margin-bottom: 18px;
+}
+
+.staffDirectoryCard .staffSectionHeader {
+  margin-bottom: 18px;
+}
+
+.staffGroupedList {
+  gap: 16px;
+}
+
+.staffGroup {
+  border-radius: 18px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid var(--pep-border);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.staffGroupHeader {
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+  color: var(--pep-text);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  cursor: pointer;
+  text-align: left;
+  min-height: 74px;
+}
+
+.staffGroupHeader:hover {
+  background: #f8fafc;
+}
+
+.staffGroupHeader.open {
+  border-bottom: 1px solid var(--pep-border);
+}
+
+.staffGroupHeaderText {
+  display: grid !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.staffGroupHeaderText strong {
+  font-size: 20px;
+  line-height: 1.2;
+  color: inherit;
+}
+
+.staffGroupHeaderText small {
+  color: var(--pep-muted);
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.staffGroupHeaderRight {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+  width: auto !important;
+  min-width: auto !important;
+  height: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  flex-shrink: 0;
+}
+
+.staffGroupCount {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 38px !important;
+  height: 32px !important;
+  padding: 0 10px !important;
+  border-radius: 999px !important;
+  background: var(--pep-soft) !important;
+  border: 1px solid var(--pep-border) !important;
+  color: var(--pep-muted) !important;
+  font-weight: 900 !important;
+}
+
+.staffGroupFreelancer .staffGroupHeader.open {
+  background: #eff6ff;
+}
+
+.staffGroupInactive .staffGroupHeader.open {
+  background: #111111;
+  color: #ffffff;
+  border-bottom-color: rgba(255,255,255,0.18);
+}
+
+.staffGroupInactive .staffGroupHeader.open .staffGroupHeaderText small,
+.staffGroupInactive .staffGroupHeader.open .chevron {
+  color: rgba(255,255,255,0.72);
+}
+
+.staffGroupInactive .staffGroupHeader.open .staffGroupCount {
+  background: rgba(255,255,255,0.12) !important;
+  border-color: rgba(255,255,255,0.22) !important;
+  color: #ffffff !important;
+}
+
+.staffGroup .staffList {
+  padding: 16px;
+}
+
+.staffMemberCard {
+  border: 1px solid var(--pep-border);
+  border-radius: 14px;
+  margin-bottom: 12px;
+  background: #ffffff;
+}
+
+.staffMemberCard:last-child {
+  margin-bottom: 0;
+}
+
+.staffGroupEmpty {
+  padding: 18px 20px;
+}
+
+@media (max-width: 720px) {
+  .collapsibleStaffFormHeader,
+  .collapsibleStaffFormBody,
+  .staffGroupHeader {
+    padding: 16px;
+  }
+
+  .staffGroupHeaderText strong,
+  .collapsibleStaffFormHeader strong {
+    font-size: 18px;
+  }
+
+  .staffGroup .staffList {
+    padding: 12px;
+  }
+}
