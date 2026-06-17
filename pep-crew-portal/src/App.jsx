@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDown, Plus, Copy, Settings, ArrowLeft, LogOut } from 'lucide-react'
+import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDown, Plus, Copy, Settings, ArrowLeft, LogOut, Eye, EyeOff } from 'lucide-react'
 import { supabase } from './supabase'
 import './styles.css'
 import * as XLSX from 'xlsx'
@@ -1394,19 +1394,22 @@ function AdminPage() {
                       onClick={() => toggleResourceCalendarGroup(group.key)}
                       aria-label={`${openResourceCalendarGroups[group.key] ? 'Collapse' : 'Expand'} ${group.label} sub-calendars`}
                     >
-                      {openResourceCalendarGroups[group.key] ? 'Hide' : 'Show'}
+                      {openResourceCalendarGroups[group.key] ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   )}
                 </div>
 
                 {subCalendars.length > 0 && openResourceCalendarGroups[group.key] && (
                   <div className="calendarSubCalendarList">
-                    {subCalendars.map(resource => (
-                      <div className={resource.active === false ? 'calendarSubCalendarItem inactive' : 'calendarSubCalendarItem'} key={resource.id} style={{ '--calendar-key-colour': resource.colour || getCalendarCategoryColour(resource.category) }}>
-                        <span className="calendarKeyColour"></span>
-                        <span>{resource.name}</span>
-                      </div>
-                    ))}
+                    {subCalendars.map(resource => {
+                      const subCalendarInactive = resource.active === false || !calendarFilters[group.key]
+                      return (
+                        <div className={subCalendarInactive ? 'calendarSubCalendarItem inactive' : 'calendarSubCalendarItem'} key={resource.id} style={{ '--calendar-key-colour': resource.colour || getCalendarCategoryColour(resource.category) }}>
+                          <span className="calendarKeyColour"></span>
+                          <span>{resource.name}</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
