@@ -1225,19 +1225,6 @@ function AdminPage() {
     return (
       <>
         <section className="eventCard operationsCalendarCard">
-          <div className="calendarHeaderTop">
-            <div>
-              <p className="eyebrowDark">Operations Calendar</p>
-              <h2>{getCalendarRangeLabel()}</h2>
-              <p>View existing crew sheets across monthly, two-weekly, weekly and daily planning views.</p>
-            </div>
-            <div className="calendarNavigationActions">
-              <button type="button" onClick={() => moveCalendar(-1)}>Previous</button>
-              <button type="button" onClick={jumpCalendarToToday}>Today</button>
-              <button type="button" onClick={() => moveCalendar(1)}>Next</button>
-            </div>
-          </div>
-
           <div className="calendarToolbar">
             <div className="calendarNavGroup">
               <div className="calendarViewTabs" role="tablist" aria-label="Calendar views">
