@@ -572,6 +572,7 @@ function AdminPage() {
     vehicles: false,
     led_trailers: false,
   }))
+  const [calendarResourceFilters, setCalendarResourceFilters] = useState(() => readStoredValue('pep.calendarResourceFilters', {}))
   const [resourceCalendarForm, setResourceCalendarForm] = useState({
     category: 'vehicles',
     name: '',
@@ -665,6 +666,10 @@ function AdminPage() {
   useEffect(() => {
     writeStoredValue('pep.openResourceCalendarGroups', openResourceCalendarGroups)
   }, [openResourceCalendarGroups])
+
+  useEffect(() => {
+    writeStoredValue('pep.calendarResourceFilters', calendarResourceFilters)
+  }, [calendarResourceFilters])
 
   useEffect(() => {
     writeStoredValue('pep.calendarSettings', calendarSettings)
@@ -1231,6 +1236,18 @@ function AdminPage() {
     }))
   }
 
+  function isResourceCalendarVisible(resourceId) {
+    return calendarResourceFilters[String(resourceId)] !== false
+  }
+
+  function toggleCalendarResourceFilter(resourceId) {
+    const key = String(resourceId)
+    setCalendarResourceFilters(previous => ({
+      ...previous,
+      [key]: previous[key] === false,
+    }))
+  }
+
   function getCalendarSourceEvents() {
     if (!calendarFilters.projects) return []
     return events
@@ -1369,32 +1386,35 @@ function AdminPage() {
         <div className="calendarKeyList">
           {resourceGroups.map(group => {
             const subCalendars = getResourceCalendarsForCategory(group.key)
+            const parentEnabled = !!calendarFilters[group.key]
             const liveCountLabel = group.key === 'projects' ? `${group.count} live` : `${subCalendars.length} sub-calendar${subCalendars.length === 1 ? '' : 's'}`
 
             return (
-              <div className={openResourceCalendarGroups[group.key] ? 'calendarKeyGroup open' : 'calendarKeyGroup'} key={group.key}>
+              <div className={`${openResourceCalendarGroups[group.key] ? 'calendarKeyGroup open' : 'calendarKeyGroup'} ${parentEnabled ? 'active' : 'inactive'}`} key={group.key}>
                 <div className="calendarKeyGroupHeader">
-                  <label className={`calendarKeyItem ${group.className} ${calendarFilters[group.key] ? 'active' : ''}`} style={{ '--calendar-key-colour': getCalendarCategoryColour(group.key) }}>
-                    <input
-                      type="checkbox"
-                      checked={!!calendarFilters[group.key]}
-                      onChange={() => toggleCalendarFilter(group.key)}
-                    />
+                  <button
+                    type="button"
+                    className={`calendarKeyItem calendarKeyParentButton ${group.className} ${parentEnabled ? 'active' : ''}`}
+                    style={{ '--calendar-key-colour': getCalendarCategoryColour(group.key) }}
+                    onClick={() => toggleCalendarFilter(group.key)}
+                    aria-pressed={parentEnabled}
+                  >
+                    <span className="calendarKeyToggleDot">{parentEnabled ? '✓' : ''}</span>
                     <span className="calendarKeyColour"></span>
                     <span className="calendarKeyText">
                       <strong>{group.label}</strong>
                       <small>{liveCountLabel}</small>
                     </span>
-                  </label>
+                  </button>
 
                   {subCalendars.length > 0 && (
                     <button
                       type="button"
-                      className="calendarSubCalendarToggle"
+                      className="calendarSubCalendarExpandButton"
                       onClick={() => toggleResourceCalendarGroup(group.key)}
                       aria-label={`${openResourceCalendarGroups[group.key] ? 'Collapse' : 'Expand'} ${group.label} sub-calendars`}
                     >
-                      {openResourceCalendarGroups[group.key] ? <EyeOff size={16} /> : <Eye size={16} />}
+                      <ChevronDown size={16} className={openResourceCalendarGroups[group.key] ? 'chevron open' : 'chevron'} />
                     </button>
                   )}
                 </div>
@@ -1402,9 +1422,20 @@ function AdminPage() {
                 {subCalendars.length > 0 && openResourceCalendarGroups[group.key] && (
                   <div className="calendarSubCalendarList">
                     {subCalendars.map(resource => {
-                      const subCalendarInactive = resource.active === false || !calendarFilters[group.key]
+                      const subCalendarEnabled = isResourceCalendarVisible(resource.id)
+                      const subCalendarInactive = resource.active === false || !parentEnabled || !subCalendarEnabled
                       return (
-                        <div className={subCalendarInactive ? 'calendarSubCalendarItem inactive' : 'calendarSubCalendarItem'} key={resource.id} style={{ '--calendar-key-colour': resource.colour || getCalendarCategoryColour(resource.category) }}>
+                        <div className={subCalendarInactive ? 'calendarSubCalendarItem inactive' : 'calendarSubCalendarItem active'} key={resource.id} style={{ '--calendar-key-colour': resource.colour || getCalendarCategoryColour(resource.category) }}>
+                          <button
+                            type="button"
+                            className="calendarSubCalendarVisibilityButton"
+                            onClick={() => toggleCalendarResourceFilter(resource.id)}
+                            disabled={!parentEnabled || resource.active === false}
+                            aria-pressed={subCalendarEnabled && parentEnabled && resource.active !== false}
+                            aria-label={`${subCalendarEnabled ? 'Hide' : 'Show'} ${resource.name}`}
+                          >
+                            {subCalendarEnabled && parentEnabled && resource.active !== false ? '✓' : ''}
+                          </button>
                           <span className="calendarKeyColour"></span>
                           <span>{resource.name}</span>
                         </div>
