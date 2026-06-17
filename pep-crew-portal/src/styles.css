@@ -4808,3 +4808,190 @@ button.calendarEventListItem {
     display: grid;
   }
 }
+
+/* Resource calendars v1 */
+.calendarKeyGroup {
+  display: grid;
+  gap: 8px;
+}
+
+.calendarSubCalendarList {
+  display: grid;
+  gap: 6px;
+  margin: -2px 0 8px 28px;
+  padding-left: 12px;
+  border-left: 2px solid #e2e8f0;
+}
+
+.calendarSubCalendarItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.calendarSubCalendarItem.inactive {
+  opacity: 0.48;
+}
+
+.resourceCalendarSettingsCard {
+  border-left: 5px solid var(--pep-blue);
+}
+
+.resourceCalendarForm {
+  display: grid;
+  grid-template-columns: 1.2fr 1.5fr auto auto auto;
+  gap: 14px;
+  align-items: end;
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid var(--pep-border);
+  background: var(--pep-soft);
+}
+
+.resourceCalendarForm label {
+  display: grid;
+  gap: 8px;
+  color: #334155;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.resourceCalendarForm input,
+.resourceCalendarForm select {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #ffffff;
+  color: var(--pep-text);
+  font-size: 15px;
+}
+
+.resourceCalendarForm input[type="color"] {
+  width: 58px;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.resourceCalendarColourField,
+.resourceCalendarActiveField {
+  min-width: 90px;
+}
+
+.resourceCalendarList {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.resourceCalendarGroup {
+  border: 1px solid var(--pep-border);
+  border-radius: 16px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.resourceCalendarGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--pep-border);
+}
+
+.resourceCalendarGroupHeader strong {
+  font-size: 16px;
+}
+
+.resourceCalendarGroupHeader small {
+  margin-left: auto;
+  color: var(--pep-muted);
+  font-weight: 900;
+}
+
+.resourceCalendarRows {
+  display: grid;
+}
+
+.resourceCalendarRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--pep-border);
+}
+
+.resourceCalendarRow:last-child {
+  border-bottom: 0;
+}
+
+.resourceCalendarRow.inactive {
+  opacity: 0.55;
+}
+
+.resourceCalendarNameBlock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.resourceCalendarNameBlock div {
+  display: grid;
+  gap: 3px;
+}
+
+.resourceCalendarNameBlock strong {
+  font-size: 15px;
+}
+
+.resourceCalendarNameBlock small {
+  color: var(--pep-muted);
+  font-weight: 800;
+}
+
+.resourceCalendarRowActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.resourceCalendarRowActions button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: var(--pep-text);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.resourceCalendarRowActions button:hover {
+  background: #f8fafc;
+}
+
+@media (max-width: 900px) {
+  .resourceCalendarForm {
+    grid-template-columns: 1fr;
+  }
+
+  .resourceCalendarRow {
+    display: grid;
+  }
+
+  .resourceCalendarRowActions {
+    justify-content: flex-start;
+  }
+}
