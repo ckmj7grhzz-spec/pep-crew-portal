@@ -3299,33 +3299,78 @@ function CrewPersonalView() {
   if (loading) return <main className="page"><p>Loading crew view...</p></main>
   if (error) return <main className="page"><p>{error}</p></main>
 
+  const nextFlight = data.flights[0]
+  const nextHotel = data.hotels[0]
+  const nextTransfer = data.transfers[0]
+  const nextSchedule = data.schedule_items[0]
+
   return (
-    <main className="page">
-      <header className="hero">
+    <main className="page crewPersonalPage">
+      <header className="hero crewHero">
         <img
           src={pepLogo}
           alt="Premium Event Productions"
           className="pepLogo"
         />
         <div>
-          <p className="eyebrow">Personal Crew View</p>
+          <p className="eyebrow">Personal Crew Itinerary</p>
           <h1>{member.name}</h1>
+          <p className="crewHeroSubline">{event.show_name} · {event.venue}</p>
         </div>
       </header>
 
-      <section className="eventCard">
-        <a href={`/${event.public_slug}`} className="backLink"><ArrowLeft size={16} /> Back to Full Call Sheet</a>
-        <h2>{event.show_name}</h2>
-        <p>{event.venue}</p>
-        {event.venue_address && <p><strong>Address:</strong> {event.venue_address}</p>}
+      <section className="eventCard crewQuickCard">
+        <div className="crewPersonalTopline">
+          <a href={`/${event.public_slug}`} className="backLink"><ArrowLeft size={16} /> Back to Full Call Sheet</a>
+          <span className="crewPersonalBadge">Crew View</span>
+        </div>
+
+        <div className="crewIdentityGrid">
+          <div>
+            <p className="eyebrowDark">Your Role</p>
+            <h2>{member.role || 'Role not set'}</h2>
+            <p>{member.department || 'Department not set'}</p>
+          </div>
+          <div className="crewContactCard">
+            <strong>Contact Details</strong>
+            <span>{member.mobile || 'Mobile not set'}</span>
+            <span>{member.email || 'Email not set'}</span>
+          </div>
+        </div>
+
+        <div className="crewItineraryGrid">
+          <div className={data.flights.length ? 'crewItineraryCard statusGreen' : 'crewItineraryCard statusOrange'}>
+            <Plane size={22} />
+            <strong>Flight</strong>
+            <span>{data.flights.length ? `${data.flights.length} flight record${data.flights.length === 1 ? '' : 's'}` : 'No flight assigned'}</span>
+          </div>
+          <div className={data.hotels.length ? 'crewItineraryCard statusGreen' : 'crewItineraryCard'}>
+            <Hotel size={22} />
+            <strong>Hotel</strong>
+            <span>{data.hotels.length ? `${data.hotels.length} hotel record${data.hotels.length === 1 ? '' : 's'}` : 'No hotel assigned'}</span>
+          </div>
+          <div className={data.transfers.length ? 'crewItineraryCard statusGreen' : 'crewItineraryCard statusOrange'}>
+            <Car size={22} />
+            <strong>Transfers</strong>
+            <span>{data.transfers.length ? `${data.transfers.length} transfer${data.transfers.length === 1 ? '' : 's'}` : 'No transfer assigned'}</span>
+          </div>
+          <div className={data.schedule_items.length ? 'crewItineraryCard statusGreen' : 'crewItineraryCard'}>
+            <CalendarDays size={22} />
+            <strong>Schedule</strong>
+            <span>{data.schedule_items.length ? `${data.schedule_items.length} item${data.schedule_items.length === 1 ? '' : 's'}` : 'No schedule items'}</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="eventCard crewVenueCard">
+        <div>
+          <p className="eyebrowDark">Venue</p>
+          <h2>{event.venue || 'Venue not set'}</h2>
+          {event.venue_address && <p>{event.venue_address}</p>}
+        </div>
         <div className="locationButtonRow">
           {event.venue_maps_url && <a href={event.venue_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Open Maps</a>}
           {event.venue_what3words && <a href={`https://what3words.com/${String(event.venue_what3words).replace(/^\/\/\//, '')}`} target="_blank" rel="noreferrer" className="locationButton">/// What3Words</a>}
-        </div>
-        <div className="eventGrid">
-          <span><strong>Role:</strong> {member.role || 'Not set'}</span>
-          <span><strong>Department:</strong> {member.department || 'Not set'}</span>
-          <span><strong>Mobile:</strong> {member.mobile || 'Not set'}</span>
         </div>
         {(event.venue_access_notes || event.loading_bay_notes) && (
           <div className="locationNotes">
@@ -3333,41 +3378,82 @@ function CrewPersonalView() {
             {event.loading_bay_notes && <p><strong>Loading Bay:</strong> {event.loading_bay_notes}</p>}
           </div>
         )}
-        {member.notes && <p><strong>Notes:</strong> {member.notes}</p>}
+        {member.notes && <p><strong>Your Notes:</strong> {member.notes}</p>}
       </section>
 
-      <div className="accordionStack">
-        <Accordion title="My Flights" subtitle={`${data.flights.length} flight records`} icon={Plane}>
+      <section className="eventCard crewTodayCard">
+        <p className="eyebrowDark">At a Glance</p>
+        <h2>Your key details</h2>
+        <div className="crewAtGlanceGrid">
+          <div>
+            <strong>Next Flight</strong>
+            {nextFlight ? (
+              <span>{nextFlight.airline} {nextFlight.flight_number || ''} · {nextFlight.departure_airport} → {nextFlight.arrival_airport}</span>
+            ) : (
+              <span>No flight assigned</span>
+            )}
+          </div>
+          <div>
+            <strong>Hotel</strong>
+            {nextHotel ? <span>{nextHotel.hotel_name}</span> : <span>No hotel assigned</span>}
+          </div>
+          <div>
+            <strong>Next Transfer</strong>
+            {nextTransfer ? <span>{formatDate(nextTransfer.date)} {nextTransfer.time && `· ${formatTime(nextTransfer.time)}`}</span> : <span>No transfer assigned</span>}
+          </div>
+          <div>
+            <strong>Next Schedule Item</strong>
+            {nextSchedule ? <span>{nextSchedule.activity} · {formatDate(nextSchedule.date)}</span> : <span>No schedule item assigned</span>}
+          </div>
+        </div>
+      </section>
+
+      <div className="crewPersonalSections">
+        <section className="eventCard crewSectionCard">
+          <div className="crewSectionHeader">
+            <Plane size={24} />
+            <div>
+              <p className="eyebrowDark">Travel</p>
+              <h2>Your Flights</h2>
+            </div>
+          </div>
           {data.flights.length ? (
             data.flights.map(x => (
-              <div className="item" key={x.id}>
+              <div className="crewTimelineItem" key={x.id}>
                 <strong>{x.airline} {x.flight_number}</strong>
                 <p>{x.departure_airport} → {x.arrival_airport}</p>
-                {x.departure_time && <small>Departure: {formatDateTime(x.departure_time)}</small>}
-                {x.arrival_time && (
-                  <small>
-                    <br />
-                    Arrival: {formatDateTime(x.arrival_time)}
-                  </small>
-                )}
-                {x.booking_reference && (
-                  <small>
-                    <br />
-                    Booking Ref: {x.booking_reference}
-                  </small>
-                )}
+                <small>
+                  {x.departure_time && `Departure: ${formatDateTime(x.departure_time)}`}
+                  {x.arrival_time && (
+                    <>
+                      <br />Arrival: {formatDateTime(x.arrival_time)}
+                    </>
+                  )}
+                  {x.booking_reference && (
+                    <>
+                      <br />Booking Ref: {x.booking_reference}
+                    </>
+                  )}
+                </small>
                 {x.notes && <p>{x.notes}</p>}
               </div>
             ))
           ) : (
             <Empty text="No flights assigned to you yet." />
           )}
-        </Accordion>
+        </section>
 
-        <Accordion title="My Hotel" subtitle={`${data.hotels.length} hotel records`} icon={Hotel}>
+        <section className="eventCard crewSectionCard">
+          <div className="crewSectionHeader">
+            <Hotel size={24} />
+            <div>
+              <p className="eyebrowDark">Accommodation</p>
+              <h2>Your Hotel</h2>
+            </div>
+          </div>
           {data.hotels.length ? (
             data.hotels.map(x => (
-              <div className="item" key={x.id}>
+              <div className="crewTimelineItem" key={x.id}>
                 <strong>{x.hotel_name}</strong>
                 {x.address && <p>{x.address}</p>}
                 <div className="locationButtonRow">
@@ -3378,42 +3464,45 @@ function CrewPersonalView() {
                   Check-in: {formatDate(x.check_in)}
                   {x.check_out && (
                     <>
-                      <br />
-                      Check-out: {formatDate(x.check_out)}
+                      <br />Check-out: {formatDate(x.check_out)}
                     </>
                   )}
                   {x.room_number && (
                     <>
-                      <br />
-                      Room: {x.room_number}
+                      <br />Room: {x.room_number}
+                    </>
+                  )}
+                  {x.booking_reference && (
+                    <>
+                      <br />Booking Ref: {x.booking_reference}
+                    </>
+                  )}
+                  {x.hotel_contact && (
+                    <>
+                      <br />Hotel Contact: {x.hotel_contact}
                     </>
                   )}
                 </small>
-                {x.booking_reference && (
-                  <small>
-                    <br />
-                    Booking Ref: {x.booking_reference}
-                  </small>
-                )}
-                {x.hotel_contact && (
-                  <small>
-                    <br />
-                    Hotel Contact: {x.hotel_contact}
-                  </small>
-                )}
                 {x.notes && <p>{x.notes}</p>}
               </div>
             ))
           ) : (
             <Empty text="No hotel assigned to you yet." />
           )}
-        </Accordion>
+        </section>
 
-        <Accordion title="My Transfers" subtitle={`${data.transfers.length} transfer records`} icon={Car}>
+        <section className="eventCard crewSectionCard">
+          <div className="crewSectionHeader">
+            <Car size={24} />
+            <div>
+              <p className="eyebrowDark">Transport</p>
+              <h2>Your Transfers</h2>
+            </div>
+          </div>
           {data.transfers.length ? (
             data.transfers.map(x => (
-              <div className="item" key={x.id}>
-                <strong>{x.transfer_type}</strong>
+              <div className="crewTimelineItem" key={x.id}>
+                <strong>{x.transfer_type || 'Transfer'}</strong>
                 <p>{x.pickup_location} → {x.destination}</p>
                 <div className="locationButtonRow">
                   {x.pickup_maps_url && <a href={x.pickup_maps_url} target="_blank" rel="noreferrer" className="locationButton">📍 Pickup Maps</a>}
@@ -3424,57 +3513,67 @@ function CrewPersonalView() {
                 <small>
                   {formatDate(x.date)}
                   {x.time && ` at ${formatTime(x.time)}`}
+                  {x.driver_name && (
+                    <>
+                      <br />Driver: {x.driver_name}{x.driver_phone && ` | ${x.driver_phone}`}
+                    </>
+                  )}
+                  {x.vehicle && (
+                    <>
+                      <br />Vehicle: {x.vehicle}
+                    </>
+                  )}
                 </small>
-                {x.driver_name && (
-                  <small>
-                    <br />
-                    Driver: {x.driver_name}
-                    {x.driver_phone && ` | ${x.driver_phone}`}
-                  </small>
-                )}
-                {x.vehicle && (
-                  <small>
-                    <br />
-                    Vehicle: {x.vehicle}
-                  </small>
-                )}
                 {x.notes && <p>{x.notes}</p>}
               </div>
             ))
           ) : (
             <Empty text="No transfers assigned to you yet." />
           )}
-        </Accordion>
+        </section>
 
-        <Accordion title="My Schedule" subtitle={`${data.schedule_items.length} schedule items`} icon={CalendarDays}>
+        <section className="eventCard crewSectionCard">
+          <div className="crewSectionHeader">
+            <CalendarDays size={24} />
+            <div>
+              <p className="eyebrowDark">Schedule</p>
+              <h2>Your Schedule</h2>
+            </div>
+          </div>
           {data.schedule_items.length ? (
             data.schedule_items.map(x => (
-              <div className="item" key={x.id}>
+              <div className="crewTimelineItem" key={x.id}>
                 <strong>{x.activity}</strong>
                 <p>{x.location}</p>
                 <small>
                   {formatDate(x.date)}
                   {x.start_time && ` | ${formatTime(x.start_time)}`}
                   {x.end_time && ` - ${formatTime(x.end_time)}`}
+                  {x.assigned_crew && (
+                    <>
+                      <br />Assigned Crew: {x.assigned_crew}
+                    </>
+                  )}
                 </small>
-                {x.assigned_crew && (
-                  <small>
-                    <br />
-                    Assigned Crew: {x.assigned_crew}
-                  </small>
-                )}
                 {x.notes && <p>{x.notes}</p>}
               </div>
             ))
           ) : (
             <Empty text="No schedule items assigned to you yet." />
           )}
-        </Accordion>
+        </section>
 
-        <Accordion title="Documents" subtitle={`${data.documents.length} documents`} icon={FileText}>
+        <section className="eventCard crewSectionCard crewDocumentsSection">
+          <div className="crewSectionHeader">
+            <FileText size={24} />
+            <div>
+              <p className="eyebrowDark">Documents</p>
+              <h2>Event Documents</h2>
+            </div>
+          </div>
           {data.documents.length ? (
             data.documents.map(x => (
-              <div className="item" key={x.id}>
+              <div className="crewTimelineItem" key={x.id}>
                 <strong>{x.document_name}</strong>
                 <div className="documentMetaRow">
                   <span>{x.category || 'Uncategorised'}</span>
@@ -3485,9 +3584,9 @@ function CrewPersonalView() {
               </div>
             ))
           ) : (
-            <Empty text="No documents added yet." />
+            <Empty text="No public documents available yet." />
           )}
-        </Accordion>
+        </section>
       </div>
     </main>
   )
