@@ -561,6 +561,14 @@ function AdminPage() {
     const stored = readStoredValue('pep.calendarSettings', null)
     return stored && typeof stored === 'object' ? { ...DEFAULT_CALENDAR_COLOURS, ...stored } : DEFAULT_CALENDAR_COLOURS
   })
+  const [resourceCalendars, setResourceCalendars] = useState([])
+  const [resourceCalendarLoading, setResourceCalendarLoading] = useState(true)
+  const [resourceCalendarForm, setResourceCalendarForm] = useState({
+    category: 'vehicles',
+    name: '',
+    colour: '#111827',
+    active: true,
+  })
   const [calendarFilters, setCalendarFilters] = useState(() => {
     const defaults = {
       projects: true,
@@ -622,6 +630,7 @@ function AdminPage() {
     loadEvents()
     loadStaffMembers()
     loadCalendarSettings()
+    loadResourceCalendars()
   }, [])
 
   useEffect(() => {
@@ -709,6 +718,24 @@ function AdminPage() {
     setCalendarSettings(nextSettings)
   }
 
+  async function loadResourceCalendars() {
+    setResourceCalendarLoading(true)
+
+    const { data, error } = await supabase
+      .from('resource_calendars')
+      .select('*')
+      .order('category', { ascending: true })
+      .order('name', { ascending: true })
+
+    if (error) {
+      setResourceCalendars([])
+    } else {
+      setResourceCalendars(data || [])
+    }
+
+    setResourceCalendarLoading(false)
+  }
+
   function updateCalendarSetting(category, colour) {
     setCalendarSettings(current => ({
       ...current,
@@ -736,6 +763,82 @@ function AdminPage() {
 
     setMessage('Calendar colours saved.')
     await loadCalendarSettings()
+  }
+
+  function updateResourceCalendarField(field, value) {
+    setResourceCalendarForm(current => ({
+      ...current,
+      [field]: value,
+    }))
+  }
+
+  async function saveResourceCalendar(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!resourceCalendarForm.name.trim()) {
+      setMessage('Resource calendar name is required.')
+      return
+    }
+
+    const { error } = await supabase
+      .from('resource_calendars')
+      .insert([{
+        category: resourceCalendarForm.category,
+        name: resourceCalendarForm.name.trim(),
+        colour: resourceCalendarForm.colour || getCalendarCategoryColour(resourceCalendarForm.category),
+        active: resourceCalendarForm.active !== false,
+      }])
+
+    if (error) {
+      setMessage(`Could not create resource calendar: ${error.message}`)
+      return
+    }
+
+    setMessage('Resource calendar created.')
+    setResourceCalendarForm({
+      category: 'vehicles',
+      name: '',
+      colour: '#111827',
+      active: true,
+    })
+    await loadResourceCalendars()
+  }
+
+  async function toggleResourceCalendarActive(calendarRecord) {
+    const { error } = await supabase
+      .from('resource_calendars')
+      .update({ active: calendarRecord.active === false })
+      .eq('id', calendarRecord.id)
+
+    if (error) {
+      setMessage(`Could not update resource calendar: ${error.message}`)
+      return
+    }
+
+    await loadResourceCalendars()
+  }
+
+  async function deleteResourceCalendar(id) {
+    const confirmed = window.confirm('Delete this resource calendar?')
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from('resource_calendars')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      setMessage(`Could not delete resource calendar: ${error.message}`)
+      return
+    }
+
+    setMessage('Resource calendar deleted.')
+    await loadResourceCalendars()
+  }
+
+  function getResourceCalendarsForCategory(category) {
+    return resourceCalendars.filter(resource => resource.category === category)
   }
 
   function getCalendarCategoryColour(category) {
@@ -1223,12 +1326,12 @@ function AdminPage() {
     const projectCount = events.length
     const resourceGroups = [
       { key: 'projects', label: 'Projects', count: projectCount, className: 'projectKey' },
-      { key: 'dry_hire', label: 'Dry Hire', count: 0, className: 'dryHireKey', comingSoon: true },
-      { key: 'crew', label: 'Crew', count: 0, className: 'crewKey', comingSoon: true },
-      { key: 'freelancers', label: 'Freelancers', count: 0, className: 'freelancerKey', comingSoon: true },
-      { key: 'rooms', label: 'Office Rooms', count: 0, className: 'roomKey', comingSoon: true },
-      { key: 'vehicles', label: 'Vehicles', count: 0, className: 'vehicleKey', comingSoon: true },
-      { key: 'led_trailers', label: 'LED Trailers', count: 0, className: 'trailerKey', comingSoon: true },
+      { key: 'dry_hire', label: 'Dry Hire', count: getResourceCalendarsForCategory('dry_hire').length, className: 'dryHireKey' },
+      { key: 'crew', label: 'Crew', count: getResourceCalendarsForCategory('crew').length, className: 'crewKey' },
+      { key: 'freelancers', label: 'Freelancers', count: getResourceCalendarsForCategory('freelancers').length, className: 'freelancerKey' },
+      { key: 'rooms', label: 'Office Rooms', count: getResourceCalendarsForCategory('rooms').length, className: 'roomKey' },
+      { key: 'vehicles', label: 'Vehicles', count: getResourceCalendarsForCategory('vehicles').length, className: 'vehicleKey' },
+      { key: 'led_trailers', label: 'LED Trailers', count: getResourceCalendarsForCategory('led_trailers').length, className: 'trailerKey' },
     ]
 
     return (
@@ -1244,20 +1347,38 @@ function AdminPage() {
         </div>
 
         <div className="calendarKeyList">
-          {resourceGroups.map(group => (
-            <label className={`calendarKeyItem ${group.className} ${calendarFilters[group.key] ? 'active' : ''}`} key={group.key} style={{ '--calendar-key-colour': getCalendarCategoryColour(group.key) }}>
-              <input
-                type="checkbox"
-                checked={!!calendarFilters[group.key]}
-                onChange={() => toggleCalendarFilter(group.key)}
-              />
-              <span className="calendarKeyColour"></span>
-              <span className="calendarKeyText">
-                <strong>{group.label}</strong>
-                <small>{group.comingSoon ? 'Coming later' : `${group.count} live`}</small>
-              </span>
-            </label>
-          ))}
+          {resourceGroups.map(group => {
+            const subCalendars = getResourceCalendarsForCategory(group.key)
+            const liveCountLabel = group.key === 'projects' ? `${group.count} live` : `${subCalendars.length} sub-calendar${subCalendars.length === 1 ? '' : 's'}`
+
+            return (
+              <div className="calendarKeyGroup" key={group.key}>
+                <label className={`calendarKeyItem ${group.className} ${calendarFilters[group.key] ? 'active' : ''}`} style={{ '--calendar-key-colour': getCalendarCategoryColour(group.key) }}>
+                  <input
+                    type="checkbox"
+                    checked={!!calendarFilters[group.key]}
+                    onChange={() => toggleCalendarFilter(group.key)}
+                  />
+                  <span className="calendarKeyColour"></span>
+                  <span className="calendarKeyText">
+                    <strong>{group.label}</strong>
+                    <small>{liveCountLabel}</small>
+                  </span>
+                </label>
+
+                {subCalendars.length > 0 && (
+                  <div className="calendarSubCalendarList">
+                    {subCalendars.map(resource => (
+                      <div className={resource.active === false ? 'calendarSubCalendarItem inactive' : 'calendarSubCalendarItem'} key={resource.id} style={{ '--calendar-key-colour': resource.colour || getCalendarCategoryColour(resource.category) }}>
+                        <span className="calendarKeyColour"></span>
+                        <span>{resource.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </aside>
     )
@@ -2147,6 +2268,91 @@ function AdminPage() {
                 <button type="button" className="secondaryButton" onClick={() => setCalendarSettings(DEFAULT_CALENDAR_COLOURS)}>Reset Defaults</button>
               </div>
             </form>
+          </section>
+
+          <section className="eventCard resourceCalendarSettingsCard">
+            <div className="staffSectionHeader">
+              <div>
+                <p className="eyebrowDark">Resource Calendars</p>
+                <h2>Sub-calendars</h2>
+                <p>Create sub-calendars under Crew, Freelancers, Vehicles, Rooms, LED Trailers, Dry Hire or Projects. Each can inherit the parent category colour or use its own colour.</p>
+              </div>
+            </div>
+
+            <form onSubmit={saveResourceCalendar} className="resourceCalendarForm">
+              <label>
+                Parent calendar
+                <select value={resourceCalendarForm.category} onChange={e => updateResourceCalendarField('category', e.target.value)}>
+                  {Object.entries(CALENDAR_COLOUR_LABELS).map(([category, label]) => (
+                    <option value={category} key={category}>{label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Sub-calendar name
+                <input value={resourceCalendarForm.name} onChange={e => updateResourceCalendarField('name', e.target.value)} placeholder="Van 1, Meeting Room, Liam Howard" />
+              </label>
+
+              <label className="resourceCalendarColourField">
+                Colour
+                <input type="color" value={resourceCalendarForm.colour} onChange={e => updateResourceCalendarField('colour', e.target.value)} />
+              </label>
+
+              <label className="checkboxRow resourceCalendarActiveField">
+                <input type="checkbox" checked={resourceCalendarForm.active !== false} onChange={e => updateResourceCalendarField('active', e.target.checked)} />
+                Active
+              </label>
+
+              <button className="primaryButton" type="submit">Create Sub-calendar</button>
+            </form>
+
+            <div className="resourceCalendarList">
+              {resourceCalendarLoading ? (
+                <p>Loading resource calendars...</p>
+              ) : resourceCalendars.length ? (
+                Object.entries(CALENDAR_COLOUR_LABELS).map(([category, label]) => {
+                  const categoryResources = getResourceCalendarsForCategory(category)
+
+                  if (!categoryResources.length) return null
+
+                  return (
+                    <div className="resourceCalendarGroup" key={category}>
+                      <div className="resourceCalendarGroupHeader" style={{ '--calendar-key-colour': getCalendarCategoryColour(category) }}>
+                        <span className="calendarKeyColour"></span>
+                        <strong>{label}</strong>
+                        <small>{categoryResources.length} sub-calendar{categoryResources.length === 1 ? '' : 's'}</small>
+                      </div>
+
+                      <div className="resourceCalendarRows">
+                        {categoryResources.map(resource => (
+                          <div className={resource.active === false ? 'resourceCalendarRow inactive' : 'resourceCalendarRow'} key={resource.id}>
+                            <div className="resourceCalendarNameBlock" style={{ '--calendar-key-colour': resource.colour || getCalendarCategoryColour(resource.category) }}>
+                              <span className="calendarKeyColour"></span>
+                              <div>
+                                <strong>{resource.name}</strong>
+                                <small>{resource.active === false ? 'Inactive' : 'Active'}</small>
+                              </div>
+                            </div>
+
+                            <div className="resourceCalendarRowActions">
+                              <button type="button" onClick={() => toggleResourceCalendarActive(resource)}>
+                                {resource.active === false ? 'Activate' : 'Deactivate'}
+                              </button>
+                              <button type="button" onClick={() => deleteResourceCalendar(resource.id)}>
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <Empty text="No resource sub-calendars created yet." />
+              )}
+            </div>
           </section>
         </>
       )}
