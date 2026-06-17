@@ -532,6 +532,7 @@ function AdminPage() {
   const [crewSheetSearch, setCrewSheetSearch] = useState('')
   const [calendarView, setCalendarView] = useState(() => readStoredValue('pep.calendarView', 'month'))
   const [calendarFocusDate, setCalendarFocusDate] = useState(() => readStoredValue('pep.calendarFocusDate', formatCalendarDateInput(new Date())))
+  const [showCalendarResources, setShowCalendarResources] = useState(() => readStoredValue('pep.showCalendarResources', true))
   const [calendarFilters, setCalendarFilters] = useState(() => {
     const defaults = {
       projects: true,
@@ -604,6 +605,10 @@ function AdminPage() {
   useEffect(() => {
     writeStoredValue('pep.calendarFocusDate', calendarFocusDate)
   }, [calendarFocusDate])
+
+  useEffect(() => {
+    writeStoredValue('pep.showCalendarResources', showCalendarResources)
+  }, [showCalendarResources])
 
   useEffect(() => {
     writeStoredValue('pep.calendarFilters', calendarFilters)
@@ -1003,6 +1008,10 @@ function AdminPage() {
     }))
   }
 
+  function toggleCalendarResources() {
+    setShowCalendarResources(previous => !previous)
+  }
+
   function getCalendarSourceEvents() {
     if (!calendarFilters.projects) return []
     return events
@@ -1023,8 +1032,13 @@ function AdminPage() {
     return (
       <aside className="calendarKeySidebar">
         <div className="calendarKeyHeader">
-          <p className="eyebrowDark">Calendar Key</p>
-          <h3>Resources</h3>
+          <div>
+            <p className="eyebrowDark">Calendar Key</p>
+            <h3>Resources</h3>
+          </div>
+          <button type="button" className="calendarResourceToggleButton" onClick={toggleCalendarResources}>
+            Hide
+          </button>
         </div>
 
         <div className="calendarKeyList">
@@ -1271,15 +1285,22 @@ function AdminPage() {
           {loading ? (
             <p>Loading calendar...</p>
           ) : (
-            <div className="calendarWorkspace">
-              {renderCalendarKeySidebar()}
-              <div className="calendarViewPanel">
-                {calendarView === 'month' && renderMonthCalendar()}
-                {calendarView === 'two_week' && renderRollingCalendar(14)}
-                {calendarView === 'week' && renderRollingCalendar(7)}
-                {calendarView === 'day' && renderRollingCalendar(1)}
+            <>
+              {!showCalendarResources && (
+                <button type="button" className="calendarResourceShowButton" onClick={toggleCalendarResources}>
+                  Show Resources
+                </button>
+              )}
+              <div className={showCalendarResources ? 'calendarWorkspace' : 'calendarWorkspace calendarWorkspaceFull'}>
+                {showCalendarResources && renderCalendarKeySidebar()}
+                <div className="calendarViewPanel">
+                  {calendarView === 'month' && renderMonthCalendar()}
+                  {calendarView === 'two_week' && renderRollingCalendar(14)}
+                  {calendarView === 'week' && renderRollingCalendar(7)}
+                  {calendarView === 'day' && renderRollingCalendar(1)}
+                </div>
               </div>
-            </div>
+            </>
           )}
         </section>
 
