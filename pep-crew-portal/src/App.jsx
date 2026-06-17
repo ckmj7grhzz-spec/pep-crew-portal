@@ -697,6 +697,7 @@ function EventManagerPage() {
   const [showCriticalIssues, setShowCriticalIssues] = useState(false)
   const [showWarningIssues, setShowWarningIssues] = useState(false)
   const [showOperationalChecks, setShowOperationalChecks] = useState(false)
+  const [showVenueLocation, setShowVenueLocation] = useState(false)
   const [globalSearch, setGlobalSearch] = useState('')
   const [editingCrewId, setEditingCrewId] = useState(null)
   const [editingFlightId, setEditingFlightId] = useState(null)
@@ -2320,73 +2321,93 @@ function EventManagerPage() {
             </div>
           </section>
 
-          <section className="eventCard">
-            <h2>Venue Location</h2>
-            <p>Add map links and access notes for the venue. These appear on the public call sheet and crew personal view.</p>
+          <section className="eventCard collapsibleOverviewCard">
+            <button
+              type="button"
+              className="collapsibleOverviewHeader"
+              onClick={() => setShowVenueLocation(!showVenueLocation)}
+            >
+              <span>
+                <h2>Venue Location</h2>
+                <small>Maps, access notes, loading bay details and event contacts</small>
+              </span>
+              <ChevronDown className={showVenueLocation ? 'chevron open' : 'chevron'} />
+            </button>
 
-            <form onSubmit={saveEventLocation} className="adminForm">
-              <label>
-                Venue Address
-                <input value={eventLocationForm.venue_address} onChange={e => updateEventLocationField('venue_address', e.target.value)} placeholder="Center Blvd. 5, Copenhagen" />
-              </label>
+            {showVenueLocation && (
+              <div className="collapsibleOverviewBody">
+                <p>Add map links, access notes and event contacts. These appear on the public call sheet and crew personal view.</p>
 
-              <label>
-                Google Maps URL
-                <input value={eventLocationForm.venue_maps_url} onChange={e => updateEventLocationField('venue_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
-              </label>
+                <form onSubmit={saveEventLocation} className="adminForm">
+                  <div className="formSectionTitle">
+                    <strong>Venue Details</strong>
+                    <span>Shown on the public call sheet and crew personal view.</span>
+                  </div>
 
-              <label>
-                What3Words
-                <input value={eventLocationForm.venue_what3words} onChange={e => updateEventLocationField('venue_what3words', e.target.value)} placeholder="///filled.count.soap" />
-              </label>
+                  <label>
+                    Venue Address
+                    <input value={eventLocationForm.venue_address} onChange={e => updateEventLocationField('venue_address', e.target.value)} placeholder="Center Blvd. 5, Copenhagen" />
+                  </label>
 
-              <label>
-                Access Notes
-                <input value={eventLocationForm.venue_access_notes} onChange={e => updateEventLocationField('venue_access_notes', e.target.value)} placeholder="Use north entrance / exhibitor access" />
-              </label>
+                  <label>
+                    Google Maps URL
+                    <input value={eventLocationForm.venue_maps_url} onChange={e => updateEventLocationField('venue_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+                  </label>
 
-              <label>
-                Loading Bay Notes
-                <input value={eventLocationForm.loading_bay_notes} onChange={e => updateEventLocationField('loading_bay_notes', e.target.value)} placeholder="Loading bay 3, vehicle pass required" />
-              </label>
+                  <label>
+                    What3Words
+                    <input value={eventLocationForm.venue_what3words} onChange={e => updateEventLocationField('venue_what3words', e.target.value)} placeholder="///filled.count.soap" />
+                  </label>
 
-              <div className="formSectionTitle">
-                <strong>Event Contacts</strong>
-                <span>Shown on the public call sheet and crew personal view.</span>
+                  <label>
+                    Access Notes
+                    <input value={eventLocationForm.venue_access_notes} onChange={e => updateEventLocationField('venue_access_notes', e.target.value)} placeholder="Use north entrance / exhibitor access" />
+                  </label>
+
+                  <label>
+                    Loading Bay Notes
+                    <input value={eventLocationForm.loading_bay_notes} onChange={e => updateEventLocationField('loading_bay_notes', e.target.value)} placeholder="Loading bay 3, vehicle pass required" />
+                  </label>
+
+                  <div className="formSectionTitle">
+                    <strong>Event Contacts</strong>
+                    <span>Shown on the public call sheet and crew personal view.</span>
+                  </div>
+
+                  <label>
+                    Project Manager Name
+                    <input value={eventLocationForm.project_manager} onChange={e => updateEventLocationField('project_manager', e.target.value)} placeholder="Liam Howard" />
+                  </label>
+
+                  <label>
+                    Project Manager Phone
+                    <input value={eventLocationForm.project_manager_phone} onChange={e => updateEventLocationField('project_manager_phone', e.target.value)} placeholder="+44..." />
+                  </label>
+
+                  <label>
+                    Project Manager Email
+                    <input type="email" value={eventLocationForm.project_manager_email} onChange={e => updateEventLocationField('project_manager_email', e.target.value)} placeholder="name@pepled.com" />
+                  </label>
+
+                  <label>
+                    Operations Contact Name
+                    <input value={eventLocationForm.operations_contact_name} onChange={e => updateEventLocationField('operations_contact_name', e.target.value)} placeholder="Operations contact" />
+                  </label>
+
+                  <label>
+                    Operations Contact Phone
+                    <input value={eventLocationForm.operations_contact_phone} onChange={e => updateEventLocationField('operations_contact_phone', e.target.value)} placeholder="+44..." />
+                  </label>
+
+                  <label>
+                    Emergency Contact Number
+                    <input value={eventLocationForm.emergency_contact_number} onChange={e => updateEventLocationField('emergency_contact_number', e.target.value)} placeholder="+44..." />
+                  </label>
+
+                  <button className="primaryButton" type="submit">Save Location & Contact Details</button>
+                </form>
               </div>
-
-              <label>
-                Project Manager Name
-                <input value={eventLocationForm.project_manager} onChange={e => updateEventLocationField('project_manager', e.target.value)} placeholder="Liam Howard" />
-              </label>
-
-              <label>
-                Project Manager Phone
-                <input value={eventLocationForm.project_manager_phone} onChange={e => updateEventLocationField('project_manager_phone', e.target.value)} placeholder="+44..." />
-              </label>
-
-              <label>
-                Project Manager Email
-                <input type="email" value={eventLocationForm.project_manager_email} onChange={e => updateEventLocationField('project_manager_email', e.target.value)} placeholder="name@pepled.com" />
-              </label>
-
-              <label>
-                Operations Contact Name
-                <input value={eventLocationForm.operations_contact_name} onChange={e => updateEventLocationField('operations_contact_name', e.target.value)} placeholder="Operations contact" />
-              </label>
-
-              <label>
-                Operations Contact Phone
-                <input value={eventLocationForm.operations_contact_phone} onChange={e => updateEventLocationField('operations_contact_phone', e.target.value)} placeholder="+44..." />
-              </label>
-
-              <label>
-                Emergency Contact Number
-                <input value={eventLocationForm.emergency_contact_number} onChange={e => updateEventLocationField('emergency_contact_number', e.target.value)} placeholder="+44..." />
-              </label>
-
-              <button className="primaryButton" type="submit">Save Location & Contact Details</button>
-            </form>
+            )}
           </section>
 
           <section className={`eventCard readiness2Hero ${readiness2StatusClass}`}>
