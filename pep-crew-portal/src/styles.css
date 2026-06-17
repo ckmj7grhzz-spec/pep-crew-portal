@@ -2692,3 +2692,182 @@ th {
     max-width: 1160px;
   }
 }
+
+/* Staff management v1 */
+.staffOverviewDashboard,
+.staffManagementCard,
+.staffDirectoryCard {
+  display: grid;
+  gap: 18px;
+}
+
+.staffOverviewGrid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.staffSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.staffSectionHeader h2 {
+  margin-bottom: 0;
+}
+
+.staffForm textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.staffSearchBox {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+
+.staffGroupedList {
+  display: grid;
+  gap: 18px;
+}
+
+.staffGroup {
+  border: 1px solid var(--pep-border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.staffGroupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--pep-border);
+  background: var(--pep-soft);
+}
+
+.staffGroupHeader strong {
+  font-size: 18px;
+}
+
+.staffGroupHeader span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 30px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid var(--pep-border);
+  font-weight: 900;
+  color: var(--pep-muted);
+}
+
+.staffList {
+  display: grid;
+  gap: 0;
+}
+
+.staffMemberCard {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  padding: 18px;
+  border-bottom: 1px solid var(--pep-border);
+}
+
+.staffMemberCard:last-child {
+  border-bottom: 0;
+}
+
+.staffMemberMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.staffMemberTitleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.staffMemberTitleRow strong {
+  font-size: 18px;
+}
+
+.staffMemberCard p {
+  margin: 6px 0;
+  color: #334155;
+}
+
+.staffMemberCard small {
+  color: var(--pep-muted);
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.staffTypeBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid var(--pep-border);
+}
+
+.staffBadge {
+  color: var(--green-text);
+  background: var(--green-bg);
+  border-color: var(--green-border);
+}
+
+.freelancerBadge {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.inactiveBadge {
+  color: var(--pep-muted);
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.inactiveStaffMemberCard {
+  opacity: 0.72;
+  background: #f8fafc;
+}
+
+.staffGroupEmpty {
+  padding: 18px;
+}
+
+@media (max-width: 900px) {
+  .staffOverviewGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .staffMemberCard,
+  .staffSectionHeader {
+    display: grid;
+  }
+
+  .staffMemberCard .adminActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .staffOverviewGrid {
+    grid-template-columns: 1fr;
+  }
+}
