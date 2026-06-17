@@ -1702,3 +1702,95 @@ th {
     align-items: flex-start;
   }
 }
+
+
+/* Event contacts */
+.formSectionTitle {
+  grid-column: 1 / -1;
+  background: var(--pep-soft);
+  border: 1px solid var(--pep-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 4px;
+}
+
+.formSectionTitle strong {
+  font-size: 16px;
+  color: var(--pep-text);
+}
+
+.formSectionTitle span {
+  color: var(--pep-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.eventContactsCard {
+  display: grid;
+  gap: 18px;
+}
+
+.compactEventContactsCard {
+  margin-top: 18px;
+  background: #ffffff;
+  border: 1px solid var(--pep-border);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.eventContactsHeader h2 {
+  margin: 0;
+}
+
+.eventContactsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.eventContactsGrid div {
+  background: var(--pep-soft);
+  border: 1px solid var(--pep-border);
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 7px;
+}
+
+.eventContactsGrid strong {
+  color: var(--pep-muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.eventContactsGrid span,
+.eventContactsGrid a {
+  color: var(--pep-text);
+  font-weight: 800;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.eventContactsGrid a:hover {
+  color: var(--pep-blue);
+  text-decoration: underline;
+}
+
+.eventEmergencyContact {
+  background: var(--orange-bg) !important;
+  border-color: var(--orange-border) !important;
+}
+
+.eventEmergencyContact strong,
+.eventEmergencyContact a {
+  color: var(--orange-text) !important;
+}
+
+@media (max-width: 900px) {
+  .eventContactsGrid {
+    grid-template-columns: 1fr;
+  }
+}
