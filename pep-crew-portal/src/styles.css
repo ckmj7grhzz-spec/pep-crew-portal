@@ -5095,3 +5095,126 @@ button.calendarEventListItem {
     padding: 0;
   }
 }
+
+/* Resource calendar parent/sub-calendar toggle refinement */
+.calendarKeyGroup.inactive {
+  opacity: 0.72;
+}
+
+.calendarKeyParentButton {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.calendarKeyParentButton:hover {
+  border-color: var(--calendar-key-colour, var(--pep-green));
+  background: #f8fafc;
+}
+
+.calendarKeyParentButton.active {
+  border-color: color-mix(in srgb, var(--calendar-key-colour, var(--pep-green)) 45%, #ffffff);
+  background: color-mix(in srgb, var(--calendar-key-colour, var(--pep-green)) 10%, #ffffff);
+}
+
+.calendarKeyGroup.inactive .calendarKeyParentButton,
+.calendarKeyGroup.inactive .calendarKeyText strong,
+.calendarKeyGroup.inactive .calendarKeyText small {
+  color: #94a3b8 !important;
+}
+
+.calendarKeyGroup.inactive .calendarKeyColour {
+  opacity: 0.45;
+}
+
+.calendarKeyToggleDot,
+.calendarSubCalendarVisibilityButton {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.calendarKeyParentButton.active .calendarKeyToggleDot,
+.calendarSubCalendarItem.active .calendarSubCalendarVisibilityButton {
+  background: var(--calendar-key-colour, var(--pep-green));
+  border-color: var(--calendar-key-colour, var(--pep-green));
+  color: #ffffff;
+}
+
+.calendarSubCalendarExpandButton {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #64748b;
+  border-radius: 999px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.calendarSubCalendarExpandButton:hover {
+  border-color: var(--pep-green);
+  color: var(--pep-green);
+  background: #f8fafc;
+}
+
+.calendarKeyGroup.open .calendarSubCalendarExpandButton {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.calendarSubCalendarItem {
+  justify-content: flex-start;
+}
+
+.calendarSubCalendarVisibilityButton {
+  cursor: pointer;
+  color: transparent;
+  font-family: inherit;
+}
+
+.calendarSubCalendarVisibilityButton:hover:not(:disabled) {
+  border-color: var(--calendar-key-colour, var(--pep-green));
+}
+
+.calendarSubCalendarVisibilityButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.calendarSubCalendarItem.inactive {
+  opacity: 1;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.calendarSubCalendarItem.inactive span:last-child {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.calendarSubCalendarItem.active span:last-child {
+  color: #334155;
+  font-weight: 800;
+}
