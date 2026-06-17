@@ -522,6 +522,27 @@ function writeStoredValue(key, value) {
   }
 }
 
+
+const DEFAULT_CALENDAR_COLOURS = {
+  projects: '#16a34a',
+  dry_hire: '#1d4ed8',
+  crew: '#ea580c',
+  freelancers: '#7c3aed',
+  rooms: '#64748b',
+  vehicles: '#111827',
+  led_trailers: '#dc2626',
+}
+
+const CALENDAR_COLOUR_LABELS = {
+  projects: 'Projects',
+  dry_hire: 'Dry Hire',
+  crew: 'Crew',
+  freelancers: 'Freelancers',
+  rooms: 'Office Rooms',
+  vehicles: 'Vehicles',
+  led_trailers: 'LED Trailers',
+}
+
 function AdminPage() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -536,6 +557,10 @@ function AdminPage() {
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState(null)
   const [calendarEventCounts, setCalendarEventCounts] = useState(null)
   const [calendarEventCountsLoading, setCalendarEventCountsLoading] = useState(false)
+  const [calendarSettings, setCalendarSettings] = useState(() => {
+    const stored = readStoredValue('pep.calendarSettings', null)
+    return stored && typeof stored === 'object' ? { ...DEFAULT_CALENDAR_COLOURS, ...stored } : DEFAULT_CALENDAR_COLOURS
+  })
   const [calendarFilters, setCalendarFilters] = useState(() => {
     const defaults = {
       projects: true,
@@ -569,6 +594,7 @@ function AdminPage() {
     skills: '',
     notes: '',
     active: true,
+    calendar_colour: '#16a34a',
   })
   const [form, setForm] = useState({
     show_name: '',
@@ -595,6 +621,7 @@ function AdminPage() {
   useEffect(() => {
     loadEvents()
     loadStaffMembers()
+    loadCalendarSettings()
   }, [])
 
   useEffect(() => {
@@ -616,6 +643,10 @@ function AdminPage() {
   useEffect(() => {
     writeStoredValue('pep.calendarFilters', calendarFilters)
   }, [calendarFilters])
+
+  useEffect(() => {
+    writeStoredValue('pep.calendarSettings', calendarSettings)
+  }, [calendarSettings])
 
   useEffect(() => {
     writeStoredValue('pep.showCreateCrewSheet', showCreateCrewSheet)
@@ -661,6 +692,60 @@ function AdminPage() {
     setStaffLoading(false)
   }
 
+  async function loadCalendarSettings() {
+    const { data, error } = await supabase
+      .from('calendar_settings')
+      .select('*')
+
+    if (error) return
+
+    const nextSettings = { ...DEFAULT_CALENDAR_COLOURS }
+    ;(data || []).forEach(setting => {
+      if (setting.category && setting.colour) {
+        nextSettings[setting.category] = setting.colour
+      }
+    })
+
+    setCalendarSettings(nextSettings)
+  }
+
+  function updateCalendarSetting(category, colour) {
+    setCalendarSettings(current => ({
+      ...current,
+      [category]: colour,
+    }))
+  }
+
+  async function saveCalendarSettings(e) {
+    e.preventDefault()
+    setMessage('')
+
+    const rows = Object.entries(calendarSettings).map(([category, colour]) => ({
+      category,
+      colour,
+    }))
+
+    const { error } = await supabase
+      .from('calendar_settings')
+      .upsert(rows, { onConflict: 'category' })
+
+    if (error) {
+      setMessage(`Could not save calendar colours: ${error.message}`)
+      return
+    }
+
+    setMessage('Calendar colours saved.')
+    await loadCalendarSettings()
+  }
+
+  function getCalendarCategoryColour(category) {
+    return calendarSettings[category] || DEFAULT_CALENDAR_COLOURS[category] || '#16a34a'
+  }
+
+  function getStaffCalendarColour(member) {
+    return member?.calendar_colour || '#16a34a'
+  }
+
   function updateStaffField(field, value) {
     setStaffForm({ ...staffForm, [field]: value })
   }
@@ -677,6 +762,7 @@ function AdminPage() {
       skills: '',
       notes: '',
       active: true,
+      calendar_colour: '#16a34a',
     })
   }
 
@@ -693,6 +779,7 @@ function AdminPage() {
       skills: member.skills || '',
       notes: member.notes || '',
       active: member.active !== false,
+      calendar_colour: member.calendar_colour || '#16a34a',
     })
   }
 
@@ -1004,6 +1091,12 @@ function AdminPage() {
     return 'projectCalendarEvent'
   }
 
+  function getCalendarEventColour(eventRecord) {
+    const status = getCrewSheetStatus(eventRecord)
+    if (status === 'show_complete') return '#050505'
+    return getCalendarCategoryColour('projects')
+  }
+
   function toggleCalendarFilter(key) {
     setCalendarFilters(previous => ({
       ...previous,
@@ -1152,7 +1245,7 @@ function AdminPage() {
 
         <div className="calendarKeyList">
           {resourceGroups.map(group => (
-            <label className={`calendarKeyItem ${group.className} ${calendarFilters[group.key] ? 'active' : ''}`} key={group.key}>
+            <label className={`calendarKeyItem ${group.className} ${calendarFilters[group.key] ? 'active' : ''}`} key={group.key} style={{ '--calendar-key-colour': getCalendarCategoryColour(group.key) }}>
               <input
                 type="checkbox"
                 checked={!!calendarFilters[group.key]}
@@ -1176,6 +1269,7 @@ function AdminPage() {
         type="button"
         key={`${eventRecord.id}-${eventRecord.public_slug}`}
         className={`calendarEventPill ${getCalendarEventClass(eventRecord)}`}
+        style={{ '--calendar-event-colour': getCalendarEventColour(eventRecord) }}
         onClick={() => openCalendarEventDetails(eventRecord)}
         title={`${eventRecord.show_name}${eventRecord.venue ? ` — ${eventRecord.venue}` : ''}`}
       >
@@ -1202,7 +1296,7 @@ function AdminPage() {
         className={`calendarEventBar ${getCalendarEventClass(eventRecord)} ${continuesBefore ? 'continuesBefore' : ''} ${continuesAfter ? 'continuesAfter' : ''}`}
         onClick={() => openCalendarEventDetails(eventRecord)}
         title={`${eventRecord.show_name}${eventRecord.venue ? ` — ${eventRecord.venue}` : ''}`}
-        style={{ gridColumn: `${startCol} / ${endCol}` }}
+        style={{ gridColumn: `${startCol} / ${endCol}`, '--calendar-event-colour': getCalendarEventColour(eventRecord) }}
       >
         {continuesBefore && <span className="calendarContinuationMark">←</span>}
         <span className="calendarEventBarText">
@@ -1441,12 +1535,13 @@ function AdminPage() {
 
   function renderStaffMemberCard(member) {
     return (
-      <div className={member.active === false ? 'staffMemberCard inactiveStaffMemberCard' : 'staffMemberCard'} key={member.id}>
+      <div className={member.active === false ? 'staffMemberCard inactiveStaffMemberCard' : 'staffMemberCard'} key={member.id} style={{ '--staff-calendar-colour': getStaffCalendarColour(member) }}>
         <div className="staffMemberMain">
           <div>
             <div className="staffMemberTitleRow">
+              <span className="staffColourSwatch" title="Calendar colour"></span>
               <strong>{member.name}</strong>
-              <span className={member.employment_type === 'Freelancer' ? 'staffTypeBadge freelancerBadge' : 'staffTypeBadge staffBadge'}>
+              <span className={getStaffTypeBadgeClass(member)}>
                 {getStaffEmploymentType(member)}
               </span>
               {member.active === false && <span className="staffTypeBadge inactiveBadge">Inactive</span>}
@@ -1607,6 +1702,13 @@ function AdminPage() {
           onClick={() => changePortalTab('staff')}
         >
           Staff
+        </button>
+        <button
+          type="button"
+          className={activePortalTab === 'settings' ? 'active' : ''}
+          onClick={() => changePortalTab('settings')}
+        >
+          Settings
         </button>
         <button
           type="button"
@@ -1926,6 +2028,11 @@ function AdminPage() {
               </label>
 
               <label>
+                Calendar Colour
+                <input type="color" value={staffForm.calendar_colour || '#16a34a'} onChange={e => updateStaffField('calendar_colour', e.target.value)} />
+              </label>
+
+              <label>
                 Phone
                 <input value={staffForm.phone} onChange={e => updateStaffField('phone', e.target.value)} placeholder="+44..." />
               </label>
@@ -1997,6 +2104,49 @@ function AdminPage() {
             ) : (
               <Empty text="No staff or freelancer records created yet." />
             )}
+          </section>
+        </>
+      )}
+
+      {activePortalTab === 'settings' && (
+        <>
+          <section className="eventCard settingsOverviewCard">
+            <p className="eyebrowDark">Settings</p>
+            <h2>Portal Settings</h2>
+            <p>Manage shared calendar colours for projects, resources and future Current RMS data.</p>
+          </section>
+
+          {message && <p className="adminMessage adminHomeMessage">{message}</p>}
+
+          <section className="eventCard calendarColourSettingsCard">
+            <div className="staffSectionHeader">
+              <div>
+                <p className="eyebrowDark">Calendar Colours</p>
+                <h2>Resource Colour Key</h2>
+                <p>These colours control the calendar key and project/resource event bars. They can be changed at any time.</p>
+              </div>
+            </div>
+
+            <form onSubmit={saveCalendarSettings} className="calendarColourSettingsForm">
+              {Object.entries(CALENDAR_COLOUR_LABELS).map(([category, label]) => (
+                <label className="calendarColourSettingRow" key={category}>
+                  <span>
+                    <strong>{label}</strong>
+                    <small>{category === 'projects' ? 'Current crew sheets and future Current RMS projects' : 'Future resource calendar category'}</small>
+                  </span>
+                  <input
+                    type="color"
+                    value={getCalendarCategoryColour(category)}
+                    onChange={e => updateCalendarSetting(category, e.target.value)}
+                  />
+                </label>
+              ))}
+
+              <div className="calendarColourSettingsActions">
+                <button className="primaryButton" type="submit">Save Calendar Colours</button>
+                <button type="button" className="secondaryButton" onClick={() => setCalendarSettings(DEFAULT_CALENDAR_COLOURS)}>Reset Defaults</button>
+              </div>
+            </form>
           </section>
         </>
       )}
