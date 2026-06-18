@@ -1813,7 +1813,8 @@ function AdminPage() {
     const linkedEvent = selectedCalendarEvent.linked_event
 
     return (
-      <aside className="calendarEventDrawer" aria-label="Calendar event details">
+      <div className="calendarEventDrawerOverlay" role="dialog" aria-modal="true">
+        <aside className="calendarEventDrawer" aria-label="Calendar event details">
         <div className="calendarEventDrawerHeader">
           <div>
             <p className="eyebrowDark">Calendar Item</p>
@@ -1932,23 +1933,20 @@ function AdminPage() {
                 <div className="projectAssignedResourceGroups">
                   {PROJECT_RESOURCE_CATEGORIES.map(category => {
                     const categoryBookings = getBookingsForEvent(selectedCalendarEvent).filter(booking => booking.resource_category === category)
+                    if (!categoryBookings.length) return null
 
                     return (
                       <div className="projectAssignedResourceGroup" key={category}>
                         <strong>{getResourceCalendarLabel(category)}</strong>
-                        {categoryBookings.length ? (
-                          <div className="projectAssignedResourceList">
-                            {categoryBookings.map(booking => (
-                              <div className="projectAssignedResourceItem" key={booking.id} style={{ '--calendar-key-colour': booking.resource_colour }}>
-                                <span className="calendarKeyColour"></span>
-                                <span>{booking.resource_calendar?.name || booking.booking_name}</span>
-                                <button type="button" onClick={() => deleteResourceBooking(booking.id, { keepOpen: true })}>Remove</button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <small>No {getResourceCalendarLabel(category).toLowerCase()} assigned</small>
-                        )}
+                        <div className="projectAssignedResourceList">
+                          {categoryBookings.map(booking => (
+                            <div className="projectAssignedResourceItem" key={booking.id} style={{ '--calendar-key-colour': booking.resource_colour }}>
+                              <span className="calendarKeyColour"></span>
+                              <span>{booking.resource_calendar?.name || booking.booking_name}</span>
+                              <button type="button" onClick={() => deleteResourceBooking(booking.id, { keepOpen: true })}>Remove</button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )
                   })}
@@ -1991,7 +1989,8 @@ function AdminPage() {
             </>
           )}
         </div>
-      </aside>
+        </aside>
+      </div>
     )
   }
 
