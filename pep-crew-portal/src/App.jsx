@@ -51,6 +51,58 @@ function personSlug(text) {
     .replace(/(^-|-$)/g, '')
 }
 
+
+function getRouteSlug(prefix = '') {
+  let pathname = window.location.pathname || ''
+
+  if (prefix && pathname.startsWith(prefix)) {
+    pathname = pathname.slice(prefix.length)
+  } else {
+    pathname = pathname.replace(/^\/+/, '')
+  }
+
+  const clean = pathname
+    .split('?')[0]
+    .split('#')[0]
+    .replace(/^\/+|\/+$/g, '')
+
+  try {
+    return decodeURIComponent(clean)
+  } catch (error) {
+    return clean
+  }
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''))
+}
+
+async function fetchEventBySlugOrId(slug) {
+  const cleanSlug = String(slug || '').trim().replace(/^\/+|\/+$/g, '')
+
+  if (!cleanSlug) {
+    return { data: null, error: new Error('Missing crew sheet slug.') }
+  }
+
+  let result = await supabase
+    .from('Events')
+    .select('*')
+    .eq('public_slug', cleanSlug)
+    .maybeSingle()
+
+  if (!result.error && result.data) return result
+
+  if (isUuid(cleanSlug)) {
+    result = await supabase
+      .from('Events')
+      .select('*')
+      .eq('id', cleanSlug)
+      .maybeSingle()
+  }
+
+  return result
+}
+
 function Accordion({ title, subtitle, icon: Icon, children }) {
   const [open, setOpen] = useState(false)
 
@@ -3306,7 +3358,7 @@ function AdminPage() {
 }
 
 function EventManagerPage() {
-  const slug = window.location.pathname.replace('/admin/event/', '')
+  const slug = getRouteSlug('/admin/event/')
   const [event, setEvent] = useState(null)
   const [eventDetailsForm, setEventDetailsForm] = useState({
     show_name: '',
@@ -3437,14 +3489,10 @@ function EventManagerPage() {
   async function loadEventManager() {
     setLoading(true)
 
-    const { data: eventData, error: eventError } = await supabase
-      .from('Events')
-      .select('*')
-      .eq('public_slug', slug)
-      .single()
+    const { data: eventData, error: eventError } = await fetchEventBySlugOrId(slug)
 
     if (eventError || !eventData) {
-      setMessage('Event not found.')
+      setMessage(`Event not found for: ${slug}`)
       setLoading(false)
       return
     }
@@ -6225,15 +6273,16 @@ function CrewPersonalView() {
     async function loadCrewView() {
       setLoading(true)
 
-      const { data: eventData, error: eventError } = await supabase
-        .from('Events')
-        .select('*')
-        .eq('public_slug', eventSlug)
-        .eq('share_enabled', true)
-        .single()
+      const { data: eventData, error: eventError } = await fetchEventBySlugOrId(eventSlug)
 
       if (eventError || !eventData) {
-        setError('Crew sheet not found or not published.')
+        setError('Crew sheet not found.')
+        setLoading(false)
+        return
+      }
+
+      if (eventData.share_enabled === false) {
+        setError('Crew sheet is not published.')
         setLoading(false)
         return
       }
@@ -6580,7 +6629,7 @@ function CrewPersonalView() {
 }
 
 function PublicCrewSheet() {
-  const slug = window.location.pathname.replace('/', '') || 'test-pep-show'
+  const slug = getRouteSlug() || 'test-pep-show'
 
   const [event, setEvent] = useState(null)
   const [data, setData] = useState({
@@ -6600,15 +6649,16 @@ function PublicCrewSheet() {
     async function loadCrewSheet() {
       setLoading(true)
 
-      const { data: eventData, error: eventError } = await supabase
-        .from('Events')
-        .select('*')
-        .eq('public_slug', slug)
-        .eq('share_enabled', true)
-        .single()
+      const { data: eventData, error: eventError } = await fetchEventBySlugOrId(slug)
 
       if (eventError || !eventData) {
-        setError('Crew sheet not found or not published.')
+        setError('Crew sheet not found.')
+        setLoading(false)
+        return
+      }
+
+      if (eventData.share_enabled === false) {
+        setError('Crew sheet is not published.')
         setLoading(false)
         return
       }
