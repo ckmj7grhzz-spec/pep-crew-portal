@@ -6205,3 +6205,95 @@ button.calendarEventListItem {
 .staffCancelEditButton {
   margin-bottom: 16px;
 }
+
+
+/* Resource conflict warnings */
+.warningButton {
+  min-height: 48px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #f97316;
+  background: #f97316;
+  color: #ffffff;
+}
+
+.warningButton:hover {
+  background: #ea580c;
+  border-color: #ea580c;
+}
+
+.resourceInlineWarning {
+  margin-top: 12px;
+  border: 1px solid var(--orange-border);
+  background: var(--orange-bg);
+  color: var(--orange-text);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.resourceInlineWarning strong,
+.resourceInlineWarning span {
+  color: var(--orange-text);
+  font-weight: 900;
+}
+
+.resourceConflictBox {
+  margin-top: 16px;
+  border: 1px solid var(--red-border);
+  background: var(--red-bg);
+  border-radius: 16px;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.resourceConflictBox h4 {
+  margin: 0 0 6px;
+  color: var(--red-text);
+  font-size: 20px;
+}
+
+.resourceConflictBox p {
+  margin: 0;
+  color: var(--red-text);
+  font-weight: 800;
+}
+
+.resourceConflictList {
+  display: grid;
+  gap: 10px;
+}
+
+.resourceConflictItem {
+  background: #ffffff;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.resourceConflictItem strong {
+  color: var(--red-text);
+}
+
+.resourceConflictItem span,
+.resourceConflictItem small {
+  color: #7f1d1d;
+  font-weight: 800;
+}
+
+.resourceConflictActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
