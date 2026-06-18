@@ -43,7 +43,7 @@ function slugify(text) {
 }
 
 
-function cleanRouteSlug(value) {
+function cleanPathSegment(value) {
   return decodeURIComponent(String(value || ''))
     .split('?')[0]
     .split('#')[0]
@@ -51,34 +51,33 @@ function cleanRouteSlug(value) {
     .trim()
 }
 
-function looksLikeUuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''))
+function getEventRouteSlug(eventRecord) {
+  return cleanPathSegment(eventRecord?.public_slug || eventRecord?.id || '')
 }
 
-async function findEventBySlugOrId(rawSlug, options = {}) {
-  const slug = cleanRouteSlug(rawSlug)
-  if (!slug) return { data: null, error: new Error('Missing event slug') }
+async function findEventBySlugOrId(slugOrId, options = {}) {
+  const cleanSlug = cleanPathSegment(slugOrId)
+  if (!cleanSlug) return { data: null, error: new Error('Missing event slug') }
 
   let query = supabase
     .from('Events')
     .select('*')
-    .eq('public_slug', slug)
+    .eq('public_slug', cleanSlug)
 
-  if (options.requirePublished) query = query.eq('share_enabled', true)
+  if (options.publishedOnly) query = query.eq('share_enabled', true)
 
-  const slugResult = await query.maybeSingle()
-  if (slugResult.data || slugResult.error) return slugResult
+  let result = await query.maybeSingle()
+  if (result.data || result.error) return result
 
-  if (!looksLikeUuid(slug)) return slugResult
-
-  let idQuery = supabase
+  query = supabase
     .from('Events')
     .select('*')
-    .eq('id', slug)
+    .eq('id', cleanSlug)
 
-  if (options.requirePublished) idQuery = idQuery.eq('share_enabled', true)
+  if (options.publishedOnly) query = query.eq('share_enabled', true)
 
-  return idQuery.maybeSingle()
+  result = await query.maybeSingle()
+  return result
 }
 
 
@@ -1268,13 +1267,13 @@ function AdminPage() {
       return
     }
 
-    const payload = {
+    const eventPayload = {
       ...form,
-      public_slug: form.public_slug || slugify(form.show_name),
+      public_slug: cleanPathSegment(form.public_slug) || slugify(form.show_name),
       share_enabled: form.share_enabled !== false,
     }
 
-    const { error } = await supabase.from('Events').insert([payload])
+    const { error } = await supabase.from('Events').insert([eventPayload])
 
     if (error) {
       setMessage(`Could not create event: ${error.message}`)
@@ -1909,7 +1908,7 @@ function AdminPage() {
 
                 <div className="calendarEventDrawerActions">
                   {linkedEvent?.public_slug && (
-                    <a className="primaryButton" href={`/admin/event/${linkedEvent.public_slug || linkedEvent.id}`}>
+                    <a className="primaryButton" href={`/admin/event/${getEventRouteSlug(linkedEvent)}`}>
                       Open Crew Sheet
                     </a>
                   )}
@@ -2008,7 +2007,7 @@ function AdminPage() {
                 </section>
 
                 <div className="calendarEventDrawerActions">
-                  <a className="primaryButton" href={`/admin/event/${selectedCalendarEvent.public_slug || selectedCalendarEvent.id}`}>
+                  <a className="primaryButton" href={`/admin/event/${getEventRouteSlug(selectedCalendarEvent)}`}>
                     Open Crew Sheet
                   </a>
                   <button type="button" className="secondaryButton" onClick={closeCalendarEventDetails}>
@@ -2694,11 +2693,11 @@ function AdminPage() {
         </div>
 
         <div className="adminActions">
-          <a href={`/admin/event/${eventRecord.public_slug || eventRecord.id}`}>
+          <a href={`/admin/event/${getEventRouteSlug(eventRecord)}`}>
             <Settings size={16} /> Manage
           </a>
-          <a href={`/${eventRecord.public_slug}`} target="_blank" rel="noreferrer">Open</a>
-          <button type="button" onClick={() => copyLink(eventRecord.public_slug)}>
+          <a href={`/${getEventRouteSlug(eventRecord)}`} target="_blank" rel="noreferrer">Open</a>
+          <button type="button" onClick={() => copyLink(getEventRouteSlug(eventRecord))}>
             <Copy size={16} /> Copy Link
           </button>
           {crewSheetStatus === 'in_progress' && (
@@ -3351,7 +3350,7 @@ function AdminPage() {
 }
 
 function EventManagerPage() {
-  const slug = cleanRouteSlug(window.location.pathname.replace('/admin/event/', ''))
+  const slug = cleanPathSegment(window.location.pathname.replace('/admin/event/', ''))
   const [event, setEvent] = useState(null)
   const [eventDetailsForm, setEventDetailsForm] = useState({
     show_name: '',
@@ -5053,7 +5052,7 @@ function EventManagerPage() {
           </div>
 
           <div className="adminActions managerTopActions">
-            <a href={`/${event.public_slug || event.id}`} target="_blank" rel="noreferrer">Open Public Sheet</a>
+            <a href={`/${getEventRouteSlug(event)}`} target="_blank" rel="noreferrer">Open Public Sheet</a>
           </div>
         </div>
       </section>
@@ -5135,7 +5134,7 @@ function EventManagerPage() {
             <h2>Overview</h2>
             <p>This is the admin overview for this PEP crew sheet.</p>
             <div className="overviewGrid">
-              <div><strong>Public Link</strong><a href={`/${event.public_slug || event.id}`} target="_blank" rel="noreferrer">/{event.public_slug}</a></div>
+              <div><strong>Public Link</strong><a href={`/${getEventRouteSlug(event)}`} target="_blank" rel="noreferrer">/{getEventRouteSlug(event)}</a></div>
               <div><strong>Current RMS ID</strong><span>{event.current_rms_id || 'Not linked yet'}</span></div>
               <div><strong>Project Manager</strong><span>{event.project_manager || 'Not set'}</span></div>
               <div><strong>Venue</strong><span>{event.venue || 'Not set'}</span></div>
@@ -6248,7 +6247,7 @@ function EventManagerPage() {
 
 function CrewPersonalView() {
   const parts = window.location.pathname.split('/').filter(Boolean)
-  const eventSlug = cleanRouteSlug(parts[0])
+  const eventSlug = cleanPathSegment(parts[0])
   const crewId = parts[2]
 
   const [event, setEvent] = useState(null)
@@ -6266,7 +6265,7 @@ function CrewPersonalView() {
     async function loadCrewView() {
       setLoading(true)
 
-      const { data: eventData, error: eventError } = await findEventBySlugOrId(eventSlug, { requirePublished: true })
+      const { data: eventData, error: eventError } = await findEventBySlugOrId(eventSlug, { publishedOnly: true })
 
       if (eventError || !eventData) {
         setError('Crew sheet not found or not published.')
@@ -6366,7 +6365,7 @@ function CrewPersonalView() {
 
       <section className="eventCard crewQuickCard">
         <div className="crewPersonalTopline">
-          <a href={`/${event.public_slug || event.id}`} className="backLink"><ArrowLeft size={16} /> Back to Full Call Sheet</a>
+          <a href={`/${getEventRouteSlug(event)}`} className="backLink"><ArrowLeft size={16} /> Back to Full Call Sheet</a>
           <span className="crewPersonalBadge">Crew View</span>
         </div>
 
@@ -6616,7 +6615,7 @@ function CrewPersonalView() {
 }
 
 function PublicCrewSheet() {
-  const slug = cleanRouteSlug(window.location.pathname.replace('/', '')) || 'test-pep-show'
+  const slug = cleanPathSegment(window.location.pathname.replace(/^\//, '')) || 'test-pep-show'
 
   const [event, setEvent] = useState(null)
   const [data, setData] = useState({
@@ -6636,7 +6635,12 @@ function PublicCrewSheet() {
     async function loadCrewSheet() {
       setLoading(true)
 
-      const { data: eventData, error: eventError } = await findEventBySlugOrId(slug, { requirePublished: true })
+      const { data: eventData, error: eventError } = await supabase
+        .from('Events')
+        .select('*')
+        .eq('public_slug', slug)
+        .eq('share_enabled', true)
+        .single()
 
       if (eventError || !eventData) {
         setError('Crew sheet not found or not published.')
