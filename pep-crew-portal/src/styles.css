@@ -5959,3 +5959,44 @@ button.calendarEventListItem {
     padding-right: 18px;
   }
 }
+
+
+/* Resource booking ribbon / merged project bar fix */
+.calendarEventBar.resourceLinkedCalendarEvent,
+.calendarEventPill.resourceLinkedCalendarEvent,
+.calendarEventBar.resourceBookingCalendarEvent,
+.calendarEventPill.resourceBookingCalendarEvent {
+  background: var(--calendar-event-background, var(--calendar-event-colour, #16a34a)) !important;
+  border-color: color-mix(in srgb, var(--calendar-event-colour, #16a34a) 78%, #000 22%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--calendar-event-colour, #16a34a) 30%, transparent) !important;
+  background-size: auto !important;
+}
+
+.calendarEventBar.resourceLinkedCalendarEvent .calendarEventBarText,
+.calendarEventPill.resourceLinkedCalendarEvent .calendarEventBarText,
+.calendarEventBar.resourceBookingCalendarEvent .calendarEventBarText,
+.calendarEventPill.resourceBookingCalendarEvent .calendarEventBarText {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.45);
+}
+
+.calendarEventBar.resourceLinkedCalendarEvent small,
+.calendarEventPill.resourceLinkedCalendarEvent small,
+.calendarEventBar.resourceBookingCalendarEvent small,
+.calendarEventPill.resourceBookingCalendarEvent small {
+  color: rgba(255,255,255,0.92) !important;
+}
+
+.calendarEventBar.resourceLinkedCalendarEvent::before,
+.calendarEventPill.resourceLinkedCalendarEvent::before,
+.calendarEventBar.resourceBookingCalendarEvent::before,
+.calendarEventPill.resourceBookingCalendarEvent::before {
+  content: '';
+  width: 8px;
+  align-self: stretch;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.72);
+  flex: 0 0 auto;
+}
