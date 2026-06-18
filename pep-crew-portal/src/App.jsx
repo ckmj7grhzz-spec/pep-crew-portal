@@ -563,6 +563,9 @@ function AdminPage() {
     return stored && typeof stored === 'object' ? { ...DEFAULT_CALENDAR_COLOURS, ...stored } : DEFAULT_CALENDAR_COLOURS
   })
   const [resourceCalendars, setResourceCalendars] = useState([])
+  const [resourceBookings, setResourceBookings] = useState([])
+  const [resourceBookingLoading, setResourceBookingLoading] = useState(true)
+  const [showResourceBookingForm, setShowResourceBookingForm] = useState(() => readStoredValue('pep.showResourceBookingForm', false))
   const [resourceCalendarLoading, setResourceCalendarLoading] = useState(true)
   const [openResourceCalendarGroups, setOpenResourceCalendarGroups] = useState(() => readStoredValue('pep.openResourceCalendarGroups', {
     projects: true,
@@ -579,6 +582,15 @@ function AdminPage() {
     name: '',
     colour: DEFAULT_CALENDAR_COLOURS.vehicles,
     active: true,
+  })
+  const [resourceBookingForm, setResourceBookingForm] = useState({
+    resource_calendar_id: '',
+    event_id: '',
+    title: '',
+    booking_type: 'Resource Booking',
+    start_date: '',
+    end_date: '',
+    notes: '',
   })
   const [editingResourceCalendarId, setEditingResourceCalendarId] = useState(null)
   const [calendarFilters, setCalendarFilters] = useState(() => {
@@ -643,6 +655,7 @@ function AdminPage() {
     loadStaffMembers()
     loadCalendarSettings()
     loadResourceCalendars()
+    loadResourceBookings()
   }, [])
 
   useEffect(() => {
@@ -660,6 +673,10 @@ function AdminPage() {
   useEffect(() => {
     writeStoredValue('pep.showCalendarResources', showCalendarResources)
   }, [showCalendarResources])
+
+  useEffect(() => {
+    writeStoredValue('pep.showResourceBookingForm', showResourceBookingForm)
+  }, [showResourceBookingForm])
 
   useEffect(() => {
     writeStoredValue('pep.resourceSearch', resourceSearch)
@@ -919,6 +936,99 @@ function AdminPage() {
 
   function getResourceCalendarsForCategory(category) {
     return resourceCalendars.filter(resource => resource.category === category)
+  }
+
+
+  function getResourceCalendarById(resourceId) {
+    return resourceCalendars.find(resource => String(resource.id) === String(resourceId))
+  }
+
+  function updateResourceBookingField(field, value) {
+    setResourceBookingForm(current => {
+      const next = { ...current, [field]: value }
+
+      if (field === 'event_id') {
+        const linkedEvent = events.find(eventRecord => String(eventRecord.id) === String(value))
+        if (linkedEvent) {
+          next.title = next.title || linkedEvent.show_name || ''
+          next.start_date = linkedEvent.start_date || next.start_date
+          next.end_date = linkedEvent.end_date || linkedEvent.start_date || next.end_date
+          next.booking_type = 'Crew Sheet Assignment'
+        }
+      }
+
+      return next
+    })
+  }
+
+  function resetResourceBookingForm(options = {}) {
+    setResourceBookingForm(current => ({
+      resource_calendar_id: options.keepResource ? current.resource_calendar_id : '',
+      event_id: '',
+      title: '',
+      booking_type: 'Resource Booking',
+      start_date: '',
+      end_date: '',
+      notes: '',
+    }))
+  }
+
+  async function saveResourceBooking(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!resourceBookingForm.resource_calendar_id) {
+      setMessage('Choose a resource to book.')
+      return
+    }
+
+    if (!resourceBookingForm.start_date) {
+      setMessage('Booking start date is required.')
+      return
+    }
+
+    const linkedEvent = events.find(eventRecord => String(eventRecord.id) === String(resourceBookingForm.event_id))
+    const resource = getResourceCalendarById(resourceBookingForm.resource_calendar_id)
+    const bookingTitle = resourceBookingForm.title.trim() || linkedEvent?.show_name || resource?.name || 'Resource booking'
+
+    const payload = {
+      resource_calendar_id: Number(resourceBookingForm.resource_calendar_id),
+      event_id: resourceBookingForm.event_id ? Number(resourceBookingForm.event_id) : null,
+      title: bookingTitle,
+      booking_type: resourceBookingForm.booking_type || 'Resource Booking',
+      start_date: resourceBookingForm.start_date,
+      end_date: resourceBookingForm.end_date || resourceBookingForm.start_date,
+      notes: resourceBookingForm.notes || null,
+      colour: resource?.colour || getCalendarCategoryColour(resource?.category || 'projects'),
+      active: true,
+    }
+
+    const { error } = await supabase.from('resource_bookings').insert([payload])
+
+    if (error) {
+      setMessage(`Could not create resource booking: ${error.message}`)
+      return
+    }
+
+    setMessage(`${resource?.name || 'Resource'} booked for ${bookingTitle}.`)
+    resetResourceBookingForm({ keepResource: true })
+    await loadResourceBookings()
+  }
+
+  async function deleteResourceBooking(bookingId) {
+    const confirmed = window.confirm('Delete this resource booking?')
+    if (!confirmed) return
+
+    const { error } = await supabase.from('resource_bookings').delete().eq('id', bookingId)
+
+    if (error) {
+      setMessage(`Could not delete resource booking: ${error.message}`)
+      return
+    }
+
+    setMessage('Resource booking deleted.')
+    closeCalendarEventDetails()
+    await loadResourceBookings()
   }
 
   function getCalendarCategoryColour(category) {
@@ -1269,12 +1379,16 @@ function AdminPage() {
   }
 
   function getCalendarEventClass(eventRecord) {
+    if (eventRecord.calendar_item_type === 'resource_booking') return 'resourceBookingCalendarEvent'
     const status = getCrewSheetStatus(eventRecord)
     if (status === 'show_complete') return 'completeCalendarEvent'
     return 'projectCalendarEvent'
   }
 
   function getCalendarEventColour(eventRecord) {
+    if (eventRecord.calendar_item_type === 'resource_booking') {
+      return eventRecord.colour || eventRecord.resource_calendar?.colour || getCalendarCategoryColour(eventRecord.resource_category || 'projects')
+    }
     const status = getCrewSheetStatus(eventRecord)
     if (status === 'show_complete') return '#050505'
     return getCalendarCategoryColour('projects')
@@ -1289,6 +1403,10 @@ function AdminPage() {
 
   function toggleCalendarResources() {
     setShowCalendarResources(previous => !previous)
+  }
+
+  function toggleResourceBookingForm() {
+    setShowResourceBookingForm(previous => !previous)
   }
 
   function toggleResourceCalendarGroup(category) {
@@ -1312,12 +1430,51 @@ function AdminPage() {
 
   function getCalendarSourceEvents() {
     if (!calendarFilters.projects) return []
-    return events
+    return events.map(eventRecord => ({ ...eventRecord, calendar_item_type: 'event' }))
+  }
+
+  function getCalendarSourceItems() {
+    const projectItems = getCalendarSourceEvents()
+    const bookingItems = resourceBookings
+      .filter(booking => booking.active !== false)
+      .map(booking => {
+        const resource = booking.resource_calendar || getResourceCalendarById(booking.resource_calendar_id)
+        const category = resource?.category || 'projects'
+        const linkedEvent = booking.linked_event || events.find(eventRecord => String(eventRecord.id) === String(booking.event_id))
+
+        return {
+          ...booking,
+          id: `resource-booking-${booking.id}`,
+          calendar_item_type: 'resource_booking',
+          booking_id: booking.id,
+          show_name: booking.title || linkedEvent?.show_name || resource?.name || 'Resource booking',
+          venue: resource?.name ? `${CALENDAR_CATEGORY_LABELS[category] || 'Resource'} · ${resource.name}` : CALENDAR_CATEGORY_LABELS[category] || 'Resource',
+          start_date: booking.start_date,
+          end_date: booking.end_date || booking.start_date,
+          resource_calendar: resource,
+          linked_event: linkedEvent,
+          resource_category: category,
+          public_slug: linkedEvent?.public_slug || '',
+        }
+      })
+      .filter(item => {
+        if (!calendarFilters[item.resource_category]) return false
+        if (!item.resource_calendar?.id) return true
+        return isResourceCalendarVisible(item.resource_calendar.id)
+      })
+
+    return [...projectItems, ...bookingItems]
   }
 
   async function openCalendarEventDetails(eventRecord) {
     setSelectedCalendarEvent(eventRecord)
     setCalendarEventCounts(null)
+
+    if (eventRecord.calendar_item_type === 'resource_booking') {
+      setCalendarEventCountsLoading(false)
+      return
+    }
+
     setCalendarEventCountsLoading(true)
 
     try {
@@ -1364,8 +1521,10 @@ function AdminPage() {
   function renderCalendarEventDetailDrawer() {
     if (!selectedCalendarEvent) return null
 
-    const status = getCrewSheetStatus(selectedCalendarEvent)
-    const statusLabel = getCrewSheetStatusLabel(status)
+    const isBooking = selectedCalendarEvent.calendar_item_type === 'resource_booking'
+    const status = isBooking ? 'resource_booking' : getCrewSheetStatus(selectedCalendarEvent)
+    const statusLabel = isBooking ? selectedCalendarEvent.booking_type || 'Resource Booking' : getCrewSheetStatusLabel(status)
+    const linkedEvent = selectedCalendarEvent.linked_event
 
     return (
       <aside className="calendarEventDrawer" aria-label="Calendar event details">
@@ -1379,43 +1538,93 @@ function AdminPage() {
         </div>
 
         <div className="calendarEventDrawerBody">
-          <div className="calendarEventDrawerSection">
-            <strong>Venue</strong>
-            <span>{selectedCalendarEvent.venue || 'Venue TBC'}</span>
-          </div>
+          {isBooking ? (
+            <>
+              <div className="calendarEventDrawerSection">
+                <strong>Resource</strong>
+                <span>{selectedCalendarEvent.resource_calendar?.name || 'Resource'}</span>
+              </div>
 
-          <div className="calendarEventDrawerGrid">
-            <div>
-              <strong>Start</strong>
-              <span>{formatDate(selectedCalendarEvent.start_date) || 'TBC'}</span>
-            </div>
-            <div>
-              <strong>End</strong>
-              <span>{formatDate(selectedCalendarEvent.end_date) || 'TBC'}</span>
-            </div>
-          </div>
+              <div className="calendarEventDrawerGrid">
+                <div>
+                  <strong>Start</strong>
+                  <span>{formatDate(selectedCalendarEvent.start_date) || 'TBC'}</span>
+                </div>
+                <div>
+                  <strong>End</strong>
+                  <span>{formatDate(selectedCalendarEvent.end_date) || 'TBC'}</span>
+                </div>
+              </div>
 
-          <div className="calendarEventDrawerSection">
-            <strong>Project Manager</strong>
-            <span>{selectedCalendarEvent.project_manager || 'Not assigned'}</span>
-          </div>
+              {linkedEvent && (
+                <div className="calendarEventDrawerSection">
+                  <strong>Linked crew sheet</strong>
+                  <span>{linkedEvent.show_name}</span>
+                </div>
+              )}
 
-          <div className="calendarEventDrawerStats">
-            <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.crew ?? 0}</strong><span>Crew</span></div>
-            <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.flights ?? 0}</strong><span>Flights</span></div>
-            <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.hotels ?? 0}</strong><span>Hotels</span></div>
-            <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.transfers ?? 0}</strong><span>Transfers</span></div>
-            <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.documents ?? 0}</strong><span>Docs</span></div>
-          </div>
+              {selectedCalendarEvent.notes && (
+                <div className="calendarEventDrawerSection">
+                  <strong>Notes</strong>
+                  <span>{selectedCalendarEvent.notes}</span>
+                </div>
+              )}
 
-          <div className="calendarEventDrawerActions">
-            <a className="primaryButton" href={`/admin/event/${selectedCalendarEvent.public_slug}`}>
-              Open Crew Sheet
-            </a>
-            <button type="button" className="secondaryButton" onClick={closeCalendarEventDetails}>
-              Close
-            </button>
-          </div>
+              <div className="calendarEventDrawerActions">
+                {linkedEvent?.public_slug && (
+                  <a className="primaryButton" href={`/admin/event/${linkedEvent.public_slug}`}>
+                    Open Crew Sheet
+                  </a>
+                )}
+                <button type="button" className="secondaryButton" onClick={() => deleteResourceBooking(selectedCalendarEvent.booking_id)}>
+                  Delete Booking
+                </button>
+                <button type="button" className="secondaryButton" onClick={closeCalendarEventDetails}>
+                  Close
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="calendarEventDrawerSection">
+                <strong>Venue</strong>
+                <span>{selectedCalendarEvent.venue || 'Venue TBC'}</span>
+              </div>
+
+              <div className="calendarEventDrawerGrid">
+                <div>
+                  <strong>Start</strong>
+                  <span>{formatDate(selectedCalendarEvent.start_date) || 'TBC'}</span>
+                </div>
+                <div>
+                  <strong>End</strong>
+                  <span>{formatDate(selectedCalendarEvent.end_date) || 'TBC'}</span>
+                </div>
+              </div>
+
+              <div className="calendarEventDrawerSection">
+                <strong>Project Manager</strong>
+                <span>{selectedCalendarEvent.project_manager || 'Not assigned'}</span>
+              </div>
+
+              <div className="calendarEventDrawerStats">
+                <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.crew ?? 0}</strong><span>Crew</span></div>
+                <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.flights ?? 0}</strong><span>Flights</span></div>
+                <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.hotels ?? 0}</strong><span>Hotels</span></div>
+                <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.transfers ?? 0}</strong><span>Transfers</span></div>
+                <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.documents ?? 0}</strong><span>Docs</span></div>
+              </div>
+
+              <div className="calendarEventDrawerActions">
+                <a className="primaryButton" href={`/admin/event/${selectedCalendarEvent.public_slug}`}>
+                  Open Crew Sheet
+                </a>
+                <button type="button" className="secondaryButton" onClick={closeCalendarEventDetails}>
+                  Close
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </aside>
     )
@@ -1604,7 +1813,7 @@ function AdminPage() {
   function renderCalendarWeekRow(days, options = {}) {
     const weekStart = startOfCalendarDay(days[0])
     const weekEnd = startOfCalendarDay(days[days.length - 1])
-    const weekEvents = getCalendarSourceEvents()
+    const weekEvents = getCalendarSourceItems()
       .filter(eventRecord => eventOverlapsRange(eventRecord, weekStart, weekEnd))
       .sort((a, b) => {
         const aStart = parseCalendarDate(a.start_date) || weekStart
@@ -1674,7 +1883,7 @@ function AdminPage() {
     const days = Array.from({ length: daysToShow }, (_, index) => addCalendarDays(start, index))
 
     if (daysToShow === 1) {
-      const dayEvents = getCalendarSourceEvents().filter(eventRecord => eventOverlapsDate(eventRecord, start))
+      const dayEvents = getCalendarSourceItems().filter(eventRecord => eventOverlapsDate(eventRecord, start))
 
       return (
         <div className="calendarDayView">
@@ -1729,7 +1938,7 @@ function AdminPage() {
       rangeEnd = startOfCalendarDay(focus)
     }
 
-    const visibleEvents = getCalendarSourceEvents().filter(eventRecord => eventOverlapsRange(eventRecord, rangeStart, rangeEnd))
+    const visibleEvents = getCalendarSourceItems().filter(eventRecord => eventOverlapsRange(eventRecord, rangeStart, rangeEnd))
     const readyVisible = visibleEvents.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'ready_to_go')
     const inProgressVisible = visibleEvents.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'in_progress' || !eventRecord.crew_sheet_status)
     const completeVisible = visibleEvents.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'show_complete')
@@ -1772,6 +1981,85 @@ function AdminPage() {
               <input type="date" value={calendarFocusDate} onChange={e => setCalendarFocusDate(e.target.value)} />
             </label>
           </div>
+
+          <section className="resourceBookingQuickPanel">
+            <button type="button" className={showResourceBookingForm ? 'resourceBookingToggle open' : 'resourceBookingToggle'} onClick={toggleResourceBookingForm}>
+              <span>
+                <strong>Book Resource</strong>
+                <small>Book staff, freelancers, rooms, vehicles or trailers against dates or a crew sheet.</small>
+              </span>
+              <ChevronDown className={showResourceBookingForm ? 'chevron open' : 'chevron'} />
+            </button>
+
+            {showResourceBookingForm && (
+              <form className="adminForm resourceBookingForm" onSubmit={saveResourceBooking}>
+                <label>
+                  Resource
+                  <select value={resourceBookingForm.resource_calendar_id} onChange={e => updateResourceBookingField('resource_calendar_id', e.target.value)}>
+                    <option value="">Choose resource...</option>
+                    {Object.keys(CALENDAR_CATEGORY_LABELS).map(category => {
+                      const resources = getResourceCalendarsForCategory(category).filter(resource => resource.active !== false)
+                      if (!resources.length) return null
+                      return (
+                        <optgroup label={CALENDAR_CATEGORY_LABELS[category]} key={category}>
+                          {resources.map(resource => (
+                            <option value={resource.id} key={resource.id}>{resource.name}</option>
+                          ))}
+                        </optgroup>
+                      )
+                    })}
+                  </select>
+                </label>
+
+                <label>
+                  Linked Crew Sheet
+                  <select value={resourceBookingForm.event_id} onChange={e => updateResourceBookingField('event_id', e.target.value)}>
+                    <option value="">No linked crew sheet</option>
+                    {events.map(eventRecord => (
+                      <option value={eventRecord.id} key={eventRecord.id}>{eventRecord.show_name}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  Booking Type
+                  <select value={resourceBookingForm.booking_type} onChange={e => updateResourceBookingField('booking_type', e.target.value)}>
+                    <option>Resource Booking</option>
+                    <option>Crew Sheet Assignment</option>
+                    <option>Annual Leave</option>
+                    <option>Unavailable</option>
+                    <option>Travel</option>
+                    <option>Internal Meeting</option>
+                  </select>
+                </label>
+
+                <label>
+                  Booking Title
+                  <input value={resourceBookingForm.title} onChange={e => updateResourceBookingField('title', e.target.value)} placeholder="Optional - uses crew sheet name if linked" />
+                </label>
+
+                <label>
+                  Start Date
+                  <input type="date" value={resourceBookingForm.start_date} onChange={e => updateResourceBookingField('start_date', e.target.value)} />
+                </label>
+
+                <label>
+                  End Date
+                  <input type="date" value={resourceBookingForm.end_date} onChange={e => updateResourceBookingField('end_date', e.target.value)} />
+                </label>
+
+                <label className="formWide">
+                  Notes
+                  <textarea value={resourceBookingForm.notes} onChange={e => updateResourceBookingField('notes', e.target.value)} placeholder="Optional booking notes" />
+                </label>
+
+                <div className="adminActions formWide">
+                  <button type="submit" className="primaryButton">Create Booking</button>
+                  <button type="button" className="secondaryButton" onClick={() => resetResourceBookingForm({ keepResource: true })}>Clear</button>
+                </div>
+              </form>
+            )}
+          </section>
 
           <div className="calendarOverviewGrid">
             <div><strong>{visibleEvents.length}</strong><span>Events in view</span></div>
