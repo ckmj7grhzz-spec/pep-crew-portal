@@ -1337,6 +1337,49 @@ function AdminPage() {
     loadEvents()
   }
 
+  async function deleteCrewSheetEvent(eventRecord) {
+    const confirmed = window.confirm(`Delete ${eventRecord.show_name}? This removes the crew sheet, calendar project, resource bookings and all related logistics records. This cannot be undone.`)
+    if (!confirmed) return
+
+    setMessage('')
+
+    const relatedTables = [
+      'resource_bookings',
+      'crew',
+      'flights',
+      'hotels',
+      'transfers',
+      'schedule_items',
+      'documents',
+    ]
+
+    for (const tableName of relatedTables) {
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('event_id', eventRecord.id)
+
+      if (error) {
+        setMessage(`Could not delete ${tableName.replace('_', ' ')}: ${error.message}`)
+        return
+      }
+    }
+
+    const { error } = await supabase
+      .from('Events')
+      .delete()
+      .eq('id', eventRecord.id)
+
+    if (error) {
+      setMessage(`Could not delete crew sheet: ${error.message}`)
+      return
+    }
+
+    setMessage(`${eventRecord.show_name} deleted.`)
+    await loadEvents()
+    await loadResourceBookings()
+  }
+
   function copyLink(publicSlug) {
     const url = `${window.location.origin}/${cleanRouteSlug(publicSlug)}`
     navigator.clipboard.writeText(url)
@@ -2027,6 +2070,9 @@ function AdminPage() {
                   <a className="primaryButton" href={getEventAdminHref(selectedCalendarEvent)}>
                     Open Crew Sheet
                   </a>
+                  <button type="button" className="secondaryButton" onClick={() => deleteCrewSheetEvent(selectedCalendarEvent)}>
+                    Delete Project
+                  </button>
                   <button type="button" className="secondaryButton" onClick={closeCalendarEventDetails}>
                     Close
                   </button>
@@ -2739,6 +2785,9 @@ function AdminPage() {
           )}
           <button type="button" onClick={() => togglePublished(eventRecord)}>
             {eventRecord.share_enabled ? 'Unpublish' : 'Publish'}
+          </button>
+          <button type="button" onClick={() => deleteCrewSheetEvent(eventRecord)}>
+            Delete
           </button>
         </div>
       </div>
@@ -3744,6 +3793,57 @@ function EventManagerPage() {
 
     setMessage('Resource removed from crew sheet.')
     await loadEventManager()
+  }
+
+  async function deleteCurrentCrewSheet() {
+    if (!event) return
+
+    const confirmed = window.confirm(`Delete ${event.show_name}? This removes the crew sheet, calendar project, resource bookings and all related logistics records. This cannot be undone.`)
+    if (!confirmed) return
+
+    setMessage('')
+
+    const storedDocumentPaths = documents
+      .map(document => document.storage_path)
+      .filter(Boolean)
+
+    if (storedDocumentPaths.length) {
+      await supabase.storage.from('event-documents').remove(storedDocumentPaths)
+    }
+
+    const relatedTables = [
+      'resource_bookings',
+      'crew',
+      'flights',
+      'hotels',
+      'transfers',
+      'schedule_items',
+      'documents',
+    ]
+
+    for (const tableName of relatedTables) {
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('event_id', event.id)
+
+      if (error) {
+        setMessage(`Could not delete ${tableName.replace('_', ' ')}: ${error.message}`)
+        return
+      }
+    }
+
+    const { error } = await supabase
+      .from('Events')
+      .delete()
+      .eq('id', event.id)
+
+    if (error) {
+      setMessage(`Could not delete crew sheet: ${error.message}`)
+      return
+    }
+
+    window.location.href = '/admin'
   }
 
   function getEventAssignedResources() {
@@ -5070,6 +5170,7 @@ function EventManagerPage() {
 
           <div className="adminActions managerTopActions">
             <a href={getEventPublicHref(event)} target="_blank" rel="noreferrer">Open Public Sheet</a>
+            <button type="button" onClick={deleteCurrentCrewSheet}>Delete Sheet</button>
           </div>
         </div>
       </section>
