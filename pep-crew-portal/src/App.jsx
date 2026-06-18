@@ -576,7 +576,7 @@ function AdminPage() {
   const [resourceCalendarForm, setResourceCalendarForm] = useState({
     category: 'vehicles',
     name: '',
-    colour: '#111827',
+    colour: DEFAULT_CALENDAR_COLOURS.vehicles,
     active: true,
   })
   const [editingResourceCalendarId, setEditingResourceCalendarId] = useState(null)
@@ -785,10 +785,20 @@ function AdminPage() {
   }
 
   function updateResourceCalendarField(field, value) {
-    setResourceCalendarForm(current => ({
-      ...current,
-      [field]: value,
-    }))
+    setResourceCalendarForm(current => {
+      if (field === 'category') {
+        return {
+          ...current,
+          category: value,
+          colour: editingResourceCalendarId ? current.colour : getCalendarCategoryColour(value),
+        }
+      }
+
+      return {
+        ...current,
+        [field]: value,
+      }
+    })
   }
 
   function resetResourceCalendarForm(options = {}) {
@@ -796,11 +806,15 @@ function AdminPage() {
       ? resourceCalendarForm.category
       : 'vehicles'
 
+    const nextColour = options.keepColour
+      ? resourceCalendarForm.colour
+      : getCalendarCategoryColour(nextCategory)
+
     setEditingResourceCalendarId(null)
     setResourceCalendarForm({
       category: nextCategory,
       name: '',
-      colour: getCalendarCategoryColour(nextCategory),
+      colour: nextColour,
       active: true,
     })
   }
@@ -862,7 +876,7 @@ function AdminPage() {
       ...current,
       [resourceCalendarForm.category]: true,
     }))
-    resetResourceCalendarForm({ keepCategory: true })
+    resetResourceCalendarForm({ keepCategory: true, keepColour: true })
     await loadResourceCalendars()
   }
 
