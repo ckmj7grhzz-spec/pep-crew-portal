@@ -777,6 +777,25 @@ function AdminPage() {
     setResourceCalendarLoading(false)
   }
 
+
+  async function loadResourceBookings() {
+    setResourceBookingLoading(true)
+
+    const { data, error } = await supabase
+      .from('resource_bookings')
+      .select('*')
+      .order('start_date', { ascending: true })
+
+    if (error) {
+      setResourceBookings([])
+      setMessage(`Could not load resource bookings: ${error.message}`)
+    } else {
+      setResourceBookings(data || [])
+    }
+
+    setResourceBookingLoading(false)
+  }
+
   function updateCalendarSetting(category, colour) {
     setCalendarSettings(current => ({
       ...current,
@@ -993,13 +1012,12 @@ function AdminPage() {
 
     const payload = {
       resource_calendar_id: Number(resourceBookingForm.resource_calendar_id),
-      event_id: resourceBookingForm.event_id ? Number(resourceBookingForm.event_id) : null,
-      title: bookingTitle,
+      event_id: resourceBookingForm.event_id || null,
+      booking_name: bookingTitle,
       booking_type: resourceBookingForm.booking_type || 'Resource Booking',
       start_date: resourceBookingForm.start_date,
       end_date: resourceBookingForm.end_date || resourceBookingForm.start_date,
       notes: resourceBookingForm.notes || null,
-      colour: resource?.colour || getCalendarCategoryColour(resource?.category || 'projects'),
       active: true,
     }
 
@@ -1447,7 +1465,7 @@ function AdminPage() {
           id: `resource-booking-${booking.id}`,
           calendar_item_type: 'resource_booking',
           booking_id: booking.id,
-          show_name: booking.title || linkedEvent?.show_name || resource?.name || 'Resource booking',
+          show_name: booking.booking_name || linkedEvent?.show_name || resource?.name || 'Resource booking',
           venue: resource?.name ? `${CALENDAR_CATEGORY_LABELS[category] || 'Resource'} · ${resource.name}` : CALENDAR_CATEGORY_LABELS[category] || 'Resource',
           start_date: booking.start_date,
           end_date: booking.end_date || booking.start_date,
