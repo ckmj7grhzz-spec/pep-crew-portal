@@ -1338,10 +1338,18 @@ function AdminPage() {
   }
 
   async function deleteCrewSheetEvent(eventRecord) {
-    const confirmed = window.confirm(`Delete ${eventRecord.show_name}? This removes the crew sheet, calendar project, resource bookings and all related logistics records. This cannot be undone.`)
+    const eventId = eventRecord?.id
+    const eventName = eventRecord?.show_name || 'this crew sheet'
+
+    if (!eventId) {
+      setMessage('Could not delete crew sheet: missing event ID.')
+      return
+    }
+
+    const confirmed = window.confirm(`Delete ${eventName}? This removes the crew sheet, calendar project, resource bookings and all related logistics records. This cannot be undone.`)
     if (!confirmed) return
 
-    setMessage('')
+    setMessage('Deleting crew sheet...')
 
     const relatedTables = [
       'resource_bookings',
@@ -1357,7 +1365,7 @@ function AdminPage() {
       const { error } = await supabase
         .from(tableName)
         .delete()
-        .eq('event_id', eventRecord.id)
+        .eq('event_id', eventId)
 
       if (error) {
         setMessage(`Could not delete ${tableName.replace('_', ' ')}: ${error.message}`)
@@ -1365,17 +1373,39 @@ function AdminPage() {
       }
     }
 
-    const { error } = await supabase
+    const { data: deletedRows, error: deleteError } = await supabase
       .from('Events')
       .delete()
-      .eq('id', eventRecord.id)
+      .eq('id', eventId)
+      .select('id')
 
-    if (error) {
-      setMessage(`Could not delete crew sheet: ${error.message}`)
+    if (deleteError) {
+      setMessage(`Could not delete crew sheet: ${deleteError.message}`)
       return
     }
 
-    setMessage(`${eventRecord.show_name} deleted.`)
+    const { data: stillExists, error: verifyError } = await supabase
+      .from('Events')
+      .select('id')
+      .eq('id', eventId)
+      .maybeSingle()
+
+    if (verifyError) {
+      setMessage(`Could not verify delete: ${verifyError.message}`)
+      return
+    }
+
+    if (stillExists || !deletedRows?.length) {
+      setMessage('Delete was blocked by Supabase. Run the delete-policy SQL, then try again.')
+      return
+    }
+
+    setEvents(current => current.filter(eventItem => String(eventItem.id) !== String(eventId)))
+    setSelectedCalendarEvent(current => String(current?.id || '') === String(eventId) ? null : current)
+    setSelectedEventEditForm(null)
+    setCalendarEventCounts(null)
+
+    setMessage(`${eventName} deleted.`)
     await loadEvents()
     await loadResourceBookings()
   }
