@@ -6191,3 +6191,17 @@ button.calendarEventListItem {
 .publicResourceItem strong {
   display: block;
 }
+
+
+/* Staff edit scroll target */
+#staff-edit-form {
+  scroll-margin-top: 96px;
+}
+
+.collapsibleStaffFormBody {
+  scroll-margin-top: 96px;
+}
+
+.staffCancelEditButton {
+  margin-bottom: 16px;
+}
