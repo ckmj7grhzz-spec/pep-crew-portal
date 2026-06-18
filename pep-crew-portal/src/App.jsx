@@ -554,6 +554,7 @@ function AdminPage() {
   const [calendarView, setCalendarView] = useState(() => readStoredValue('pep.calendarView', 'month'))
   const [calendarFocusDate, setCalendarFocusDate] = useState(() => readStoredValue('pep.calendarFocusDate', formatCalendarDateInput(new Date())))
   const [showCalendarResources, setShowCalendarResources] = useState(() => readStoredValue('pep.showCalendarResources', true))
+  const [resourceSearch, setResourceSearch] = useState(() => readStoredValue('pep.resourceSearch', ''))
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState(null)
   const [calendarEventCounts, setCalendarEventCounts] = useState(null)
   const [calendarEventCountsLoading, setCalendarEventCountsLoading] = useState(false)
@@ -659,6 +660,10 @@ function AdminPage() {
   useEffect(() => {
     writeStoredValue('pep.showCalendarResources', showCalendarResources)
   }, [showCalendarResources])
+
+  useEffect(() => {
+    writeStoredValue('pep.resourceSearch', resourceSearch)
+  }, [resourceSearch])
 
   useEffect(() => {
     writeStoredValue('pep.calendarFilters', calendarFilters)
@@ -1428,6 +1433,24 @@ function AdminPage() {
       { key: 'led_trailers', label: 'LED Trailers', count: getResourceCalendarsForCategory('led_trailers').length, className: 'trailerKey' },
     ]
 
+    const resourceSearchTerm = resourceSearch.trim().toLowerCase()
+
+    const visibleResourceGroups = resourceGroups
+      .map(group => {
+        const subCalendars = getResourceCalendarsForCategory(group.key)
+        const filteredSubCalendars = resourceSearchTerm
+          ? subCalendars.filter(resource => String(resource.name || '').toLowerCase().includes(resourceSearchTerm))
+          : subCalendars
+        const parentMatches = group.label.toLowerCase().includes(resourceSearchTerm)
+        return {
+          ...group,
+          subCalendars,
+          filteredSubCalendars,
+          parentMatches,
+        }
+      })
+      .filter(group => !resourceSearchTerm || group.parentMatches || group.filteredSubCalendars.length > 0)
+
     return (
       <aside className="calendarKeySidebar">
         <div className="calendarKeyHeader">
@@ -1440,11 +1463,27 @@ function AdminPage() {
           </button>
         </div>
 
+        <div className="calendarResourceSearch">
+          <input
+            type="search"
+            value={resourceSearch}
+            onChange={event => setResourceSearch(event.target.value)}
+            placeholder="Search resources..."
+            aria-label="Search resources"
+          />
+          {resourceSearch && (
+            <button type="button" onClick={() => setResourceSearch('')} aria-label="Clear resource search">×</button>
+          )}
+        </div>
+
         <div className="calendarKeyList">
-          {resourceGroups.map(group => {
-            const subCalendars = getResourceCalendarsForCategory(group.key)
+          {visibleResourceGroups.map(group => {
             const parentEnabled = !!calendarFilters[group.key]
-            const liveCountLabel = group.key === 'projects' ? `${group.count} live` : `${subCalendars.length} sub-calendar${subCalendars.length === 1 ? '' : 's'}`
+            const hasSubCalendars = group.subCalendars.length > 0
+            const visibleSubCalendars = group.filteredSubCalendars
+            const shouldShowSubCalendars = hasSubCalendars && (openResourceCalendarGroups[group.key] || !!resourceSearchTerm)
+            const countValue = group.key === 'projects' ? group.count : group.subCalendars.length
+            const countLabel = group.key === 'projects' ? `${group.count} live` : `${group.subCalendars.length} sub-calendar${group.subCalendars.length === 1 ? '' : 's'}`
 
             return (
               <div className={`${openResourceCalendarGroups[group.key] ? 'calendarKeyGroup open' : 'calendarKeyGroup'} ${parentEnabled ? 'active' : 'inactive'}`} key={group.key}>
@@ -1455,30 +1494,31 @@ function AdminPage() {
                     style={{ '--calendar-key-colour': getCalendarCategoryColour(group.key) }}
                     onClick={() => toggleCalendarFilter(group.key)}
                     aria-pressed={parentEnabled}
+                    title={countLabel}
                   >
                     <span className="calendarKeyToggleDot">{parentEnabled ? '✓' : ''}</span>
                     <span className="calendarKeyColour"></span>
                     <span className="calendarKeyText">
                       <strong>{group.label}</strong>
-                      <small>{liveCountLabel}</small>
                     </span>
+                    <span className="calendarKeyCountBadge">{countValue}</span>
                   </button>
 
-                  {subCalendars.length > 0 && (
+                  {hasSubCalendars && (
                     <button
                       type="button"
                       className="calendarSubCalendarExpandButton"
                       onClick={() => toggleResourceCalendarGroup(group.key)}
                       aria-label={`${openResourceCalendarGroups[group.key] ? 'Collapse' : 'Expand'} ${group.label} sub-calendars`}
                     >
-                      <ChevronDown size={16} className={openResourceCalendarGroups[group.key] ? 'chevron open' : 'chevron'} />
+                      <ChevronDown size={14} className={openResourceCalendarGroups[group.key] ? 'chevron open' : 'chevron'} />
                     </button>
                   )}
                 </div>
 
-                {subCalendars.length > 0 && openResourceCalendarGroups[group.key] && (
+                {shouldShowSubCalendars && visibleSubCalendars.length > 0 && (
                   <div className="calendarSubCalendarList">
-                    {subCalendars.map(resource => {
+                    {visibleSubCalendars.map(resource => {
                       const subCalendarEnabled = isResourceCalendarVisible(resource.id)
                       const subCalendarInactive = resource.active === false || !parentEnabled || !subCalendarEnabled
                       return (
@@ -1500,9 +1540,17 @@ function AdminPage() {
                     })}
                   </div>
                 )}
+
+                {shouldShowSubCalendars && visibleSubCalendars.length === 0 && resourceSearchTerm && (
+                  <div className="calendarSubCalendarEmpty">No matching resources</div>
+                )}
               </div>
             )
           })}
+
+          {visibleResourceGroups.length === 0 && (
+            <div className="calendarResourceEmpty">No resources match your search.</div>
+          )}
         </div>
       </aside>
     )
