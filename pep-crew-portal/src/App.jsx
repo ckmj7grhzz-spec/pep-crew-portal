@@ -107,13 +107,32 @@ function getEventPublicHref(eventRecord) {
 }
 
 function normalisePersonName(value) {
-  return String(value || '').trim().toLowerCase()
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function normalisePersonSlug(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
 }
 
 function findStaffMemberForResource(resource, staffMembers = []) {
   const resourceName = normalisePersonName(resource?.name)
-  if (!resourceName) return null
-  return (staffMembers || []).find(member => normalisePersonName(member.name) === resourceName) || null
+  const resourceSlug = normalisePersonSlug(resource?.name)
+  if (!resourceName && !resourceSlug) return null
+
+  return (staffMembers || []).find(member => {
+    const memberName = normalisePersonName(member.name)
+    const memberSlug = normalisePersonSlug(member.name)
+    return (resourceName && memberName === resourceName) || (resourceSlug && memberSlug === resourceSlug)
+  }) || null
 }
 
 function buildCrewRowFromResourceBooking(booking, staffMembers = []) {
@@ -166,32 +185,60 @@ function mergeCrewRowsWithResourceBookings(crewRows = [], resourceBookings = [],
 async function ensureCrewRowForBookedResource(eventId, resource, staffMembers = [], notes = '') {
   if (!eventId || !['crew', 'freelancers'].includes(resource?.category)) return
 
-  const staffMember = findStaffMemberForResource(resource, staffMembers)
-  const crewName = resource?.name || staffMember?.name
+  let staffMember = findStaffMemberForResource(resource, staffMembers)
+  const resourceName = String(resource?.name || '').trim()
+
+  if (!staffMember && resourceName) {
+    const { data: freshStaff } = await supabase
+      .from('staff_members')
+      .select('*')
+      .ilike('name', resourceName)
+      .maybeSingle()
+
+    staffMember = freshStaff || null
+  }
+
+  const crewName = staffMember?.name || resourceName
   if (!crewName) return
 
   const { data: existingCrew } = await supabase
     .from('crew')
-    .select('id')
+    .select('*')
     .eq('event_id', eventId)
     .ilike('name', crewName)
     .maybeSingle()
 
-  if (existingCrew?.id) return
-
-  const payload = {
-    event_id: eventId,
+  const crewPayload = {
     name: crewName,
     role: staffMember?.role || '',
     department: staffMember?.department || '',
     mobile: staffMember?.phone || '',
     email: staffMember?.email || '',
-    hotel: '',
-    room_number: '',
     notes: notes || staffMember?.notes || staffMember?.skills || '',
   }
 
-  await supabase.from('crew').insert([payload])
+  if (existingCrew?.id) {
+    const updatePayload = {}
+
+    if (!existingCrew.role && crewPayload.role) updatePayload.role = crewPayload.role
+    if (!existingCrew.department && crewPayload.department) updatePayload.department = crewPayload.department
+    if (!existingCrew.mobile && crewPayload.mobile) updatePayload.mobile = crewPayload.mobile
+    if (!existingCrew.email && crewPayload.email) updatePayload.email = crewPayload.email
+    if (!existingCrew.notes && crewPayload.notes) updatePayload.notes = crewPayload.notes
+
+    if (Object.keys(updatePayload).length) {
+      await supabase.from('crew').update(updatePayload).eq('id', existingCrew.id)
+    }
+
+    return
+  }
+
+  await supabase.from('crew').insert([{
+    event_id: eventId,
+    ...crewPayload,
+    hotel: '',
+    room_number: '',
+  }])
 }
 
 function Accordion({ title, subtitle, icon: Icon, children }) {
