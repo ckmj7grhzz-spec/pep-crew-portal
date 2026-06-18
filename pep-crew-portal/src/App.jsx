@@ -1120,7 +1120,8 @@ function AdminPage() {
     await loadResourceBookings()
   }
 
-  async function deleteResourceBooking(bookingIdOrIds) {
+  async function deleteResourceBooking(bookingIdOrIds, options = {}) {
+    const { keepProjectModalOpen = false } = options
     const bookingIds = Array.isArray(bookingIdOrIds) ? bookingIdOrIds : [bookingIdOrIds]
     const confirmed = window.confirm(bookingIds.length > 1 ? 'Delete these grouped resource bookings?' : 'Delete this resource booking?')
     if (!confirmed) return
@@ -1133,7 +1134,7 @@ function AdminPage() {
     }
 
     setMessage(bookingIds.length > 1 ? 'Resource bookings deleted.' : 'Resource booking deleted.')
-    closeCalendarEventDetails()
+    if (!keepProjectModalOpen) closeCalendarEventDetails()
     await loadResourceBookings()
   }
 
@@ -1338,18 +1339,10 @@ function AdminPage() {
   }
 
   async function deleteCrewSheetEvent(eventRecord) {
-    const eventId = eventRecord?.id
-    const eventName = eventRecord?.show_name || 'this crew sheet'
-
-    if (!eventId) {
-      setMessage('Could not delete crew sheet: missing event ID.')
-      return
-    }
-
-    const confirmed = window.confirm(`Delete ${eventName}? This removes the crew sheet, calendar project, resource bookings and all related logistics records. This cannot be undone.`)
+    const confirmed = window.confirm(`Delete ${eventRecord.show_name}? This removes the crew sheet, calendar project, resource bookings and all related logistics records. This cannot be undone.`)
     if (!confirmed) return
 
-    setMessage('Deleting crew sheet...')
+    setMessage('')
 
     const relatedTables = [
       'resource_bookings',
@@ -1365,7 +1358,7 @@ function AdminPage() {
       const { error } = await supabase
         .from(tableName)
         .delete()
-        .eq('event_id', eventId)
+        .eq('event_id', eventRecord.id)
 
       if (error) {
         setMessage(`Could not delete ${tableName.replace('_', ' ')}: ${error.message}`)
@@ -1373,39 +1366,17 @@ function AdminPage() {
       }
     }
 
-    const { data: deletedRows, error: deleteError } = await supabase
+    const { error } = await supabase
       .from('Events')
       .delete()
-      .eq('id', eventId)
-      .select('id')
+      .eq('id', eventRecord.id)
 
-    if (deleteError) {
-      setMessage(`Could not delete crew sheet: ${deleteError.message}`)
+    if (error) {
+      setMessage(`Could not delete crew sheet: ${error.message}`)
       return
     }
 
-    const { data: stillExists, error: verifyError } = await supabase
-      .from('Events')
-      .select('id')
-      .eq('id', eventId)
-      .maybeSingle()
-
-    if (verifyError) {
-      setMessage(`Could not verify delete: ${verifyError.message}`)
-      return
-    }
-
-    if (stillExists || !deletedRows?.length) {
-      setMessage('Delete was blocked by Supabase. Run the delete-policy SQL, then try again.')
-      return
-    }
-
-    setEvents(current => current.filter(eventItem => String(eventItem.id) !== String(eventId)))
-    setSelectedCalendarEvent(current => String(current?.id || '') === String(eventId) ? null : current)
-    setSelectedEventEditForm(null)
-    setCalendarEventCounts(null)
-
-    setMessage(`${eventName} deleted.`)
+    setMessage(`${eventRecord.show_name} deleted.`)
     await loadEvents()
     await loadResourceBookings()
   }
@@ -1709,7 +1680,7 @@ function AdminPage() {
     const projectItems = getCalendarSourceEvents()
       .map(eventRecord => {
         const linkedBookings = linkedBookingsByEventId[String(eventRecord.id)] || []
-        const linkedColours = [...new Set(linkedBookings.map(booking => booking.resource_colour).filter(Boolean))]
+        const linkedColours = [...new Set([getCalendarEventColour(eventRecord), ...linkedBookings.map(booking => booking.resource_colour)].filter(Boolean))]
         const linkedResources = linkedBookings
           .map(booking => booking.resource_calendar)
           .filter(Boolean)
@@ -2088,7 +2059,7 @@ function AdminPage() {
                         {group.items.map(booking => (
                           <div className="assignedResourcePill" key={booking.id} style={{ '--resource-colour': booking.resource_calendar?.colour || getCalendarCategoryColour(group.category) }}>
                             <span>{booking.resource_calendar?.name || booking.booking_name}</span>
-                            <button type="button" onClick={() => deleteResourceBooking(booking.id)}>Remove</button>
+                            <button type="button" onClick={() => deleteResourceBooking(booking.id, { keepProjectModalOpen: true })}>Remove</button>
                           </div>
                         ))}
                       </div>
