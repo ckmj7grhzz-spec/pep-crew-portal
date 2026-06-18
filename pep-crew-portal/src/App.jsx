@@ -784,11 +784,10 @@ function AdminPage() {
     const { data, error } = await supabase
       .from('resource_bookings')
       .select('*')
-      .order('start_date', { ascending: true })
+      .order('created_at', { ascending: false })
 
     if (error) {
       setResourceBookings([])
-      setMessage(`Could not load resource bookings: ${error.message}`)
     } else {
       setResourceBookings(data || [])
     }
@@ -1033,18 +1032,19 @@ function AdminPage() {
     await loadResourceBookings()
   }
 
-  async function deleteResourceBooking(bookingId) {
-    const confirmed = window.confirm('Delete this resource booking?')
+  async function deleteResourceBooking(bookingIdOrIds) {
+    const bookingIds = Array.isArray(bookingIdOrIds) ? bookingIdOrIds : [bookingIdOrIds]
+    const confirmed = window.confirm(bookingIds.length > 1 ? 'Delete these grouped resource bookings?' : 'Delete this resource booking?')
     if (!confirmed) return
 
-    const { error } = await supabase.from('resource_bookings').delete().eq('id', bookingId)
+    const { error } = await supabase.from('resource_bookings').delete().in('id', bookingIds)
 
     if (error) {
       setMessage(`Could not delete resource booking: ${error.message}`)
       return
     }
 
-    setMessage('Resource booking deleted.')
+    setMessage(bookingIds.length > 1 ? 'Resource bookings deleted.' : 'Resource booking deleted.')
     closeCalendarEventDetails()
     await loadResourceBookings()
   }
@@ -1412,6 +1412,37 @@ function AdminPage() {
     return getCalendarCategoryColour('projects')
   }
 
+
+  function buildBookingStripe(colours = []) {
+    const cleanColours = [...new Set((colours || []).filter(Boolean))]
+    if (!cleanColours.length) return getCalendarCategoryColour('projects')
+    if (cleanColours.length === 1) return cleanColours[0]
+
+    const stopSize = Math.max(8, Math.floor(100 / cleanColours.length))
+    const parts = cleanColours.map((colour, index) => {
+      const start = index * stopSize
+      const end = index === cleanColours.length - 1 ? 100 : (index + 1) * stopSize
+      return `${colour} ${start}%, ${colour} ${end}%`
+    })
+
+    return `linear-gradient(90deg, ${parts.join(', ')})`
+  }
+
+  function getCalendarEventStyle(eventRecord) {
+    if (eventRecord.calendar_item_type === 'resource_booking') {
+      const colours = eventRecord.resource_colours || [getCalendarEventColour(eventRecord)]
+      return {
+        '--calendar-event-colour': colours[0] || getCalendarEventColour(eventRecord),
+        '--calendar-event-background': buildBookingStripe(colours),
+      }
+    }
+
+    return {
+      '--calendar-event-colour': getCalendarEventColour(eventRecord),
+      '--calendar-event-background': getCalendarEventColour(eventRecord),
+    }
+  }
+
   function toggleCalendarFilter(key) {
     setCalendarFilters(previous => ({
       ...previous,
@@ -1453,7 +1484,8 @@ function AdminPage() {
 
   function getCalendarSourceItems() {
     const projectItems = getCalendarSourceEvents()
-    const bookingItems = resourceBookings
+
+    const visibleBookings = resourceBookings
       .filter(booking => booking.active !== false)
       .map(booking => {
         const resource = booking.resource_calendar || getResourceCalendarById(booking.resource_calendar_id)
@@ -1462,17 +1494,13 @@ function AdminPage() {
 
         return {
           ...booking,
-          id: `resource-booking-${booking.id}`,
-          calendar_item_type: 'resource_booking',
-          booking_id: booking.id,
-          show_name: booking.booking_name || linkedEvent?.show_name || resource?.name || 'Resource booking',
-          venue: resource?.name ? `${CALENDAR_CATEGORY_LABELS[category] || 'Resource'} · ${resource.name}` : CALENDAR_CATEGORY_LABELS[category] || 'Resource',
-          start_date: booking.start_date,
-          end_date: booking.end_date || booking.start_date,
           resource_calendar: resource,
           linked_event: linkedEvent,
           resource_category: category,
-          public_slug: linkedEvent?.public_slug || '',
+          booking_name: booking.booking_name || booking.title || linkedEvent?.show_name || resource?.name || 'Resource booking',
+          start_date: booking.start_date,
+          end_date: booking.end_date || booking.start_date,
+          resource_colour: resource?.colour || getCalendarCategoryColour(category),
         }
       })
       .filter(item => {
@@ -1481,7 +1509,51 @@ function AdminPage() {
         return isResourceCalendarVisible(item.resource_calendar.id)
       })
 
-    return [...projectItems, ...bookingItems]
+    const groupedBookings = Object.values(
+      visibleBookings.reduce((groups, booking) => {
+        const groupKey = [
+          booking.event_id || booking.booking_name,
+          booking.start_date,
+          booking.end_date || booking.start_date,
+          booking.booking_type || 'Resource Booking',
+          booking.resource_category || 'resource',
+        ].join('|')
+
+        if (!groups[groupKey]) {
+          groups[groupKey] = {
+            id: `resource-booking-group-${groupKey}`,
+            calendar_item_type: 'resource_booking',
+            booking_ids: [],
+            show_name: booking.linked_event?.show_name || booking.booking_name || 'Resource booking',
+            venue: booking.linked_event?.venue || CALENDAR_CATEGORY_LABELS[booking.resource_category] || 'Resource',
+            start_date: booking.start_date,
+            end_date: booking.end_date || booking.start_date,
+            booking_type: booking.booking_type || 'Resource Booking',
+            resource_category: booking.resource_category,
+            resource_calendars: [],
+            resource_colours: [],
+            linked_event: booking.linked_event,
+            public_slug: booking.linked_event?.public_slug || '',
+            notes: booking.notes || '',
+          }
+        }
+
+        groups[groupKey].booking_ids.push(booking.id)
+        if (booking.resource_calendar) groups[groupKey].resource_calendars.push(booking.resource_calendar)
+        if (booking.resource_colour) groups[groupKey].resource_colours.push(booking.resource_colour)
+        if (booking.notes && !groups[groupKey].notes) groups[groupKey].notes = booking.notes
+
+        return groups
+      }, {})
+    ).map(group => ({
+      ...group,
+      resource_colours: [...new Set(group.resource_colours)],
+      resource_calendars: group.resource_calendars.filter((resource, index, array) =>
+        array.findIndex(item => String(item.id) === String(resource.id)) === index
+      ),
+    }))
+
+    return [...projectItems, ...groupedBookings]
   }
 
   async function openCalendarEventDetails(eventRecord) {
@@ -1560,7 +1632,7 @@ function AdminPage() {
             <>
               <div className="calendarEventDrawerSection">
                 <strong>Resource</strong>
-                <span>{selectedCalendarEvent.resource_calendar?.name || 'Resource'}</span>
+                <span>{selectedCalendarEvent.resource_calendars?.length ? selectedCalendarEvent.resource_calendars.map(resource => resource.name).join(', ') : selectedCalendarEvent.resource_calendar?.name || 'Resource'}</span>
               </div>
 
               <div className="calendarEventDrawerGrid">
@@ -1594,7 +1666,7 @@ function AdminPage() {
                     Open Crew Sheet
                   </a>
                 )}
-                <button type="button" className="secondaryButton" onClick={() => deleteResourceBooking(selectedCalendarEvent.booking_id)}>
+                <button type="button" className="secondaryButton" onClick={() => deleteResourceBooking(selectedCalendarEvent.booking_ids || selectedCalendarEvent.booking_id)}>
                   Delete Booking
                 </button>
                 <button type="button" className="secondaryButton" onClick={closeCalendarEventDetails}>
@@ -1789,7 +1861,7 @@ function AdminPage() {
         type="button"
         key={`${eventRecord.id}-${eventRecord.public_slug}`}
         className={`calendarEventPill ${getCalendarEventClass(eventRecord)}`}
-        style={{ '--calendar-event-colour': getCalendarEventColour(eventRecord) }}
+        style={getCalendarEventStyle(eventRecord)}
         onClick={() => openCalendarEventDetails(eventRecord)}
         title={`${eventRecord.show_name}${eventRecord.venue ? ` — ${eventRecord.venue}` : ''}`}
       >
@@ -1816,7 +1888,7 @@ function AdminPage() {
         className={`calendarEventBar ${getCalendarEventClass(eventRecord)} ${continuesBefore ? 'continuesBefore' : ''} ${continuesAfter ? 'continuesAfter' : ''}`}
         onClick={() => openCalendarEventDetails(eventRecord)}
         title={`${eventRecord.show_name}${eventRecord.venue ? ` — ${eventRecord.venue}` : ''}`}
-        style={{ gridColumn: `${startCol} / ${endCol}`, '--calendar-event-colour': getCalendarEventColour(eventRecord) }}
+        style={{ gridColumn: `${startCol} / ${endCol}`, ...getCalendarEventStyle(eventRecord) }}
       >
         {continuesBefore && <span className="calendarContinuationMark">←</span>}
         <span className="calendarEventBarText">
