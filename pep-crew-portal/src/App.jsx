@@ -543,6 +543,8 @@ const CALENDAR_COLOUR_LABELS = {
   led_trailers: 'LED Trailers',
 }
 
+const CALENDAR_CATEGORY_LABELS = CALENDAR_COLOUR_LABELS
+
 function AdminPage() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
