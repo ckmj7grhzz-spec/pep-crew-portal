@@ -558,6 +558,7 @@ function AdminPage() {
   const [showCalendarResources, setShowCalendarResources] = useState(() => readStoredValue('pep.showCalendarResources', true))
   const [resourceSearch, setResourceSearch] = useState(() => readStoredValue('pep.resourceSearch', ''))
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState(null)
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState(null)
   const [calendarEventCounts, setCalendarEventCounts] = useState(null)
   const [calendarEventCountsLoading, setCalendarEventCountsLoading] = useState(false)
   const [calendarSettings, setCalendarSettings] = useState(() => {
@@ -1031,6 +1032,7 @@ function AdminPage() {
 
     setMessage(`${resource?.name || 'Resource'} booked for ${bookingTitle}.`)
     resetResourceBookingForm({ keepResource: true })
+    if (selectedCalendarDay) closeCalendarDayBookingModal()
     await loadResourceBookings()
   }
 
@@ -1400,6 +1402,7 @@ function AdminPage() {
 
   function getCalendarEventClass(eventRecord) {
     if (eventRecord.calendar_item_type === 'resource_booking') return 'resourceBookingCalendarEvent'
+    if (eventRecord.has_resource_bookings) return 'projectCalendarEvent resourceLinkedCalendarEvent'
     const status = getCrewSheetStatus(eventRecord)
     if (status === 'show_complete') return 'completeCalendarEvent'
     return 'projectCalendarEvent'
@@ -1431,8 +1434,11 @@ function AdminPage() {
   }
 
   function getCalendarEventStyle(eventRecord) {
-    if (eventRecord.calendar_item_type === 'resource_booking') {
-      const colours = eventRecord.resource_colours || [getCalendarEventColour(eventRecord)]
+    if (eventRecord.calendar_item_type === 'resource_booking' || eventRecord.has_resource_bookings) {
+      const colours = eventRecord.resource_colours?.length
+        ? eventRecord.resource_colours
+        : [getCalendarEventColour(eventRecord)]
+
       return {
         '--calendar-event-colour': colours[0] || getCalendarEventColour(eventRecord),
         '--calendar-event-background': buildBookingStripe(colours),
@@ -1460,6 +1466,26 @@ function AdminPage() {
     setShowResourceBookingForm(previous => !previous)
   }
 
+
+  function openCalendarDayBookingModal(date) {
+    const selectedDate = formatCalendarDateInput(date)
+    setSelectedCalendarDay(selectedDate)
+    setSelectedCalendarEvent(null)
+    setResourceBookingForm(current => ({
+      ...current,
+      event_id: '',
+      title: '',
+      booking_type: 'Resource Booking',
+      start_date: selectedDate,
+      end_date: selectedDate,
+      notes: '',
+    }))
+  }
+
+  function closeCalendarDayBookingModal() {
+    setSelectedCalendarDay(null)
+  }
+
   function toggleResourceCalendarGroup(category) {
     setOpenResourceCalendarGroups(previous => ({
       ...previous,
@@ -1480,13 +1506,10 @@ function AdminPage() {
   }
 
   function getCalendarSourceEvents() {
-    if (!calendarFilters.projects) return []
     return events.map(eventRecord => ({ ...eventRecord, calendar_item_type: 'event' }))
   }
 
   function getCalendarSourceItems() {
-    const projectItems = getCalendarSourceEvents()
-
     const visibleBookings = resourceBookings
       .filter(booking => booking.active !== false)
       .map(booking => {
@@ -1511,10 +1534,46 @@ function AdminPage() {
         return isResourceCalendarVisible(item.resource_calendar.id)
       })
 
+    const linkedBookingsByEventId = visibleBookings
+      .filter(booking => booking.event_id)
+      .reduce((groups, booking) => {
+        const key = String(booking.event_id)
+        if (!groups[key]) groups[key] = []
+        groups[key].push(booking)
+        return groups
+      }, {})
+
+    const projectItems = getCalendarSourceEvents()
+      .map(eventRecord => {
+        const linkedBookings = linkedBookingsByEventId[String(eventRecord.id)] || []
+        const linkedColours = [...new Set(linkedBookings.map(booking => booking.resource_colour).filter(Boolean))]
+        const linkedResources = linkedBookings
+          .map(booking => booking.resource_calendar)
+          .filter(Boolean)
+          .filter((resource, index, array) =>
+            array.findIndex(item => String(item.id) === String(resource.id)) === index
+          )
+
+        if (!linkedBookings.length) return eventRecord
+
+        return {
+          ...eventRecord,
+          calendar_item_type: 'event',
+          has_resource_bookings: true,
+          booking_ids: linkedBookings.map(booking => booking.id),
+          resource_colours: linkedColours,
+          resource_calendars: linkedResources,
+          booking_type: 'Crew Sheet Assignment',
+        }
+      })
+      .filter(eventRecord => calendarFilters.projects || eventRecord.has_resource_bookings)
+
+    const unlinkedBookings = visibleBookings.filter(booking => !booking.event_id)
+
     const groupedBookings = Object.values(
-      visibleBookings.reduce((groups, booking) => {
+      unlinkedBookings.reduce((groups, booking) => {
         const groupKey = [
-          booking.event_id || booking.booking_name,
+          booking.booking_name,
           booking.start_date,
           booking.end_date || booking.start_date,
           booking.booking_type || 'Resource Booking',
@@ -1526,16 +1585,16 @@ function AdminPage() {
             id: `resource-booking-group-${groupKey}`,
             calendar_item_type: 'resource_booking',
             booking_ids: [],
-            show_name: booking.linked_event?.show_name || booking.booking_name || 'Resource booking',
-            venue: booking.linked_event?.venue || CALENDAR_CATEGORY_LABELS[booking.resource_category] || 'Resource',
+            show_name: booking.booking_name || 'Resource booking',
+            venue: CALENDAR_CATEGORY_LABELS[booking.resource_category] || 'Resource',
             start_date: booking.start_date,
             end_date: booking.end_date || booking.start_date,
             booking_type: booking.booking_type || 'Resource Booking',
             resource_category: booking.resource_category,
             resource_calendars: [],
             resource_colours: [],
-            linked_event: booking.linked_event,
-            public_slug: booking.linked_event?.public_slug || '',
+            linked_event: null,
+            public_slug: '',
             notes: booking.notes || '',
           }
         }
@@ -1895,7 +1954,11 @@ function AdminPage() {
         {continuesBefore && <span className="calendarContinuationMark">←</span>}
         <span className="calendarEventBarText">
           <strong>{eventRecord.show_name}</strong>
-          {eventRecord.venue && <small>{eventRecord.venue}</small>}
+          {eventRecord.resource_calendars?.length ? (
+            <small>{eventRecord.resource_calendars.map(resource => resource.name).join(' · ')}</small>
+          ) : (
+            eventRecord.venue && <small>{eventRecord.venue}</small>
+          )}
         </span>
         {continuesAfter && <span className="calendarContinuationMark">→</span>}
       </button>
@@ -1922,13 +1985,16 @@ function AdminPage() {
             const isOutsideMonth = options.monthView && day.getMonth() !== calendarFocus.getMonth()
 
             return (
-              <div
-                className={`calendarContinuousDay ${isWeekend ? 'weekendCalendarDay' : 'weekdayCalendarDay'} ${isToday ? 'todayCalendarCell' : ''} ${isOutsideMonth ? 'outsideCalendarMonth' : ''}`}
+              <button
+                type="button"
+                className={`calendarContinuousDay calendarContinuousDayButton ${isWeekend ? 'weekendCalendarDay' : 'weekdayCalendarDay'} ${isToday ? 'todayCalendarCell' : ''} ${isOutsideMonth ? 'outsideCalendarMonth' : ''}`}
                 key={formatCalendarDateInput(day)}
+                onClick={() => openCalendarDayBookingModal(day)}
+                title={`Book a resource on ${formatDate(formatCalendarDateInput(day))}`}
               >
                 <strong>{day.getDate()}</strong>
                 <span>{day.toLocaleDateString('en-GB', { weekday: 'short' })}</span>
-              </div>
+              </button>
             )
           })}
         </div>
@@ -2010,6 +2076,92 @@ function AdminPage() {
     )
   }
 
+  function renderCalendarDayBookingModal() {
+    if (!selectedCalendarDay) return null
+
+    return (
+      <div className="calendarDayBookingOverlay" role="dialog" aria-modal="true">
+        <div className="calendarDayBookingModal">
+          <div className="calendarDayBookingHeader">
+            <div>
+              <p className="eyebrowDark">Calendar Booking</p>
+              <h2>{formatDate(selectedCalendarDay)}</h2>
+              <p>Book a resource directly from the calendar day.</p>
+            </div>
+            <button type="button" className="calendarDayBookingClose" onClick={closeCalendarDayBookingModal}>×</button>
+          </div>
+
+          <form className="adminForm resourceBookingForm calendarDayBookingForm" onSubmit={saveResourceBooking}>
+            <label>
+              Resource
+              <select value={resourceBookingForm.resource_calendar_id} onChange={e => updateResourceBookingField('resource_calendar_id', e.target.value)}>
+                <option value="">Choose resource...</option>
+                {Object.keys(CALENDAR_CATEGORY_LABELS).map(category => {
+                  const resources = getResourceCalendarsForCategory(category).filter(resource => resource.active !== false)
+                  if (!resources.length) return null
+                  return (
+                    <optgroup label={CALENDAR_CATEGORY_LABELS[category]} key={category}>
+                      {resources.map(resource => (
+                        <option value={resource.id} key={resource.id}>{resource.name}</option>
+                      ))}
+                    </optgroup>
+                  )
+                })}
+              </select>
+            </label>
+
+            <label>
+              Linked Crew Sheet
+              <select value={resourceBookingForm.event_id} onChange={e => updateResourceBookingField('event_id', e.target.value)}>
+                <option value="">No linked crew sheet</option>
+                {events.map(eventRecord => (
+                  <option value={eventRecord.id} key={eventRecord.id}>{eventRecord.show_name}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Booking Type
+              <select value={resourceBookingForm.booking_type} onChange={e => updateResourceBookingField('booking_type', e.target.value)}>
+                <option>Resource Booking</option>
+                <option>Crew Sheet Assignment</option>
+                <option>Annual Leave</option>
+                <option>Unavailable</option>
+                <option>Travel</option>
+                <option>Internal Meeting</option>
+              </select>
+            </label>
+
+            <label>
+              Booking Title
+              <input value={resourceBookingForm.title} onChange={e => updateResourceBookingField('title', e.target.value)} placeholder="Optional - uses crew sheet name if linked" />
+            </label>
+
+            <label>
+              Start Date
+              <input type="date" value={resourceBookingForm.start_date} onChange={e => updateResourceBookingField('start_date', e.target.value)} />
+            </label>
+
+            <label>
+              End Date
+              <input type="date" value={resourceBookingForm.end_date} onChange={e => updateResourceBookingField('end_date', e.target.value)} />
+            </label>
+
+            <label className="formWide">
+              Notes
+              <textarea value={resourceBookingForm.notes} onChange={e => updateResourceBookingField('notes', e.target.value)} placeholder="Optional booking notes" />
+            </label>
+
+            <div className="adminActions formWide">
+              <button type="submit" className="primaryButton">Create Booking</button>
+              <button type="button" className="secondaryButton" onClick={closeCalendarDayBookingModal}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
   function renderOperationsCalendar() {
     const focus = parseCalendarDate(calendarFocusDate) || new Date()
     let rangeStart = startOfCalendarMonth(focus)
@@ -2037,6 +2189,7 @@ function AdminPage() {
 
     return (
       <>
+        {renderCalendarDayBookingModal()}
         <section className="eventCard operationsCalendarCard">
           <div className="calendarToolbar">
             <div className="calendarNavGroup">
