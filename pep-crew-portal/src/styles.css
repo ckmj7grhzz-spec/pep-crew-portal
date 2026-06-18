@@ -6002,195 +6002,143 @@ button.calendarEventListItem {
 }
 
 
-/* Project drawer resource manager */
-.projectResourceManager {
-  display: grid;
-  gap: 14px;
-}
-
-.projectResourceManagerHeader {
+/* Project / booking central workspace modal */
+.calendarEventModalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(3px);
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.projectResourceManagerHeader span,
-.projectAssignedResourceEmpty {
-  display: block;
-  color: var(--pep-muted);
-  font-size: 13px;
-  font-weight: 800;
-  margin-top: 4px;
-}
-
-.projectAssignedResourceList {
-  display: grid;
-  gap: 12px;
-}
-
-.projectAssignedResourceGroup {
-  display: grid;
-  gap: 8px;
-}
-
-.projectAssignedResourceGroup > small {
-  color: var(--pep-muted);
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.projectAssignedResourceItem {
-  display: grid;
-  grid-template-columns: 10px 1fr auto;
-  gap: 10px;
   align-items: center;
-  background: #f8fafc;
-  border: 1px solid var(--pep-border);
-  border-radius: 12px;
-  padding: 10px;
+  justify-content: center;
+  padding: 24px;
 }
 
-.projectAssignedResourceDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--assigned-resource-colour, var(--pep-green));
-}
-
-.projectAssignedResourceItem strong {
-  display: block;
-  font-size: 14px;
-  color: var(--pep-text);
-}
-
-.projectAssignedResourceItem span {
-  display: block;
-  color: var(--pep-muted);
-  font-size: 12px;
-  font-weight: 800;
-  margin-top: 2px;
-}
-
-.projectAssignedResourceItem button {
-  border: 1px solid #fecaca;
-  background: #fef2f2;
-  color: #991b1b;
-  border-radius: 999px;
-  padding: 7px 10px;
-  font-size: 12px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.projectResourceAssignForm {
+.calendarEventDrawer.calendarEventModal {
+  position: relative !important;
+  top: auto !important;
+  align-self: auto !important;
+  width: min(1180px, calc(100vw - 48px));
+  max-height: min(900px, calc(100vh - 48px));
+  min-height: min(720px, calc(100vh - 48px));
   display: grid;
-  grid-template-columns: 1fr 140px 140px;
-  gap: 10px;
-  align-items: end;
-  border-top: 1px solid var(--pep-border);
-  padding-top: 14px;
-}
-
-.projectResourceAssignForm label {
-  display: grid;
-  gap: 6px;
-  color: #334155;
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.projectResourceAssignForm input,
-.projectResourceAssignForm select {
-  width: 100%;
-  min-height: 42px;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 14px;
+  grid-template-rows: auto 1fr;
   background: #ffffff;
-}
-
-.projectResourceAssignNotes {
-  grid-column: 1 / -1;
-}
-
-.projectResourceAssignForm .primaryButton {
-  grid-column: 1 / -1;
-}
-
-/* Grouped event list */
-.calendarGroupedEventList {
-  display: grid;
-  gap: 12px;
-}
-
-.calendarListGroup {
-  border: 1px solid var(--pep-border);
-  border-radius: 14px;
+  border-radius: 24px;
   overflow: hidden;
-  background: #ffffff;
+  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.34);
 }
 
-.calendarListGroupHeader {
-  width: 100%;
-  border: 0;
-  background: #f8fafc;
-  padding: 14px 16px;
+.calendarEventModal .calendarEventDrawerHeader {
+  padding: 24px 28px;
+  align-items: center;
+}
+
+.calendarEventModal .calendarEventDrawerHeader h2 {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.calendarEventModal .calendarEventDrawerClose {
+  width: 44px;
+  height: 44px;
+  font-size: 30px;
+}
+
+.calendarEventModal .calendarEventDrawerBody {
+  padding: 24px 28px 28px;
+  overflow-y: auto;
+  align-content: start;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.calendarEventModal .calendarEventDrawerSection {
+  grid-column: span 12;
+}
+
+.calendarEventModal .calendarEventDrawerGrid {
+  grid-column: span 12;
+}
+
+.calendarEventModal .calendarEventDrawerStats {
+  grid-column: span 12;
+}
+
+.calendarEventModal .calendarEventDrawerActions {
+  grid-column: span 12;
+  position: sticky;
+  bottom: -28px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--pep-border);
+  margin: 8px -28px -28px;
+  padding: 18px 28px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  color: var(--pep-text);
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
-.calendarListGroupHeader:hover {
-  background: #f1f5f9;
+.calendarEventModal .calendarEventDrawerActions a,
+.calendarEventModal .calendarEventDrawerActions button {
+  min-width: 180px;
 }
 
-.calendarListGroupTitle,
-.calendarListGroupMeta {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+.calendarEventModal .resourceBookingInlineForm,
+.calendarEventModal .assignedResourcesPanel,
+.calendarEventModal .projectResourceManager,
+.calendarEventModal .calendarEventDrawerSection.resourceManagerSection {
+  grid-column: span 12;
 }
 
-.calendarListGroupTitle strong {
-  font-size: 16px;
+@media (min-width: 980px) {
+  .calendarEventModal .calendarEventDrawerSection:nth-of-type(1) {
+    grid-column: span 6;
+  }
+
+  .calendarEventModal .calendarEventDrawerGrid {
+    grid-column: span 6;
+  }
 }
 
-.calendarListGroupDot {
-  width: 11px;
-  height: 11px;
-  border-radius: 999px;
-  background: var(--calendar-list-group-colour, var(--pep-green));
-}
+@media (max-width: 760px) {
+  .calendarEventModalOverlay {
+    padding: 10px;
+    align-items: stretch;
+  }
 
-.calendarListGroupMeta small {
-  min-width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  display: inline-grid;
-  place-items: center;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #334155;
-  font-weight: 900;
-}
+  .calendarEventDrawer.calendarEventModal {
+    width: 100%;
+    min-height: auto;
+    max-height: calc(100vh - 20px);
+    border-radius: 18px;
+  }
 
-.calendarListGroup .calendarEventList {
-  padding: 12px;
-}
+  .calendarEventModal .calendarEventDrawerHeader {
+    padding: 18px;
+  }
 
-.calendarListGroup .calendarEventListItem:last-child {
-  margin-bottom: 0;
-}
+  .calendarEventModal .calendarEventDrawerHeader h2 {
+    font-size: 24px;
+  }
 
-@media (max-width: 900px) {
-  .projectResourceAssignForm {
+  .calendarEventModal .calendarEventDrawerBody {
+    padding: 18px;
+    display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .calendarEventModal .calendarEventDrawerActions {
+    margin: 8px -18px -18px;
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .calendarEventModal .calendarEventDrawerActions a,
+  .calendarEventModal .calendarEventDrawerActions button {
+    width: 100%;
+    min-width: 0;
   }
 }
