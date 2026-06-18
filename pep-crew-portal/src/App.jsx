@@ -545,8 +545,6 @@ const CALENDAR_COLOUR_LABELS = {
 
 const CALENDAR_CATEGORY_LABELS = CALENDAR_COLOUR_LABELS
 
-const PROJECT_RESOURCE_CATEGORIES = ['crew', 'freelancers', 'vehicles', 'rooms', 'led_trailers']
-
 function AdminPage() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -560,6 +558,8 @@ function AdminPage() {
   const [showCalendarResources, setShowCalendarResources] = useState(() => readStoredValue('pep.showCalendarResources', true))
   const [resourceSearch, setResourceSearch] = useState(() => readStoredValue('pep.resourceSearch', ''))
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState(null)
+  const [selectedEventEditForm, setSelectedEventEditForm] = useState(null)
+  const [selectedEventResourceId, setSelectedEventResourceId] = useState('')
   const [selectedCalendarDay, setSelectedCalendarDay] = useState(null)
   const [calendarEventCounts, setCalendarEventCounts] = useState(null)
   const [calendarEventCountsLoading, setCalendarEventCountsLoading] = useState(false)
@@ -595,10 +595,6 @@ function AdminPage() {
     booking_type: 'Resource Booking',
     start_date: '',
     end_date: '',
-    notes: '',
-  })
-  const [projectResourceForm, setProjectResourceForm] = useState({
-    resource_calendar_id: '',
     notes: '',
   })
   const [editingResourceCalendarId, setEditingResourceCalendarId] = useState(null)
@@ -970,118 +966,6 @@ function AdminPage() {
     return resourceCalendars.find(resource => String(resource.id) === String(resourceId))
   }
 
-  function getResourceCalendarLabel(category) {
-    return CALENDAR_CATEGORY_LABELS[category] || 'Resource'
-  }
-
-  function enrichResourceBooking(booking) {
-    const resource = booking.resource_calendar || getResourceCalendarById(booking.resource_calendar_id)
-    const category = resource?.category || booking.resource_category || 'projects'
-    const linkedEvent = booking.linked_event || findLinkedEventForBooking(booking)
-
-    return {
-      ...booking,
-      resource_calendar: resource,
-      linked_event: linkedEvent,
-      resource_category: category,
-      resource_colour: resource?.colour || getCalendarCategoryColour(category),
-      booking_name: booking.booking_name || booking.title || linkedEvent?.show_name || resource?.name || 'Resource booking',
-      end_date: booking.end_date || booking.start_date,
-    }
-  }
-
-  function getBookingsForEvent(eventRecord) {
-    if (!eventRecord?.id) return []
-
-    return resourceBookings
-      .filter(booking => booking.active !== false)
-      .map(enrichResourceBooking)
-      .filter(booking => booking.linked_event?.id && String(booking.linked_event.id) === String(eventRecord.id))
-  }
-
-  function updateProjectResourceField(field, value) {
-    setProjectResourceForm(current => ({
-      ...current,
-      [field]: value,
-    }))
-  }
-
-  function updateSelectedCalendarEventField(field, value) {
-    setSelectedCalendarEvent(current => current ? ({ ...current, [field]: value }) : current)
-  }
-
-  async function saveSelectedCalendarEventEdits(e) {
-    e.preventDefault()
-    if (!selectedCalendarEvent?.id || selectedCalendarEvent.calendar_item_type === 'resource_booking') return
-
-    setMessage('')
-
-    const payload = {
-      show_name: selectedCalendarEvent.show_name || '',
-      venue: selectedCalendarEvent.venue || null,
-      start_date: selectedCalendarEvent.start_date || null,
-      end_date: selectedCalendarEvent.end_date || null,
-      project_manager: selectedCalendarEvent.project_manager || null,
-      crew_sheet_status: getCrewSheetStatus(selectedCalendarEvent),
-    }
-
-    const { error } = await supabase
-      .from('Events')
-      .update(payload)
-      .eq('id', selectedCalendarEvent.id)
-
-    if (error) {
-      setMessage(`Could not update project: ${error.message}`)
-      return
-    }
-
-    setMessage(`${payload.show_name || 'Project'} updated.`)
-    await loadEvents()
-  }
-
-  async function addResourceToSelectedEvent(e) {
-    e.preventDefault()
-    if (!selectedCalendarEvent?.id || selectedCalendarEvent.calendar_item_type === 'resource_booking') return
-
-    setMessage('')
-
-    if (!projectResourceForm.resource_calendar_id) {
-      setMessage('Choose a resource to add to this project.')
-      return
-    }
-
-    const resource = getResourceCalendarById(projectResourceForm.resource_calendar_id)
-
-    if (!selectedCalendarEvent.start_date) {
-      setMessage('This project needs a start date before resources can be booked.')
-      return
-    }
-
-    const payload = {
-      resource_calendar_id: Number(projectResourceForm.resource_calendar_id),
-      event_id: selectedCalendarEvent.id,
-      booking_name: selectedCalendarEvent.show_name || resource?.name || 'Crew sheet assignment',
-      booking_type: 'Crew Sheet Assignment',
-      start_date: selectedCalendarEvent.start_date,
-      end_date: selectedCalendarEvent.end_date || selectedCalendarEvent.start_date,
-      notes: projectResourceForm.notes || null,
-      active: true,
-    }
-
-    const { error } = await supabase
-      .from('resource_bookings')
-      .insert([payload])
-
-    if (error) {
-      setMessage(`Could not add resource: ${error.message}`)
-      return
-    }
-
-    setMessage(`${resource?.name || 'Resource'} added to ${selectedCalendarEvent.show_name}.`)
-    setProjectResourceForm({ resource_calendar_id: '', notes: '' })
-    await loadResourceBookings()
-  }
-
   function normaliseBookingMatchText(value) {
     return String(value || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, ' ')
   }
@@ -1181,7 +1065,7 @@ function AdminPage() {
     await loadResourceBookings()
   }
 
-  async function deleteResourceBooking(bookingIdOrIds, options = {}) {
+  async function deleteResourceBooking(bookingIdOrIds) {
     const bookingIds = Array.isArray(bookingIdOrIds) ? bookingIdOrIds : [bookingIdOrIds]
     const confirmed = window.confirm(bookingIds.length > 1 ? 'Delete these grouped resource bookings?' : 'Delete this resource booking?')
     if (!confirmed) return
@@ -1194,7 +1078,7 @@ function AdminPage() {
     }
 
     setMessage(bookingIds.length > 1 ? 'Resource bookings deleted.' : 'Resource booking deleted.')
-    if (!options.keepOpen) closeCalendarEventDetails()
+    closeCalendarEventDetails()
     await loadResourceBookings()
   }
 
@@ -1657,7 +1541,22 @@ function AdminPage() {
   function getCalendarSourceItems() {
     const visibleBookings = resourceBookings
       .filter(booking => booking.active !== false)
-      .map(enrichResourceBooking)
+      .map(booking => {
+        const resource = booking.resource_calendar || getResourceCalendarById(booking.resource_calendar_id)
+        const category = resource?.category || 'projects'
+        const linkedEvent = booking.linked_event || findLinkedEventForBooking(booking)
+
+        return {
+          ...booking,
+          resource_calendar: resource,
+          linked_event: linkedEvent,
+          resource_category: category,
+          booking_name: booking.booking_name || booking.title || linkedEvent?.show_name || resource?.name || 'Resource booking',
+          start_date: booking.start_date,
+          end_date: booking.end_date || booking.start_date,
+          resource_colour: resource?.colour || getCalendarCategoryColour(category),
+        }
+      })
       .filter(item => {
         if (!calendarFilters[item.resource_category]) return false
         if (!item.resource_calendar?.id) return true
@@ -1676,11 +1575,7 @@ function AdminPage() {
     const projectItems = getCalendarSourceEvents()
       .map(eventRecord => {
         const linkedBookings = linkedBookingsByEventId[String(eventRecord.id)] || []
-        const resourceColours = [...new Set(linkedBookings.map(booking => booking.resource_colour).filter(Boolean))]
-        const projectColour = getCalendarCategoryColour('projects')
-        const linkedColours = calendarFilters.projects
-          ? [projectColour, ...resourceColours.filter(colour => colour !== projectColour)]
-          : resourceColours
+        const linkedColours = [...new Set(linkedBookings.map(booking => booking.resource_colour).filter(Boolean))]
         const linkedResources = linkedBookings
           .map(booking => booking.resource_calendar)
           .filter(Boolean)
@@ -1754,11 +1649,22 @@ function AdminPage() {
   async function openCalendarEventDetails(eventRecord) {
     setSelectedCalendarEvent(eventRecord)
     setCalendarEventCounts(null)
+    setSelectedEventResourceId('')
 
     if (eventRecord.calendar_item_type === 'resource_booking') {
+      setSelectedEventEditForm(null)
       setCalendarEventCountsLoading(false)
       return
     }
+
+    setSelectedEventEditForm({
+      show_name: eventRecord.show_name || '',
+      venue: eventRecord.venue || '',
+      start_date: eventRecord.start_date || '',
+      end_date: eventRecord.end_date || eventRecord.start_date || '',
+      project_manager: eventRecord.project_manager || '',
+      crew_sheet_status: getCrewSheetStatus(eventRecord),
+    })
 
     setCalendarEventCountsLoading(true)
 
@@ -1799,9 +1705,90 @@ function AdminPage() {
 
   function closeCalendarEventDetails() {
     setSelectedCalendarEvent(null)
+    setSelectedEventEditForm(null)
+    setSelectedEventResourceId('')
     setCalendarEventCounts(null)
     setCalendarEventCountsLoading(false)
-    setProjectResourceForm({ resource_calendar_id: '', notes: '' })
+  }
+
+  function updateSelectedEventEditField(field, value) {
+    setSelectedEventEditForm(current => ({
+      ...(current || {}),
+      [field]: value,
+    }))
+  }
+
+  async function saveSelectedCalendarEventDetails(e) {
+    e.preventDefault()
+    if (!selectedCalendarEvent || !selectedEventEditForm) return
+
+    setMessage('')
+
+    const payload = {
+      show_name: selectedEventEditForm.show_name,
+      venue: selectedEventEditForm.venue,
+      start_date: selectedEventEditForm.start_date || null,
+      end_date: selectedEventEditForm.end_date || selectedEventEditForm.start_date || null,
+      project_manager: selectedEventEditForm.project_manager,
+      crew_sheet_status: selectedEventEditForm.crew_sheet_status || 'in_progress',
+    }
+
+    const { error } = await supabase
+      .from('Events')
+      .update(payload)
+      .eq('id', selectedCalendarEvent.id)
+
+    if (error) {
+      setMessage(`Could not update crew sheet: ${error.message}`)
+      return
+    }
+
+    const updatedEvent = { ...selectedCalendarEvent, ...payload }
+    setSelectedCalendarEvent(updatedEvent)
+    setSelectedEventEditForm({
+      show_name: updatedEvent.show_name || '',
+      venue: updatedEvent.venue || '',
+      start_date: updatedEvent.start_date || '',
+      end_date: updatedEvent.end_date || updatedEvent.start_date || '',
+      project_manager: updatedEvent.project_manager || '',
+      crew_sheet_status: getCrewSheetStatus(updatedEvent),
+    })
+
+    setMessage('Crew sheet details updated.')
+    await loadEvents()
+  }
+
+  async function addResourceToSelectedCalendarEvent(e) {
+    e.preventDefault()
+    if (!selectedCalendarEvent || !selectedEventResourceId) return
+
+    const resource = getResourceCalendarById(selectedEventResourceId)
+    if (!resource) {
+      setMessage('Choose a valid resource.')
+      return
+    }
+
+    const payload = {
+      resource_calendar_id: Number(resource.id),
+      event_id: selectedCalendarEvent.id,
+      booking_name: selectedCalendarEvent.show_name || resource.name,
+      booking_type: 'Crew Sheet Assignment',
+      start_date: selectedCalendarEvent.start_date || formatCalendarDateInput(new Date()),
+      end_date: selectedCalendarEvent.end_date || selectedCalendarEvent.start_date || formatCalendarDateInput(new Date()),
+      notes: null,
+      active: true,
+    }
+
+    const { error } = await supabase.from('resource_bookings').insert([payload])
+
+    if (error) {
+      setMessage(`Could not assign resource: ${error.message}`)
+      return
+    }
+
+    setMessage(`${resource.name} assigned to ${selectedCalendarEvent.show_name}.`)
+    setSelectedEventResourceId('')
+    await loadResourceBookings()
   }
 
   function renderCalendarEventDetailDrawer() {
@@ -1811,184 +1798,181 @@ function AdminPage() {
     const status = isBooking ? 'resource_booking' : getCrewSheetStatus(selectedCalendarEvent)
     const statusLabel = isBooking ? selectedCalendarEvent.booking_type || 'Resource Booking' : getCrewSheetStatusLabel(status)
     const linkedEvent = selectedCalendarEvent.linked_event
+    const selectedEventBookings = !isBooking
+      ? resourceBookings
+          .filter(booking => booking.active !== false && String(booking.event_id || '') === String(selectedCalendarEvent.id))
+          .map(booking => ({
+            ...booking,
+            resource_calendar: booking.resource_calendar || getResourceCalendarById(booking.resource_calendar_id),
+          }))
+      : []
+
+    const assignedResourceGroups = ['crew', 'freelancers', 'vehicles', 'rooms', 'led_trailers', 'dry_hire']
+      .map(category => ({
+        category,
+        label: CALENDAR_CATEGORY_LABELS[category] || category,
+        items: selectedEventBookings.filter(booking => booking.resource_calendar?.category === category),
+      }))
+      .filter(group => group.items.length)
+
+    const resourceOptions = resourceCalendars.filter(resource => resource.active !== false)
 
     return (
-      <div className="calendarEventDrawerOverlay" role="dialog" aria-modal="true">
-        <aside className="calendarEventDrawer" aria-label="Calendar event details">
-        <div className="calendarEventDrawerHeader">
-          <div>
-            <p className="eyebrowDark">Calendar Item</p>
-            <h2>{selectedCalendarEvent.show_name}</h2>
-            <span className={`calendarStatusBadge calendarStatusBadge-${status}`}>{statusLabel}</span>
+      <div className="calendarEventDrawerOverlay" role="dialog" aria-modal="true" aria-label="Calendar item details">
+        <aside className="calendarEventDrawer calendarEventDrawerModal">
+          <div className="calendarEventDrawerHeader">
+            <div>
+              <p className="eyebrowDark">Calendar Item</p>
+              <h2>{selectedCalendarEvent.show_name}</h2>
+              <span className={`calendarStatusBadge calendarStatusBadge-${status}`}>{statusLabel}</span>
+            </div>
+            <button type="button" className="calendarEventDrawerClose" onClick={closeCalendarEventDetails}>×</button>
           </div>
-          <button type="button" className="calendarEventDrawerClose" onClick={closeCalendarEventDetails}>×</button>
-        </div>
 
-        <div className="calendarEventDrawerBody">
-          {isBooking ? (
-            <>
-              <div className="calendarEventDrawerSection">
-                <strong>Resource</strong>
-                <span>{selectedCalendarEvent.resource_calendars?.length ? selectedCalendarEvent.resource_calendars.map(resource => resource.name).join(', ') : selectedCalendarEvent.resource_calendar?.name || 'Resource'}</span>
-              </div>
-
-              <div className="calendarEventDrawerGrid">
-                <div>
-                  <strong>Start</strong>
-                  <span>{formatDate(selectedCalendarEvent.start_date) || 'TBC'}</span>
-                </div>
-                <div>
-                  <strong>End</strong>
-                  <span>{formatDate(selectedCalendarEvent.end_date) || 'TBC'}</span>
-                </div>
-              </div>
-
-              {linkedEvent && (
+          <div className="calendarEventDrawerBody">
+            {isBooking ? (
+              <>
                 <div className="calendarEventDrawerSection">
-                  <strong>Linked crew sheet</strong>
-                  <span>{linkedEvent.show_name}</span>
+                  <strong>Resource</strong>
+                  <span>{selectedCalendarEvent.resource_calendars?.length ? selectedCalendarEvent.resource_calendars.map(resource => resource.name).join(', ') : selectedCalendarEvent.resource_calendar?.name || 'Resource'}</span>
                 </div>
-              )}
 
-              {selectedCalendarEvent.notes && (
-                <div className="calendarEventDrawerSection">
-                  <strong>Notes</strong>
-                  <span>{selectedCalendarEvent.notes}</span>
+                <div className="calendarEventDrawerGrid">
+                  <div>
+                    <strong>Start</strong>
+                    <span>{formatDate(selectedCalendarEvent.start_date) || 'TBC'}</span>
+                  </div>
+                  <div>
+                    <strong>End</strong>
+                    <span>{formatDate(selectedCalendarEvent.end_date) || 'TBC'}</span>
+                  </div>
                 </div>
-              )}
 
-              <div className="calendarEventDrawerActions">
-                {linkedEvent?.public_slug && (
-                  <a className="primaryButton" href={`/admin/event/${linkedEvent.public_slug}`}>
+                {linkedEvent && (
+                  <div className="calendarEventDrawerSection">
+                    <strong>Linked crew sheet</strong>
+                    <span>{linkedEvent.show_name}</span>
+                  </div>
+                )}
+
+                {selectedCalendarEvent.notes && (
+                  <div className="calendarEventDrawerSection">
+                    <strong>Notes</strong>
+                    <span>{selectedCalendarEvent.notes}</span>
+                  </div>
+                )}
+
+                <div className="calendarEventDrawerActions">
+                  {linkedEvent?.public_slug && (
+                    <a className="primaryButton" href={`/admin/event/${linkedEvent.public_slug}`}>
+                      Open Crew Sheet
+                    </a>
+                  )}
+                  <button type="button" className="secondaryButton" onClick={() => deleteResourceBooking(selectedCalendarEvent.booking_ids || selectedCalendarEvent.booking_id)}>
+                    Delete Booking
+                  </button>
+                  <button type="button" className="secondaryButton" onClick={closeCalendarEventDetails}>
+                    Close
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <form className="calendarProjectEditForm" onSubmit={saveSelectedCalendarEventDetails}>
+                  <div className="drawerSectionHeader">
+                    <div>
+                      <p className="eyebrowDark">Project Details</p>
+                      <h3>Edit project / crew sheet</h3>
+                    </div>
+                    <button type="submit" className="primaryButton">Save Details</button>
+                  </div>
+
+                  <div className="calendarEventDrawerGrid projectEditGrid">
+                    <label>
+                      <strong>Show Name</strong>
+                      <input value={selectedEventEditForm?.show_name || ''} onChange={e => updateSelectedEventEditField('show_name', e.target.value)} />
+                    </label>
+                    <label>
+                      <strong>Venue</strong>
+                      <input value={selectedEventEditForm?.venue || ''} onChange={e => updateSelectedEventEditField('venue', e.target.value)} />
+                    </label>
+                    <label>
+                      <strong>Project Manager</strong>
+                      <input value={selectedEventEditForm?.project_manager || ''} onChange={e => updateSelectedEventEditField('project_manager', e.target.value)} />
+                    </label>
+                    <label>
+                      <strong>Start Date</strong>
+                      <input type="date" value={selectedEventEditForm?.start_date || ''} onChange={e => updateSelectedEventEditField('start_date', e.target.value)} />
+                    </label>
+                    <label>
+                      <strong>End Date</strong>
+                      <input type="date" value={selectedEventEditForm?.end_date || ''} onChange={e => updateSelectedEventEditField('end_date', e.target.value)} />
+                    </label>
+                    <label>
+                      <strong>Status</strong>
+                      <select value={selectedEventEditForm?.crew_sheet_status || 'in_progress'} onChange={e => updateSelectedEventEditField('crew_sheet_status', e.target.value)}>
+                        <option value="in_progress">In Progress</option>
+                        <option value="ready_to_go">Ready To Go</option>
+                        <option value="show_complete">Show Complete</option>
+                      </select>
+                    </label>
+                  </div>
+                </form>
+
+                <div className="calendarEventDrawerStats">
+                  <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.crew ?? 0}</strong><span>Crew</span></div>
+                  <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.flights ?? 0}</strong><span>Flights</span></div>
+                  <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.hotels ?? 0}</strong><span>Hotels</span></div>
+                  <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.transfers ?? 0}</strong><span>Transfers</span></div>
+                  <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.documents ?? 0}</strong><span>Docs</span></div>
+                </div>
+
+                <section className="projectResourceManager">
+                  <div className="drawerSectionHeader">
+                    <div>
+                      <p className="eyebrowDark">Resources</p>
+                      <h3>Assigned resources</h3>
+                    </div>
+                  </div>
+
+                  <form className="projectResourceAddForm" onSubmit={addResourceToSelectedCalendarEvent}>
+                    <select value={selectedEventResourceId} onChange={e => setSelectedEventResourceId(e.target.value)}>
+                      <option value="">Choose crew, vehicle, room, trailer or dry hire...</option>
+                      {resourceOptions.map(resource => (
+                        <option value={resource.id} key={resource.id}>
+                          {CALENDAR_CATEGORY_LABELS[resource.category] || resource.category} — {resource.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="submit" className="primaryButton">Add Resource</button>
+                  </form>
+
+                  {assignedResourceGroups.map(group => (
+                    <div className="assignedResourceGroup" key={group.category}>
+                      <h4>{group.label}</h4>
+                      <div className="assignedResourceList">
+                        {group.items.map(booking => (
+                          <div className="assignedResourcePill" key={booking.id} style={{ '--resource-colour': booking.resource_calendar?.colour || getCalendarCategoryColour(group.category) }}>
+                            <span>{booking.resource_calendar?.name || booking.booking_name}</span>
+                            <button type="button" onClick={() => deleteResourceBooking(booking.id)}>Remove</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </section>
+
+                <div className="calendarEventDrawerActions">
+                  <a className="primaryButton" href={`/admin/event/${selectedCalendarEvent.public_slug}`}>
                     Open Crew Sheet
                   </a>
-                )}
-                <button type="button" className="secondaryButton" onClick={() => deleteResourceBooking(selectedCalendarEvent.booking_ids || selectedCalendarEvent.booking_id)}>
-                  Delete Booking
-                </button>
-                <button type="button" className="secondaryButton" onClick={closeCalendarEventDetails}>
-                  Close
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <form className="projectModalEditForm" onSubmit={saveSelectedCalendarEventEdits}>
-                <div className="projectModalSectionHeader">
-                  <div>
-                    <p className="eyebrowDark">Project Details</p>
-                    <h3>Edit project / crew sheet</h3>
-                  </div>
-                  <button type="submit" className="primaryButton">Save Details</button>
+                  <button type="button" className="secondaryButton" onClick={closeCalendarEventDetails}>
+                    Close
+                  </button>
                 </div>
-
-                <div className="projectModalFormGrid">
-                  <label className="formWide">
-                    Show Name
-                    <input value={selectedCalendarEvent.show_name || ''} onChange={e => updateSelectedCalendarEventField('show_name', e.target.value)} />
-                  </label>
-                  <label>
-                    Venue
-                    <input value={selectedCalendarEvent.venue || ''} onChange={e => updateSelectedCalendarEventField('venue', e.target.value)} />
-                  </label>
-                  <label>
-                    Project Manager
-                    <input value={selectedCalendarEvent.project_manager || ''} onChange={e => updateSelectedCalendarEventField('project_manager', e.target.value)} />
-                  </label>
-                  <label>
-                    Start Date
-                    <input type="date" value={selectedCalendarEvent.start_date || ''} onChange={e => updateSelectedCalendarEventField('start_date', e.target.value)} />
-                  </label>
-                  <label>
-                    End Date
-                    <input type="date" value={selectedCalendarEvent.end_date || ''} onChange={e => updateSelectedCalendarEventField('end_date', e.target.value)} />
-                  </label>
-                  <label>
-                    Status
-                    <select value={getCrewSheetStatus(selectedCalendarEvent)} onChange={e => updateSelectedCalendarEventField('crew_sheet_status', e.target.value)}>
-                      <option value="in_progress">In Progress</option>
-                      <option value="ready_to_go">Ready To Go</option>
-                      <option value="show_complete">Show Complete</option>
-                    </select>
-                  </label>
-                </div>
-              </form>
-
-              <div className="calendarEventDrawerStats">
-                <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.crew ?? 0}</strong><span>Crew</span></div>
-                <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.flights ?? 0}</strong><span>Flights</span></div>
-                <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.hotels ?? 0}</strong><span>Hotels</span></div>
-                <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.transfers ?? 0}</strong><span>Transfers</span></div>
-                <div><strong>{calendarEventCountsLoading ? '…' : calendarEventCounts?.documents ?? 0}</strong><span>Docs</span></div>
-              </div>
-
-              <section className="projectResourceManager">
-                <div className="projectModalSectionHeader">
-                  <div>
-                    <p className="eyebrowDark">Resources</p>
-                    <h3>Assigned resources</h3>
-                  </div>
-                </div>
-
-                <div className="projectAssignedResourceGroups">
-                  {PROJECT_RESOURCE_CATEGORIES.map(category => {
-                    const categoryBookings = getBookingsForEvent(selectedCalendarEvent).filter(booking => booking.resource_category === category)
-                    if (!categoryBookings.length) return null
-
-                    return (
-                      <div className="projectAssignedResourceGroup" key={category}>
-                        <strong>{getResourceCalendarLabel(category)}</strong>
-                        <div className="projectAssignedResourceList">
-                          {categoryBookings.map(booking => (
-                            <div className="projectAssignedResourceItem" key={booking.id} style={{ '--calendar-key-colour': booking.resource_colour }}>
-                              <span className="calendarKeyColour"></span>
-                              <span>{booking.resource_calendar?.name || booking.booking_name}</span>
-                              <button type="button" onClick={() => deleteResourceBooking(booking.id, { keepOpen: true })}>Remove</button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-
-                <form className="projectAddResourceForm" onSubmit={addResourceToSelectedEvent}>
-                  <label>
-                    Add Resource
-                    <select value={projectResourceForm.resource_calendar_id} onChange={e => updateProjectResourceField('resource_calendar_id', e.target.value)}>
-                      <option value="">Choose crew, vehicle, room or trailer...</option>
-                      {PROJECT_RESOURCE_CATEGORIES.map(category => {
-                        const resources = getResourceCalendarsForCategory(category).filter(resource => resource.active !== false)
-                        if (!resources.length) return null
-                        return (
-                          <optgroup key={category} label={getResourceCalendarLabel(category)}>
-                            {resources.map(resource => (
-                              <option key={resource.id} value={resource.id}>{resource.name}</option>
-                            ))}
-                          </optgroup>
-                        )
-                      })}
-                    </select>
-                  </label>
-                  <label>
-                    Resource Notes
-                    <input value={projectResourceForm.notes} onChange={e => updateProjectResourceField('notes', e.target.value)} placeholder="Optional booking notes" />
-                  </label>
-                  <button type="submit" className="primaryButton">Add Resource</button>
-                </form>
-              </section>
-
-              <div className="calendarEventDrawerActions">
-                <a className="primaryButton" href={`/admin/event/${selectedCalendarEvent.public_slug}`}>
-                  Open Crew Sheet
-                </a>
-                <button type="button" className="secondaryButton" onClick={closeCalendarEventDetails}>
-                  Close
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+              </>
+            )}
+          </div>
         </aside>
       </div>
     )
@@ -2535,7 +2519,7 @@ function AdminPage() {
                   Show Resources
                 </button>
               )}
-              <div className={`${showCalendarResources ? 'calendarWorkspace' : 'calendarWorkspace calendarWorkspaceFull'} ${selectedCalendarEvent ? 'calendarWorkspaceWithDrawer' : ''}`}>
+              <div className={`${showCalendarResources ? 'calendarWorkspace' : 'calendarWorkspace calendarWorkspaceFull'} `}>
                 {showCalendarResources && renderCalendarKeySidebar()}
                 <div className="calendarViewPanel">
                   {calendarView === 'month' && renderMonthCalendar()}
@@ -3324,6 +3308,20 @@ function AdminPage() {
 function EventManagerPage() {
   const slug = window.location.pathname.replace('/admin/event/', '')
   const [event, setEvent] = useState(null)
+  const [eventDetailsForm, setEventDetailsForm] = useState({
+    show_name: '',
+    venue: '',
+    start_date: '',
+    end_date: '',
+    project_manager: '',
+    crew_sheet_status: 'in_progress',
+  })
+
+  const [eventResourceBookingForm, setEventResourceBookingForm] = useState({
+    resource_calendar_id: '',
+    notes: '',
+  })
+
   const [eventLocationForm, setEventLocationForm] = useState({
     venue_address: '',
     venue_maps_url: '',
@@ -3343,6 +3341,8 @@ function EventManagerPage() {
   const [transfers, setTransfers] = useState([])
   const [scheduleItems, setScheduleItems] = useState([])
   const [documents, setDocuments] = useState([])
+  const [resourceCalendars, setResourceCalendars] = useState([])
+  const [resourceBookings, setResourceBookings] = useState([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
@@ -3450,6 +3450,14 @@ function EventManagerPage() {
     }
 
     setEvent(eventData)
+    setEventDetailsForm({
+      show_name: eventData.show_name || '',
+      venue: eventData.venue || '',
+      start_date: eventData.start_date || '',
+      end_date: eventData.end_date || eventData.start_date || '',
+      project_manager: eventData.project_manager || '',
+      crew_sheet_status: eventData.crew_sheet_status || 'in_progress',
+    })
     setEventLocationForm({
       venue_address: eventData.venue_address || '',
       venue_maps_url: eventData.venue_maps_url || '',
@@ -3519,6 +3527,22 @@ function EventManagerPage() {
     if (documentError) setMessage(`Could not load documents: ${documentError.message}`)
     else setDocuments(documentData || [])
 
+    const { data: resourceCalendarData } = await supabase
+      .from('resource_calendars')
+      .select('*')
+      .order('category', { ascending: true })
+      .order('name', { ascending: true })
+
+    setResourceCalendars(resourceCalendarData || [])
+
+    const { data: resourceBookingData } = await supabase
+      .from('resource_bookings')
+      .select('*')
+      .eq('event_id', eventData.id)
+      .order('created_at', { ascending: true })
+
+    setResourceBookings(resourceBookingData || [])
+
     setLoading(false)
   }
 
@@ -3568,6 +3592,110 @@ function EventManagerPage() {
 
     setMessage('Location details updated.')
     await loadEventManager()
+  }
+
+  function updateEventDetailsField(field, value) {
+    setEventDetailsForm(current => ({
+      ...current,
+      [field]: value,
+    }))
+  }
+
+  async function saveEventDetails(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!event) return
+
+    const payload = {
+      show_name: eventDetailsForm.show_name,
+      venue: eventDetailsForm.venue,
+      start_date: eventDetailsForm.start_date || null,
+      end_date: eventDetailsForm.end_date || eventDetailsForm.start_date || null,
+      project_manager: eventDetailsForm.project_manager,
+      crew_sheet_status: eventDetailsForm.crew_sheet_status || 'in_progress',
+    }
+
+    const { error } = await supabase
+      .from('Events')
+      .update(payload)
+      .eq('id', event.id)
+
+    if (error) {
+      setMessage(`Could not save crew sheet details: ${error.message}`)
+      return
+    }
+
+    setMessage('Crew sheet details updated.')
+    await loadEventManager()
+  }
+
+  function updateEventResourceBookingField(field, value) {
+    setEventResourceBookingForm(current => ({
+      ...current,
+      [field]: value,
+    }))
+  }
+
+  function getEventResourceById(resourceId) {
+    return resourceCalendars.find(resource => String(resource.id) === String(resourceId))
+  }
+
+  async function saveEventResourceBooking(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!event || !eventResourceBookingForm.resource_calendar_id) {
+      setMessage('Choose a resource to assign.')
+      return
+    }
+
+    const resource = getEventResourceById(eventResourceBookingForm.resource_calendar_id)
+    const payload = {
+      resource_calendar_id: Number(eventResourceBookingForm.resource_calendar_id),
+      event_id: event.id,
+      booking_name: event.show_name,
+      booking_type: 'Crew Sheet Assignment',
+      start_date: event.start_date,
+      end_date: event.end_date || event.start_date,
+      notes: eventResourceBookingForm.notes || null,
+      active: true,
+    }
+
+    const { error } = await supabase.from('resource_bookings').insert([payload])
+
+    if (error) {
+      setMessage(`Could not assign resource: ${error.message}`)
+      return
+    }
+
+    setMessage(`${resource?.name || 'Resource'} assigned to crew sheet.`)
+    setEventResourceBookingForm({ resource_calendar_id: '', notes: '' })
+    await loadEventManager()
+  }
+
+  async function deleteEventResourceBooking(bookingId) {
+    const confirmed = window.confirm('Remove this assigned resource from the crew sheet?')
+    if (!confirmed) return
+
+    const { error } = await supabase.from('resource_bookings').delete().eq('id', bookingId)
+
+    if (error) {
+      setMessage(`Could not remove resource: ${error.message}`)
+      return
+    }
+
+    setMessage('Resource removed from crew sheet.')
+    await loadEventManager()
+  }
+
+  function getEventAssignedResources() {
+    return resourceBookings
+      .map(booking => ({
+        ...booking,
+        resource_calendar: getEventResourceById(booking.resource_calendar_id),
+      }))
+      .filter(booking => booking.resource_calendar)
   }
 
 
@@ -4971,6 +5099,98 @@ function EventManagerPage() {
               <div><strong>Project Manager</strong><span>{event.project_manager || 'Not set'}</span></div>
               <div><strong>Venue</strong><span>{event.venue || 'Not set'}</span></div>
             </div>
+          </section>
+
+          <section className="eventCard liveSyncCard">
+            <div className="drawerSectionHeader">
+              <div>
+                <p className="eyebrowDark">Live Sync</p>
+                <h2>Project / Crew Sheet Details</h2>
+              </div>
+              <span className="syncPill">Calendar ↔ Crew Sheet</span>
+            </div>
+            <p>Edit these details here or from the calendar. Both views use the same live Events record.</p>
+
+            <form onSubmit={saveEventDetails} className="adminForm liveSyncForm">
+              <label>
+                Show Name
+                <input value={eventDetailsForm.show_name} onChange={e => updateEventDetailsField('show_name', e.target.value)} />
+              </label>
+              <label>
+                Venue
+                <input value={eventDetailsForm.venue} onChange={e => updateEventDetailsField('venue', e.target.value)} />
+              </label>
+              <label>
+                Project Manager
+                <input value={eventDetailsForm.project_manager} onChange={e => updateEventDetailsField('project_manager', e.target.value)} />
+              </label>
+              <label>
+                Start Date
+                <input type="date" value={eventDetailsForm.start_date} onChange={e => updateEventDetailsField('start_date', e.target.value)} />
+              </label>
+              <label>
+                End Date
+                <input type="date" value={eventDetailsForm.end_date} onChange={e => updateEventDetailsField('end_date', e.target.value)} />
+              </label>
+              <label>
+                Status
+                <select value={eventDetailsForm.crew_sheet_status} onChange={e => updateEventDetailsField('crew_sheet_status', e.target.value)}>
+                  <option value="in_progress">In Progress</option>
+                  <option value="ready_to_go">Ready To Go</option>
+                  <option value="show_complete">Show Complete</option>
+                </select>
+              </label>
+              <button className="primaryButton" type="submit">Save Live Details</button>
+            </form>
+          </section>
+
+          <section className="eventCard liveSyncCard">
+            <div className="drawerSectionHeader">
+              <div>
+                <p className="eyebrowDark">Resources</p>
+                <h2>Assigned Resources</h2>
+              </div>
+              <span className="syncPill">resource_bookings</span>
+            </div>
+            <p>Resources assigned here also appear on the Operations Calendar ribbon. Resources added from the calendar also appear here.</p>
+
+            <form onSubmit={saveEventResourceBooking} className="adminForm liveResourceForm">
+              <label>
+                Resource
+                <select value={eventResourceBookingForm.resource_calendar_id} onChange={e => updateEventResourceBookingField('resource_calendar_id', e.target.value)}>
+                  <option value="">Choose resource...</option>
+                  {resourceCalendars.filter(resource => resource.active !== false).map(resource => (
+                    <option value={resource.id} key={resource.id}>
+                      {CALENDAR_CATEGORY_LABELS[resource.category] || resource.category} — {resource.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Notes
+                <input value={eventResourceBookingForm.notes} onChange={e => updateEventResourceBookingField('notes', e.target.value)} placeholder="Optional notes" />
+              </label>
+              <button className="primaryButton" type="submit">Assign Resource</button>
+            </form>
+
+            {['crew', 'freelancers', 'vehicles', 'rooms', 'led_trailers', 'dry_hire'].map(category => {
+              const items = getEventAssignedResources().filter(booking => booking.resource_calendar?.category === category)
+              if (!items.length) return null
+
+              return (
+                <div className="assignedResourceGroup" key={category}>
+                  <h3>{CALENDAR_CATEGORY_LABELS[category] || category}</h3>
+                  <div className="assignedResourceList">
+                    {items.map(booking => (
+                      <div className="assignedResourcePill" key={booking.id} style={{ '--resource-colour': booking.resource_calendar?.colour || '#16a34a' }}>
+                        <span>{booking.resource_calendar?.name}</span>
+                        <button type="button" onClick={() => deleteEventResourceBooking(booking.id)}>Remove</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </section>
 
           <section className="eventCard collapsibleOverviewCard">
