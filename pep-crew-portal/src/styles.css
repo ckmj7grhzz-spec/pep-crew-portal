@@ -5761,3 +5761,75 @@ button.calendarEventListItem {
     max-height: none !important;
   }
 }
+
+/* Resource Bookings v1 */
+.resourceBookingQuickPanel {
+  margin: 12px 0 16px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(248, 250, 252, 0.82);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.resourceBookingToggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--pep-text);
+}
+
+.resourceBookingToggle span {
+  display: grid;
+  gap: 3px;
+}
+
+.resourceBookingToggle strong {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.resourceBookingToggle small {
+  color: var(--pep-muted);
+  font-weight: 800;
+}
+
+.resourceBookingToggle.open {
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.resourceBookingForm {
+  margin-top: 0;
+  padding: 16px;
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+.resourceBookingForm .formWide {
+  grid-column: 1 / -1;
+}
+
+.resourceBookingCalendarEvent {
+  --calendar-event-colour: #64748b;
+}
+
+.calendarStatusBadge-resource_booking {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.calendarEventDrawerActions .secondaryButton {
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .resourceBookingForm .formWide {
+    grid-column: auto;
+  }
+}
