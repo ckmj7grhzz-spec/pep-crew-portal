@@ -964,6 +964,33 @@ function AdminPage() {
     return resourceCalendars.find(resource => String(resource.id) === String(resourceId))
   }
 
+  function normaliseBookingMatchText(value) {
+    return String(value || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, ' ')
+  }
+
+  function findLinkedEventForBooking(booking) {
+    if (booking.event_id) {
+      return events.find(eventRecord => String(eventRecord.id) === String(booking.event_id)) || null
+    }
+
+    const bookingText = normaliseBookingMatchText(booking.booking_name || booking.title)
+    if (!bookingText) return null
+
+    return events.find(eventRecord => {
+      const eventText = normaliseBookingMatchText(eventRecord.show_name)
+      if (!eventText) return false
+
+      const nameMatches = bookingText === eventText || bookingText.includes(eventText) || eventText.includes(bookingText)
+      if (!nameMatches) return false
+
+      const bookingStart = parseCalendarDate(booking.start_date)
+      const bookingEnd = parseCalendarDate(booking.end_date || booking.start_date) || bookingStart
+      if (!bookingStart || !bookingEnd) return true
+
+      return eventOverlapsRange(eventRecord, bookingStart, bookingEnd)
+    }) || null
+  }
+
   function updateResourceBookingField(field, value) {
     setResourceBookingForm(current => {
       const next = { ...current, [field]: value }
@@ -1423,14 +1450,14 @@ function AdminPage() {
     if (!cleanColours.length) return getCalendarCategoryColour('projects')
     if (cleanColours.length === 1) return cleanColours[0]
 
-    const stopSize = Math.max(8, Math.floor(100 / cleanColours.length))
+    const stripeSize = 26
     const parts = cleanColours.map((colour, index) => {
-      const start = index * stopSize
-      const end = index === cleanColours.length - 1 ? 100 : (index + 1) * stopSize
-      return `${colour} ${start}%, ${colour} ${end}%`
+      const start = index * stripeSize
+      const end = (index + 1) * stripeSize
+      return `${colour} ${start}px, ${colour} ${end}px`
     })
 
-    return `linear-gradient(90deg, ${parts.join(', ')})`
+    return `repeating-linear-gradient(135deg, ${parts.join(', ')})`
   }
 
   function getCalendarEventStyle(eventRecord) {
@@ -1515,7 +1542,7 @@ function AdminPage() {
       .map(booking => {
         const resource = booking.resource_calendar || getResourceCalendarById(booking.resource_calendar_id)
         const category = resource?.category || 'projects'
-        const linkedEvent = booking.linked_event || events.find(eventRecord => String(eventRecord.id) === String(booking.event_id))
+        const linkedEvent = booking.linked_event || findLinkedEventForBooking(booking)
 
         return {
           ...booking,
@@ -1535,9 +1562,9 @@ function AdminPage() {
       })
 
     const linkedBookingsByEventId = visibleBookings
-      .filter(booking => booking.event_id)
+      .filter(booking => booking.linked_event?.id)
       .reduce((groups, booking) => {
-        const key = String(booking.event_id)
+        const key = String(booking.linked_event.id)
         if (!groups[key]) groups[key] = []
         groups[key].push(booking)
         return groups
@@ -1568,7 +1595,7 @@ function AdminPage() {
       })
       .filter(eventRecord => calendarFilters.projects || eventRecord.has_resource_bookings)
 
-    const unlinkedBookings = visibleBookings.filter(booking => !booking.event_id)
+    const unlinkedBookings = visibleBookings.filter(booking => !booking.linked_event?.id)
 
     const groupedBookings = Object.values(
       unlinkedBookings.reduce((groups, booking) => {
