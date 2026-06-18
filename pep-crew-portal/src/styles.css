@@ -6186,3 +6186,8 @@ button.calendarEventListItem {
     display: grid;
   }
 }
+
+/* Public resource booking rows */
+.publicResourceItem strong {
+  display: block;
+}
