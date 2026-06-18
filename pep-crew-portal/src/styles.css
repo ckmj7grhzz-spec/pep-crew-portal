@@ -5234,3 +5234,80 @@ button.calendarEventListItem {
 .calendarColourSettingsCard .staffSectionHeader h2 {
   margin-bottom: 6px;
 }
+
+/* Resource sidebar child calendar hierarchy refinement */
+.calendarKeyGroup .calendarSubCalendarList {
+  margin: 8px 0 2px 18px;
+  padding-left: 18px;
+  border-left: 2px solid #e2e8f0;
+  display: grid;
+  gap: 6px;
+}
+
+.calendarSubCalendarItem {
+  position: relative;
+  min-height: 34px;
+  padding: 7px 10px 7px 12px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #edf2f7;
+  gap: 9px;
+}
+
+.calendarSubCalendarItem::before {
+  content: '';
+  position: absolute;
+  left: -19px;
+  top: 50%;
+  width: 16px;
+  height: 2px;
+  background: #e2e8f0;
+  transform: translateY(-50%);
+}
+
+.calendarSubCalendarItem span:last-child,
+.calendarSubCalendarItem .calendarKeyText strong {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.calendarSubCalendarItem.active {
+  background: #ffffff;
+  border-color: color-mix(in srgb, var(--calendar-key-colour, var(--pep-green)) 22%, #e2e8f0);
+}
+
+.calendarSubCalendarItem.active span:last-child,
+.calendarSubCalendarItem.active .calendarKeyText strong {
+  color: #334155;
+  font-weight: 750;
+}
+
+.calendarSubCalendarItem.inactive {
+  background: #f8fafc;
+  border-color: #eef2f7;
+}
+
+.calendarSubCalendarItem.inactive span:last-child,
+.calendarSubCalendarItem.inactive .calendarKeyText strong,
+.calendarSubCalendarItem.inactive .calendarKeyText small {
+  color: #94a3b8 !important;
+  font-weight: 600;
+}
+
+.calendarSubCalendarVisibilityButton {
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 900px) {
+  .calendarKeyGroup .calendarSubCalendarList {
+    margin-left: 12px;
+    padding-left: 14px;
+  }
+
+  .calendarSubCalendarItem::before {
+    left: -15px;
+    width: 12px;
+  }
+}
