@@ -6191,12 +6191,3 @@ button.calendarEventListItem {
 .publicResourceItem strong {
   display: block;
 }
-
-setTimeout(() => {
-  document
-    .getElementById('staff-edit-form')
-    ?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    })
-}, 100)
