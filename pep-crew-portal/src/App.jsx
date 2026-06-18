@@ -600,6 +600,81 @@ const CALENDAR_COLOUR_LABELS = {
 
 const CALENDAR_CATEGORY_LABELS = CALENDAR_COLOUR_LABELS
 
+
+function normalisePersonName(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function findStaffProfileForResource(resource, staffMembers = []) {
+  const resourceName = normalisePersonName(resource?.name)
+  if (!resourceName) return null
+  return staffMembers.find(member => normalisePersonName(member.name) === resourceName) || null
+}
+
+function buildCrewRowFromResourceBooking(booking, staffMembers = []) {
+  const resource = booking.resource_calendar
+  const staffProfile = findStaffProfileForResource(resource, staffMembers)
+  const isFreelancer = resource?.category === 'freelancers'
+  const fallbackRole = isFreelancer ? 'Freelancer' : 'Crew'
+
+  return {
+    id: `resource-${booking.id}`,
+    name: staffProfile?.name || resource?.name || booking.booking_name || 'Booked Resource',
+    role: staffProfile?.role || booking.booking_type || fallbackRole,
+    department: staffProfile?.department || (isFreelancer ? 'Freelancer' : ''),
+    mobile: staffProfile?.phone || staffProfile?.mobile || '',
+    email: staffProfile?.email || '',
+    hotel: '',
+    room_number: '',
+    notes: booking.notes || staffProfile?.notes || staffProfile?.skills || '',
+    source: 'resource_booking',
+    resource_booking_id: booking.id,
+    resource_category: resource?.category,
+  }
+}
+
+function mergeCrewRowsWithResourceBookings(crewRows = [], resourceBookings = [], resourceCalendars = [], staffMembers = []) {
+  const resourceById = resourceCalendars.reduce((map, resource) => {
+    map[String(resource.id)] = resource
+    return map
+  }, {})
+
+  const baseCrew = (crewRows || []).map(member => ({ ...member, source: member.source || 'crew_table' }))
+  const existingKeys = new Set(baseCrew.map(member => normalisePersonName(member.email || member.name)).filter(Boolean))
+
+  const resourceCrewRows = (resourceBookings || [])
+    .filter(booking => booking.active !== false)
+    .map(booking => ({
+      ...booking,
+      resource_calendar: booking.resource_calendar || resourceById[String(booking.resource_calendar_id)],
+    }))
+    .filter(booking => ['crew', 'freelancers'].includes(booking.resource_calendar?.category))
+    .map(booking => buildCrewRowFromResourceBooking(booking, staffMembers))
+    .filter(member => {
+      const key = normalisePersonName(member.email || member.name)
+      if (!key || existingKeys.has(key)) return false
+      existingKeys.add(key)
+      return true
+    })
+
+  return [...baseCrew, ...resourceCrewRows]
+}
+
+function getTransportResourceBookings(resourceBookings = [], resourceCalendars = []) {
+  const resourceById = resourceCalendars.reduce((map, resource) => {
+    map[String(resource.id)] = resource
+    return map
+  }, {})
+
+  return (resourceBookings || [])
+    .filter(booking => booking.active !== false)
+    .map(booking => ({
+      ...booking,
+      resource_calendar: booking.resource_calendar || resourceById[String(booking.resource_calendar_id)],
+    }))
+    .filter(booking => ['vehicles', 'led_trailers'].includes(booking.resource_calendar?.category))
+}
+
 function AdminPage() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -3454,6 +3529,7 @@ function EventManagerPage() {
   const [documents, setDocuments] = useState([])
   const [resourceCalendars, setResourceCalendars] = useState([])
   const [resourceBookings, setResourceBookings] = useState([])
+  const [staffMembers, setStaffMembers] = useState([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
@@ -3641,6 +3717,13 @@ function EventManagerPage() {
       .order('name', { ascending: true })
 
     setResourceCalendars(resourceCalendarData || [])
+
+    const { data: staffMemberData } = await supabase
+      .from('staff_members')
+      .select('*')
+      .order('name', { ascending: true })
+
+    setStaffMembers(staffMemberData || [])
 
     const { data: resourceBookingData } = await supabase
       .from('resource_bookings')
@@ -5128,7 +5211,10 @@ function EventManagerPage() {
       .includes(searchText)
   }
 
-  const filteredCrew = crew.filter(matchesSearch)
+  const crewWithResourceBookings = mergeCrewRowsWithResourceBookings(crew, resourceBookings, resourceCalendars, staffMembers)
+  const transportResourceBookings = getTransportResourceBookings(resourceBookings, resourceCalendars)
+
+  const filteredCrew = crewWithResourceBookings.filter(matchesSearch)
   const filteredFlights = flights.filter(matchesSearch)
   const filteredHotels = hotels.filter(matchesSearch)
   const filteredTransfers = transfers.filter(matchesSearch)
@@ -5658,7 +5744,7 @@ function EventManagerPage() {
       <section className="eventCard">
         <h2>Crew Members</h2>
 
-        {crew.length ? (
+        {crewWithResourceBookings.length ? (
           <div className="adminList">
             {filteredCrew.map(member => (
               <div className="adminListItem" key={member.id}>
@@ -5672,8 +5758,14 @@ function EventManagerPage() {
                 </div>
 
                 <div className="adminActions">
-                  <button type="button" onClick={() => startEditCrew(member)}>Edit</button>
-                  <button type="button" onClick={() => deleteCrewMember(member.id)}>Delete</button>
+                  {member.source === 'resource_booking' ? (
+                    <button type="button" onClick={() => deleteEventResourceBooking(member.resource_booking_id)}>Remove Booking</button>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => startEditCrew(member)}>Edit</button>
+                      <button type="button" onClick={() => deleteCrewMember(member.id)}>Delete</button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -5682,6 +5774,28 @@ function EventManagerPage() {
           <Empty text="No crew added yet." />
         )}
       </section>
+
+      {transportResourceBookings.length > 0 && (
+        <section className="eventCard">
+          <h2>Transport Resources</h2>
+          <p>Vehicles and LED trailers assigned from the resource manager.</p>
+          <div className="adminList">
+            {transportResourceBookings.map(booking => (
+              <div className="adminListItem" key={booking.id}>
+                <div>
+                  <strong>{booking.resource_calendar?.name || booking.booking_name || 'Booked transport'}</strong>
+                  <p>{CALENDAR_CATEGORY_LABELS[booking.resource_calendar?.category] || 'Transport Resource'}</p>
+                  <small>{formatDate(booking.start_date)}{booking.end_date && booking.end_date !== booking.start_date && ` to ${formatDate(booking.end_date)}`}</small>
+                  {booking.notes && <p>{booking.notes}</p>}
+                </div>
+                <div className="adminActions">
+                  <button type="button" onClick={() => deleteEventResourceBooking(booking.id)}>Remove Booking</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       </>
       )}
@@ -5713,7 +5827,7 @@ function EventManagerPage() {
             Crew Member
             <select value={flightForm.crew_name} onChange={e => updateFlightField('crew_name', e.target.value)}>
               <option value="">Select crew member</option>
-              {crew.map(member => (
+              {crewWithResourceBookings.map(member => (
                 <option key={member.id} value={member.name}>{member.name}</option>
               ))}
             </select>
@@ -5839,7 +5953,7 @@ function EventManagerPage() {
             Guest
             <select value={hotelForm.guest_name} onChange={e => updateHotelField('guest_name', e.target.value)}>
               <option value="">Select guest</option>
-              {crew.map(member => (
+              {crewWithResourceBookings.map(member => (
                 <option key={member.id} value={member.name}>{member.name}</option>
               ))}
             </select>
@@ -5992,7 +6106,7 @@ function EventManagerPage() {
             Passenger
             <select value={transferForm.passenger} onChange={e => updateTransferField('passenger', e.target.value)}>
               <option value="">Select passenger</option>
-              {crew.map(member => (
+              {crewWithResourceBookings.map(member => (
                 <option key={member.id} value={member.name}>{member.name}</option>
               ))}
             </select>
@@ -6747,6 +6861,7 @@ function PublicCrewSheet() {
     notes: [],
     resource_bookings: [],
     resource_calendars: [],
+    staff_members: [],
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -6791,9 +6906,15 @@ function PublicCrewSheet() {
         .order('category', { ascending: true })
         .order('name', { ascending: true })
 
+      const { data: publicStaffMembers } = await supabase
+        .from('staff_members')
+        .select('*')
+        .order('name', { ascending: true })
+
       results.documents = (results.documents || []).filter(document => document.is_public !== false)
       results.resource_bookings = publicResourceBookings || []
       results.resource_calendars = publicResourceCalendars || []
+      results.staff_members = publicStaffMembers || []
 
       setData(results)
       setLoading(false)
@@ -6805,43 +6926,17 @@ function PublicCrewSheet() {
   if (loading) return <main className="page"><p>Loading PEP crew sheet...</p></main>
   if (error) return <main className="page"><p>{error}</p></main>
 
-  const publicResourceCalendarById = (data.resource_calendars || []).reduce((map, resource) => {
-    map[String(resource.id)] = resource
-    return map
-  }, {})
-
-  const publicResourceBookings = (data.resource_bookings || [])
-    .map(booking => ({
-      ...booking,
-      resource_calendar: publicResourceCalendarById[String(booking.resource_calendar_id)],
-    }))
-    .filter(booking => booking.resource_calendar)
-
-  const publicCrewResourceBookings = publicResourceBookings.filter(booking =>
-    ['crew', 'freelancers'].includes(booking.resource_calendar?.category)
+  const publicCrewRows = mergeCrewRowsWithResourceBookings(
+    data.crew || [],
+    data.resource_bookings || [],
+    data.resource_calendars || [],
+    data.staff_members || []
   )
 
-  const publicTransportResourceBookings = publicResourceBookings.filter(booking =>
-    ['vehicles', 'led_trailers'].includes(booking.resource_calendar?.category)
+  const publicTransportResourceBookings = getTransportResourceBookings(
+    data.resource_bookings || [],
+    data.resource_calendars || []
   )
-
-  const publicCrewRows = [
-    ...(data.crew || []).map(member => ({ ...member, source: 'crew_table' })),
-    ...publicCrewResourceBookings
-      .filter(booking => !(data.crew || []).some(member =>
-        String(member.name || '').trim().toLowerCase() === String(booking.resource_calendar?.name || '').trim().toLowerCase()
-      ))
-      .map(booking => ({
-        id: `resource-${booking.id}`,
-        name: booking.resource_calendar?.name || booking.booking_name || 'Booked resource',
-        role: CALENDAR_CATEGORY_LABELS[booking.resource_calendar?.category] || booking.booking_type || 'Booked Resource',
-        mobile: '',
-        hotel: '',
-        room_number: '',
-        notes: booking.notes || '',
-        source: 'resource_booking',
-      })),
-  ]
 
   function renderPublicSectionContent(sectionId) {
     return (
@@ -6859,7 +6954,9 @@ function PublicCrewSheet() {
                           <tr>
                             <th>Name</th>
                             <th>Role</th>
+                            <th>Department</th>
                             <th>Mobile</th>
+                            <th>Email</th>
                             <th>Hotel</th>
                           </tr>
                         </thead>
@@ -6874,7 +6971,9 @@ function PublicCrewSheet() {
                                 )}
                               </td>
                               <td>{x.role}</td>
+                              <td>{x.department}</td>
                               <td>{x.mobile}</td>
+                              <td>{x.email}</td>
                               <td>{x.hotel} {x.room_number}</td>
                             </tr>
                           ))}
