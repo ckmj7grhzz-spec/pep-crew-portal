@@ -531,6 +531,17 @@ function eventOverlapsRange(eventRecord, rangeStart, rangeEnd) {
   return startOfCalendarDay(start) <= startOfCalendarDay(rangeEnd) && startOfCalendarDay(end) >= startOfCalendarDay(rangeStart)
 }
 
+function rangesOverlap(startA, endA, startB, endB) {
+  const aStart = parseCalendarDate(startA)
+  const aEnd = parseCalendarDate(endA || startA) || aStart
+  const bStart = parseCalendarDate(startB)
+  const bEnd = parseCalendarDate(endB || startB) || bStart
+
+  if (!aStart || !aEnd || !bStart || !bEnd) return false
+
+  return startOfCalendarDay(aStart) <= startOfCalendarDay(bEnd) && startOfCalendarDay(aEnd) >= startOfCalendarDay(bStart)
+}
+
 function parseCsv(text) {
   const rows = []
   let current = ''
@@ -807,6 +818,7 @@ function AdminPage() {
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState(null)
   const [selectedEventEditForm, setSelectedEventEditForm] = useState(null)
   const [selectedEventResourceId, setSelectedEventResourceId] = useState('')
+  const [resourceConflictWarning, setResourceConflictWarning] = useState(null)
   const [selectedCalendarDay, setSelectedCalendarDay] = useState(null)
   const [calendarEventCounts, setCalendarEventCounts] = useState(null)
   const [calendarEventCountsLoading, setCalendarEventCountsLoading] = useState(false)
@@ -2018,6 +2030,7 @@ function AdminPage() {
     setSelectedCalendarEvent(null)
     setSelectedEventEditForm(null)
     setSelectedEventResourceId('')
+    setResourceConflictWarning(null)
     setCalendarEventCounts(null)
     setCalendarEventCountsLoading(false)
   }
@@ -2069,23 +2082,45 @@ function AdminPage() {
     await loadEvents()
   }
 
-  async function addResourceToSelectedCalendarEvent(e) {
-    e.preventDefault()
-    if (!selectedCalendarEvent || !selectedEventResourceId) return
+  function getResourceConflicts(resourceId, startDate, endDate, currentEventId = null) {
+    if (!resourceId || !startDate) return []
 
-    const resource = getResourceCalendarById(selectedEventResourceId)
-    if (!resource) {
-      setMessage('Choose a valid resource.')
-      return
-    }
+    return (resourceBookings || [])
+      .filter(booking => booking.active !== false)
+      .filter(booking => String(booking.resource_calendar_id) === String(resourceId))
+      .filter(booking => !currentEventId || String(booking.event_id || '') !== String(currentEventId))
+      .filter(booking => rangesOverlap(startDate, endDate || startDate, booking.start_date, booking.end_date || booking.start_date))
+      .map(booking => {
+        const linkedEvent = booking.linked_event || findLinkedEventForBooking(booking)
+        return {
+          ...booking,
+          linked_event: linkedEvent,
+          display_name: linkedEvent?.show_name || booking.booking_name || booking.title || 'Existing booking',
+          display_venue: linkedEvent?.venue || '',
+        }
+      })
+  }
+
+  function getResourceWarningCount(resourceId) {
+    if (!selectedCalendarEvent || !resourceId) return 0
+    const startDate = selectedCalendarEvent.start_date || formatCalendarDateInput(new Date())
+    const endDate = selectedCalendarEvent.end_date || selectedCalendarEvent.start_date || startDate
+    return getResourceConflicts(resourceId, startDate, endDate, selectedCalendarEvent.id).length
+  }
+
+  async function commitResourceToSelectedCalendarEvent(resource, options = {}) {
+    if (!selectedCalendarEvent || !resource) return
+
+    const startDate = selectedCalendarEvent.start_date || formatCalendarDateInput(new Date())
+    const endDate = selectedCalendarEvent.end_date || selectedCalendarEvent.start_date || startDate
 
     const payload = {
       resource_calendar_id: Number(resource.id),
       event_id: selectedCalendarEvent.id,
       booking_name: selectedCalendarEvent.show_name || resource.name,
       booking_type: 'Crew Sheet Assignment',
-      start_date: selectedCalendarEvent.start_date || formatCalendarDateInput(new Date()),
-      end_date: selectedCalendarEvent.end_date || selectedCalendarEvent.start_date || formatCalendarDateInput(new Date()),
+      start_date: startDate,
+      end_date: endDate,
       notes: null,
       active: true,
     }
@@ -2099,9 +2134,48 @@ function AdminPage() {
 
     await ensureCrewRowForBookedResource(selectedCalendarEvent.id, resource, staffMembers, null)
 
-    setMessage(`${resource.name} assigned to ${selectedCalendarEvent.show_name}.`)
+    setMessage(options.overrideConflict
+      ? `${resource.name} assigned to ${selectedCalendarEvent.show_name} despite the conflict warning.`
+      : `${resource.name} assigned to ${selectedCalendarEvent.show_name}.`
+    )
     setSelectedEventResourceId('')
+    setResourceConflictWarning(null)
     await loadResourceBookings()
+  }
+
+  async function addResourceToSelectedCalendarEvent(e) {
+    e.preventDefault()
+    setResourceConflictWarning(null)
+
+    if (!selectedCalendarEvent || !selectedEventResourceId) return
+
+    const resource = getResourceCalendarById(selectedEventResourceId)
+    if (!resource) {
+      setMessage('Choose a valid resource.')
+      return
+    }
+
+    const startDate = selectedCalendarEvent.start_date || formatCalendarDateInput(new Date())
+    const endDate = selectedCalendarEvent.end_date || selectedCalendarEvent.start_date || startDate
+    const conflicts = getResourceConflicts(resource.id, startDate, endDate, selectedCalendarEvent.id)
+
+    if (conflicts.length) {
+      setResourceConflictWarning({
+        resource,
+        conflicts,
+        startDate,
+        endDate,
+      })
+      setMessage(`${resource.name} has a booking conflict. Review the warning before saving.`)
+      return
+    }
+
+    await commitResourceToSelectedCalendarEvent(resource)
+  }
+
+  async function bookConflictingResourceAnyway() {
+    if (!resourceConflictWarning?.resource) return
+    await commitResourceToSelectedCalendarEvent(resourceConflictWarning.resource, { overrideConflict: true })
   }
 
   function renderCalendarEventDetailDrawer() {
@@ -2129,6 +2203,7 @@ function AdminPage() {
       .filter(group => group.items.length)
 
     const resourceOptions = resourceCalendars.filter(resource => resource.active !== false)
+    const selectedResourceConflictCount = selectedEventResourceId ? getResourceWarningCount(selectedEventResourceId) : 0
 
     return (
       <div className="calendarEventDrawerOverlay" role="dialog" aria-modal="true" aria-label="Calendar item details">
@@ -2249,16 +2324,62 @@ function AdminPage() {
                   </div>
 
                   <form className="projectResourceAddForm" onSubmit={addResourceToSelectedCalendarEvent}>
-                    <select value={selectedEventResourceId} onChange={e => setSelectedEventResourceId(e.target.value)}>
+                    <select value={selectedEventResourceId} onChange={e => {
+                      setSelectedEventResourceId(e.target.value)
+                      setResourceConflictWarning(null)
+                    }}>
                       <option value="">Choose crew, vehicle, room, trailer or dry hire...</option>
-                      {resourceOptions.map(resource => (
-                        <option value={resource.id} key={resource.id}>
-                          {CALENDAR_CATEGORY_LABELS[resource.category] || resource.category} — {resource.name}
-                        </option>
-                      ))}
+                      {resourceOptions.map(resource => {
+                        const warningCount = getResourceWarningCount(resource.id)
+                        return (
+                          <option value={resource.id} key={resource.id}>
+                            {warningCount ? '⚠ ' : ''}{CALENDAR_CATEGORY_LABELS[resource.category] || resource.category} — {resource.name}{warningCount ? ` (${warningCount} conflict${warningCount === 1 ? '' : 's'})` : ''}
+                          </option>
+                        )
+                      })}
                     </select>
-                    <button type="submit" className="primaryButton">Add Resource</button>
+                    <button type="submit" className={selectedResourceConflictCount ? 'warningButton' : 'primaryButton'}>
+                      {selectedResourceConflictCount ? 'Review Conflict' : 'Add Resource'}
+                    </button>
                   </form>
+
+                  {selectedResourceConflictCount > 0 && !resourceConflictWarning && (
+                    <div className="resourceInlineWarning">
+                      <strong>⚠ Possible conflict</strong>
+                      <span>This resource is already booked during these project dates. Click Review Conflict before booking.</span>
+                    </div>
+                  )}
+
+                  {resourceConflictWarning && (
+                    <div className="resourceConflictBox">
+                      <div>
+                        <p className="eyebrowDark">Resource Conflict</p>
+                        <h4>⚠ {resourceConflictWarning.resource.name} is already booked</h4>
+                        <p>
+                          New booking dates: {formatDate(resourceConflictWarning.startDate)} → {formatDate(resourceConflictWarning.endDate)}
+                        </p>
+                      </div>
+
+                      <div className="resourceConflictList">
+                        {resourceConflictWarning.conflicts.map(conflict => (
+                          <div className="resourceConflictItem" key={conflict.id}>
+                            <strong>{conflict.display_name}</strong>
+                            {conflict.display_venue && <span>{conflict.display_venue}</span>}
+                            <small>{formatDate(conflict.start_date)} → {formatDate(conflict.end_date || conflict.start_date)}</small>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="resourceConflictActions">
+                        <button type="button" className="secondaryButton" onClick={() => setResourceConflictWarning(null)}>
+                          Cancel
+                        </button>
+                        <button type="button" className="warningButton" onClick={bookConflictingResourceAnyway}>
+                          Book Anyway
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {assignedResourceGroups.map(group => (
                     <div className="assignedResourceGroup" key={group.category}>
