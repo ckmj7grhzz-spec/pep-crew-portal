@@ -128,11 +128,33 @@ function findStaffMemberForResource(resource, staffMembers = []) {
   const resourceSlug = normalisePersonSlug(resource?.name)
   if (!resourceName && !resourceSlug) return null
 
-  return (staffMembers || []).find(member => {
+  const candidates = (staffMembers || []).filter(member => member && member.active !== false)
+
+  const exactMatch = candidates.find(member => {
     const memberName = normalisePersonName(member.name)
     const memberSlug = normalisePersonSlug(member.name)
     return (resourceName && memberName === resourceName) || (resourceSlug && memberSlug === resourceSlug)
-  }) || null
+  })
+
+  if (exactMatch) return exactMatch
+
+  const looseMatches = candidates.filter(member => {
+    const memberName = normalisePersonName(member.name)
+    if (!memberName || !resourceName) return false
+
+    const resourceWords = resourceName.split(' ').filter(word => word.length >= 2)
+    const memberWords = memberName.split(' ').filter(word => word.length >= 2)
+
+    const containsName = memberName.includes(resourceName) || resourceName.includes(memberName)
+    const firstNameMatch = resourceWords.length === 1 && memberWords[0] === resourceWords[0]
+    const sharedWordMatch = resourceWords.length > 1 && resourceWords.every(word => memberWords.includes(word))
+
+    return containsName || firstNameMatch || sharedWordMatch
+  })
+
+  if (looseMatches.length === 1) return looseMatches[0]
+
+  return looseMatches[0] || null
 }
 
 function buildCrewRowFromResourceBooking(booking, staffMembers = []) {
@@ -183,7 +205,7 @@ function mergeCrewRowsWithResourceBookings(crewRows = [], resourceBookings = [],
 }
 
 async function ensureCrewRowForBookedResource(eventId, resource, staffMembers = [], notes = '') {
-  if (!eventId || !['crew', 'freelancers'].includes(resource?.category)) return
+  if (!eventId || !['crew', 'freelancers'].includes(resource?.category)) return false
 
   let staffMember = findStaffMemberForResource(resource, staffMembers)
   const resourceName = String(resource?.name || '').trim()
@@ -192,27 +214,39 @@ async function ensureCrewRowForBookedResource(eventId, resource, staffMembers = 
     const { data: freshStaff } = await supabase
       .from('staff_members')
       .select('*')
-      .ilike('name', resourceName)
-      .maybeSingle()
+      .or(`name.ilike.%${resourceName}%,email.ilike.%${resourceName}%`)
+      .limit(5)
 
-    staffMember = freshStaff || null
+    staffMember = findStaffMemberForResource(resource, freshStaff || []) || freshStaff?.[0] || null
   }
 
   const crewName = staffMember?.name || resourceName
-  if (!crewName) return
+  if (!crewName) return false
 
-  const { data: existingCrew } = await supabase
+  const { data: existingCrewRows } = await supabase
     .from('crew')
     .select('*')
     .eq('event_id', eventId)
-    .ilike('name', crewName)
-    .maybeSingle()
+
+  const existingCrew = (existingCrewRows || []).find(row => {
+    const rowName = normalisePersonName(row.name)
+    const rowEmail = normalisePersonName(row.email)
+    const staffEmail = normalisePersonName(staffMember?.email)
+    const crewNameKey = normalisePersonName(crewName)
+    const resourceNameKey = normalisePersonName(resourceName)
+
+    return (
+      (crewNameKey && rowName === crewNameKey) ||
+      (resourceNameKey && rowName === resourceNameKey) ||
+      (staffEmail && rowEmail === staffEmail)
+    )
+  })
 
   const crewPayload = {
     name: crewName,
     role: staffMember?.role || '',
     department: staffMember?.department || '',
-    mobile: staffMember?.phone || '',
+    mobile: staffMember?.phone || staffMember?.mobile || '',
     email: staffMember?.email || '',
     notes: notes || staffMember?.notes || staffMember?.skills || '',
   }
@@ -220,25 +254,48 @@ async function ensureCrewRowForBookedResource(eventId, resource, staffMembers = 
   if (existingCrew?.id) {
     const updatePayload = {}
 
-    if (!existingCrew.role && crewPayload.role) updatePayload.role = crewPayload.role
+    if (crewPayload.name && normalisePersonName(existingCrew.name) !== normalisePersonName(crewPayload.name)) updatePayload.name = crewPayload.name
+    if ((!existingCrew.role || existingCrew.role === 'Crew') && crewPayload.role) updatePayload.role = crewPayload.role
     if (!existingCrew.department && crewPayload.department) updatePayload.department = crewPayload.department
     if (!existingCrew.mobile && crewPayload.mobile) updatePayload.mobile = crewPayload.mobile
     if (!existingCrew.email && crewPayload.email) updatePayload.email = crewPayload.email
     if (!existingCrew.notes && crewPayload.notes) updatePayload.notes = crewPayload.notes
 
     if (Object.keys(updatePayload).length) {
-      await supabase.from('crew').update(updatePayload).eq('id', existingCrew.id)
+      const { error } = await supabase.from('crew').update(updatePayload).eq('id', existingCrew.id)
+      if (error) return false
+      return true
     }
 
-    return
+    return false
   }
 
-  await supabase.from('crew').insert([{
+  const { error } = await supabase.from('crew').insert([{
     event_id: eventId,
     ...crewPayload,
     hotel: '',
     room_number: '',
   }])
+
+  return !error
+}
+
+async function syncBookedCrewRowsForEvent(eventId, resourceBookings = [], resourceCalendars = [], staffMembers = []) {
+  if (!eventId) return false
+
+  let changed = false
+
+  for (const booking of resourceBookings || []) {
+    if (booking.active === false) continue
+
+    const resource = booking.resource_calendar || resourceCalendars.find(calendar => String(calendar.id) === String(booking.resource_calendar_id))
+    if (!['crew', 'freelancers'].includes(resource?.category)) continue
+
+    const didChange = await ensureCrewRowForBookedResource(eventId, resource, staffMembers, booking.notes || '')
+    if (didChange) changed = true
+  }
+
+  return changed
 }
 
 function Accordion({ title, subtitle, icon: Icon, children }) {
@@ -1247,6 +1304,10 @@ function AdminPage() {
     if (error) {
       setMessage(`Could not create resource booking: ${error.message}`)
       return
+    }
+
+    if (linkedEvent && ['crew', 'freelancers'].includes(resource?.category)) {
+      await ensureCrewRowForBookedResource(linkedEvent.id, resource, staffMembers, resourceBookingForm.notes || '')
     }
 
     setMessage(`${resource?.name || 'Resource'} booked for ${bookingTitle}.`)
@@ -3804,6 +3865,23 @@ function EventManagerPage() {
       .order('created_at', { ascending: true })
 
     setResourceBookings(resourceBookingData || [])
+
+    const crewSyncChanged = await syncBookedCrewRowsForEvent(
+      eventData.id,
+      resourceBookingData || [],
+      resourceCalendarData || [],
+      staffMemberData || []
+    )
+
+    if (crewSyncChanged) {
+      const { data: refreshedCrewData } = await supabase
+        .from('crew')
+        .select('*')
+        .eq('event_id', eventData.id)
+        .order('created_at', { ascending: true })
+
+      setCrew(refreshedCrewData || [])
+    }
 
     setLoading(false)
   }
