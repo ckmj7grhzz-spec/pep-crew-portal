@@ -106,6 +106,94 @@ function getEventPublicHref(eventRecord) {
   return `/${encodeURIComponent(routeKey)}`
 }
 
+function normalisePersonName(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function findStaffMemberForResource(resource, staffMembers = []) {
+  const resourceName = normalisePersonName(resource?.name)
+  if (!resourceName) return null
+  return (staffMembers || []).find(member => normalisePersonName(member.name) === resourceName) || null
+}
+
+function buildCrewRowFromResourceBooking(booking, staffMembers = []) {
+  const resource = booking?.resource_calendar
+  const staffMember = findStaffMemberForResource(resource, staffMembers)
+  const name = resource?.name || booking?.booking_name || 'Booked crew'
+
+  return {
+    id: `resource-${booking.id}`,
+    name,
+    role: staffMember?.role || '',
+    department: staffMember?.department || '',
+    mobile: staffMember?.phone || '',
+    email: staffMember?.email || '',
+    hotel: '',
+    room_number: '',
+    notes: booking?.notes || staffMember?.notes || staffMember?.skills || '',
+    source: 'resource_booking',
+    resource_booking_id: booking.id,
+    resource_calendar_id: resource?.id,
+    resource_category: resource?.category,
+    staff_member_id: staffMember?.id || null,
+  }
+}
+
+function mergeCrewRowsWithResourceBookings(crewRows = [], resourceBookings = [], staffMembers = []) {
+  const existingNames = new Set((crewRows || []).map(member => normalisePersonName(member.name)).filter(Boolean))
+  const existingEmails = new Set((crewRows || []).map(member => normalisePersonName(member.email)).filter(Boolean))
+
+  const bookedCrewRows = (resourceBookings || [])
+    .filter(booking => booking.active !== false)
+    .filter(booking => ['crew', 'freelancers'].includes(booking.resource_calendar?.category))
+    .map(booking => buildCrewRowFromResourceBooking(booking, staffMembers))
+    .filter(member => {
+      const nameKey = normalisePersonName(member.name)
+      const emailKey = normalisePersonName(member.email)
+      if (nameKey && existingNames.has(nameKey)) return false
+      if (emailKey && existingEmails.has(emailKey)) return false
+      if (nameKey) existingNames.add(nameKey)
+      if (emailKey) existingEmails.add(emailKey)
+      return true
+    })
+
+  return [
+    ...(crewRows || []).map(member => ({ ...member, source: 'crew_table' })),
+    ...bookedCrewRows,
+  ]
+}
+
+async function ensureCrewRowForBookedResource(eventId, resource, staffMembers = [], notes = '') {
+  if (!eventId || !['crew', 'freelancers'].includes(resource?.category)) return
+
+  const staffMember = findStaffMemberForResource(resource, staffMembers)
+  const crewName = resource?.name || staffMember?.name
+  if (!crewName) return
+
+  const { data: existingCrew } = await supabase
+    .from('crew')
+    .select('id')
+    .eq('event_id', eventId)
+    .ilike('name', crewName)
+    .maybeSingle()
+
+  if (existingCrew?.id) return
+
+  const payload = {
+    event_id: eventId,
+    name: crewName,
+    role: staffMember?.role || '',
+    department: staffMember?.department || '',
+    mobile: staffMember?.phone || '',
+    email: staffMember?.email || '',
+    hotel: '',
+    room_number: '',
+    notes: notes || staffMember?.notes || staffMember?.skills || '',
+  }
+
+  await supabase.from('crew').insert([payload])
+}
+
 function Accordion({ title, subtitle, icon: Icon, children }) {
   const [open, setOpen] = useState(false)
 
@@ -599,81 +687,6 @@ const CALENDAR_COLOUR_LABELS = {
 }
 
 const CALENDAR_CATEGORY_LABELS = CALENDAR_COLOUR_LABELS
-
-
-function normalisePersonName(value) {
-  return String(value || '').trim().toLowerCase()
-}
-
-function findStaffProfileForResource(resource, staffMembers = []) {
-  const resourceName = normalisePersonName(resource?.name)
-  if (!resourceName) return null
-  return staffMembers.find(member => normalisePersonName(member.name) === resourceName) || null
-}
-
-function buildCrewRowFromResourceBooking(booking, staffMembers = []) {
-  const resource = booking.resource_calendar
-  const staffProfile = findStaffProfileForResource(resource, staffMembers)
-  const isFreelancer = resource?.category === 'freelancers'
-  const fallbackRole = isFreelancer ? 'Freelancer' : 'Crew'
-
-  return {
-    id: `resource-${booking.id}`,
-    name: staffProfile?.name || resource?.name || booking.booking_name || 'Booked Resource',
-    role: staffProfile?.role || booking.booking_type || fallbackRole,
-    department: staffProfile?.department || (isFreelancer ? 'Freelancer' : ''),
-    mobile: staffProfile?.phone || staffProfile?.mobile || '',
-    email: staffProfile?.email || '',
-    hotel: '',
-    room_number: '',
-    notes: booking.notes || staffProfile?.notes || staffProfile?.skills || '',
-    source: 'resource_booking',
-    resource_booking_id: booking.id,
-    resource_category: resource?.category,
-  }
-}
-
-function mergeCrewRowsWithResourceBookings(crewRows = [], resourceBookings = [], resourceCalendars = [], staffMembers = []) {
-  const resourceById = resourceCalendars.reduce((map, resource) => {
-    map[String(resource.id)] = resource
-    return map
-  }, {})
-
-  const baseCrew = (crewRows || []).map(member => ({ ...member, source: member.source || 'crew_table' }))
-  const existingKeys = new Set(baseCrew.map(member => normalisePersonName(member.email || member.name)).filter(Boolean))
-
-  const resourceCrewRows = (resourceBookings || [])
-    .filter(booking => booking.active !== false)
-    .map(booking => ({
-      ...booking,
-      resource_calendar: booking.resource_calendar || resourceById[String(booking.resource_calendar_id)],
-    }))
-    .filter(booking => ['crew', 'freelancers'].includes(booking.resource_calendar?.category))
-    .map(booking => buildCrewRowFromResourceBooking(booking, staffMembers))
-    .filter(member => {
-      const key = normalisePersonName(member.email || member.name)
-      if (!key || existingKeys.has(key)) return false
-      existingKeys.add(key)
-      return true
-    })
-
-  return [...baseCrew, ...resourceCrewRows]
-}
-
-function getTransportResourceBookings(resourceBookings = [], resourceCalendars = []) {
-  const resourceById = resourceCalendars.reduce((map, resource) => {
-    map[String(resource.id)] = resource
-    return map
-  }, {})
-
-  return (resourceBookings || [])
-    .filter(booking => booking.active !== false)
-    .map(booking => ({
-      ...booking,
-      resource_calendar: booking.resource_calendar || resourceById[String(booking.resource_calendar_id)],
-    }))
-    .filter(booking => ['vehicles', 'led_trailers'].includes(booking.resource_calendar?.category))
-}
 
 function AdminPage() {
   const [events, setEvents] = useState([])
@@ -1965,6 +1978,8 @@ function AdminPage() {
       setMessage(`Could not assign resource: ${error.message}`)
       return
     }
+
+    await ensureCrewRowForBookedResource(selectedCalendarEvent.id, resource, staffMembers, null)
 
     setMessage(`${resource.name} assigned to ${selectedCalendarEvent.show_name}.`)
     setSelectedEventResourceId('')
@@ -3859,6 +3874,8 @@ function EventManagerPage() {
       return
     }
 
+    await ensureCrewRowForBookedResource(event.id, resource, staffMembers, eventResourceBookingForm.notes)
+
     setMessage(`${resource?.name || 'Resource'} assigned to crew sheet.`)
     setEventResourceBookingForm({ resource_calendar_id: '', notes: '' })
     await loadEventManager()
@@ -3932,10 +3949,14 @@ function EventManagerPage() {
 
   function getEventAssignedResources() {
     return resourceBookings
-      .map(booking => ({
-        ...booking,
-        resource_calendar: getEventResourceById(booking.resource_calendar_id),
-      }))
+      .map(booking => {
+        const resource = getEventResourceById(booking.resource_calendar_id)
+        return {
+          ...booking,
+          resource_calendar: resource,
+          staff_member: findStaffMemberForResource(resource, staffMembers),
+        }
+      })
       .filter(booking => booking.resource_calendar)
   }
 
@@ -5211,10 +5232,9 @@ function EventManagerPage() {
       .includes(searchText)
   }
 
-  const crewWithResourceBookings = mergeCrewRowsWithResourceBookings(crew, resourceBookings, resourceCalendars, staffMembers)
-  const transportResourceBookings = getTransportResourceBookings(resourceBookings, resourceCalendars)
-
-  const filteredCrew = crewWithResourceBookings.filter(matchesSearch)
+  const assignedResources = getEventAssignedResources()
+  const combinedCrewRows = mergeCrewRowsWithResourceBookings(crew, assignedResources, staffMembers)
+  const filteredCrew = combinedCrewRows.filter(matchesSearch)
   const filteredFlights = flights.filter(matchesSearch)
   const filteredHotels = hotels.filter(matchesSearch)
   const filteredTransfers = transfers.filter(matchesSearch)
@@ -5265,7 +5285,7 @@ function EventManagerPage() {
       <section className="eventCard compactControlCard">
         <div className="statsGrid">
           <div>
-            <strong>{crew.length}</strong>
+            <strong>{combinedCrewRows.length}</strong>
             <span>Crew</span>
           </div>
           <div className={getStatusClass(flightCompletion)}>
@@ -5744,13 +5764,13 @@ function EventManagerPage() {
       <section className="eventCard">
         <h2>Crew Members</h2>
 
-        {crewWithResourceBookings.length ? (
+        {filteredCrew.length ? (
           <div className="adminList">
             {filteredCrew.map(member => (
               <div className="adminListItem" key={member.id}>
                 <div>
                   <strong>{member.name}</strong>
-                  <p>{member.role} {member.department && `| ${member.department}`}</p>
+                  <p>{member.role || 'Crew'} {member.department && `| ${member.department}`}</p>
                   <small>{member.mobile} {member.email && `| ${member.email}`}</small>
                   <br />
                   <small>{member.hotel} {member.room_number && `Room ${member.room_number}`}</small>
@@ -5759,7 +5779,23 @@ function EventManagerPage() {
 
                 <div className="adminActions">
                   {member.source === 'resource_booking' ? (
-                    <button type="button" onClick={() => deleteEventResourceBooking(member.resource_booking_id)}>Remove Booking</button>
+                    <>
+                      <button type="button" onClick={() => {
+                        setCrewForm({
+                          name: member.name || '',
+                          role: member.role || '',
+                          department: member.department || '',
+                          mobile: member.mobile || '',
+                          email: member.email || '',
+                          hotel: member.hotel || '',
+                          room_number: member.room_number || '',
+                          notes: member.notes || '',
+                        })
+                        setEditingCrewId(null)
+                        scrollToForm('crew-form')
+                      }}>Edit</button>
+                      <button type="button" onClick={() => deleteEventResourceBooking(member.resource_booking_id)}>Delete</button>
+                    </>
                   ) : (
                     <>
                       <button type="button" onClick={() => startEditCrew(member)}>Edit</button>
@@ -5774,28 +5810,6 @@ function EventManagerPage() {
           <Empty text="No crew added yet." />
         )}
       </section>
-
-      {transportResourceBookings.length > 0 && (
-        <section className="eventCard">
-          <h2>Transport Resources</h2>
-          <p>Vehicles and LED trailers assigned from the resource manager.</p>
-          <div className="adminList">
-            {transportResourceBookings.map(booking => (
-              <div className="adminListItem" key={booking.id}>
-                <div>
-                  <strong>{booking.resource_calendar?.name || booking.booking_name || 'Booked transport'}</strong>
-                  <p>{CALENDAR_CATEGORY_LABELS[booking.resource_calendar?.category] || 'Transport Resource'}</p>
-                  <small>{formatDate(booking.start_date)}{booking.end_date && booking.end_date !== booking.start_date && ` to ${formatDate(booking.end_date)}`}</small>
-                  {booking.notes && <p>{booking.notes}</p>}
-                </div>
-                <div className="adminActions">
-                  <button type="button" onClick={() => deleteEventResourceBooking(booking.id)}>Remove Booking</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       </>
       )}
@@ -5827,7 +5841,7 @@ function EventManagerPage() {
             Crew Member
             <select value={flightForm.crew_name} onChange={e => updateFlightField('crew_name', e.target.value)}>
               <option value="">Select crew member</option>
-              {crewWithResourceBookings.map(member => (
+              {combinedCrewRows.map(member => (
                 <option key={member.id} value={member.name}>{member.name}</option>
               ))}
             </select>
@@ -5953,7 +5967,7 @@ function EventManagerPage() {
             Guest
             <select value={hotelForm.guest_name} onChange={e => updateHotelField('guest_name', e.target.value)}>
               <option value="">Select guest</option>
-              {crewWithResourceBookings.map(member => (
+              {combinedCrewRows.map(member => (
                 <option key={member.id} value={member.name}>{member.name}</option>
               ))}
             </select>
@@ -6106,7 +6120,7 @@ function EventManagerPage() {
             Passenger
             <select value={transferForm.passenger} onChange={e => updateTransferField('passenger', e.target.value)}>
               <option value="">Select passenger</option>
-              {crewWithResourceBookings.map(member => (
+              {crew.map(member => (
                 <option key={member.id} value={member.name}>{member.name}</option>
               ))}
             </select>
@@ -6926,17 +6940,31 @@ function PublicCrewSheet() {
   if (loading) return <main className="page"><p>Loading PEP crew sheet...</p></main>
   if (error) return <main className="page"><p>{error}</p></main>
 
-  const publicCrewRows = mergeCrewRowsWithResourceBookings(
-    data.crew || [],
-    data.resource_bookings || [],
-    data.resource_calendars || [],
-    data.staff_members || []
+  const publicResourceCalendarById = (data.resource_calendars || []).reduce((map, resource) => {
+    map[String(resource.id)] = resource
+    return map
+  }, {})
+
+  const publicResourceBookings = (data.resource_bookings || [])
+    .map(booking => {
+      const resource = publicResourceCalendarById[String(booking.resource_calendar_id)]
+      return {
+        ...booking,
+        resource_calendar: resource,
+        staff_member: findStaffMemberForResource(resource, data.staff_members || []),
+      }
+    })
+    .filter(booking => booking.resource_calendar)
+
+  const publicCrewResourceBookings = publicResourceBookings.filter(booking =>
+    ['crew', 'freelancers'].includes(booking.resource_calendar?.category)
   )
 
-  const publicTransportResourceBookings = getTransportResourceBookings(
-    data.resource_bookings || [],
-    data.resource_calendars || []
+  const publicTransportResourceBookings = publicResourceBookings.filter(booking =>
+    ['vehicles', 'led_trailers'].includes(booking.resource_calendar?.category)
   )
+
+  const publicCrewRows = mergeCrewRowsWithResourceBookings(data.crew || [], publicCrewResourceBookings, data.staff_members || [])
 
   function renderPublicSectionContent(sectionId) {
     return (
@@ -6954,9 +6982,7 @@ function PublicCrewSheet() {
                           <tr>
                             <th>Name</th>
                             <th>Role</th>
-                            <th>Department</th>
                             <th>Mobile</th>
-                            <th>Email</th>
                             <th>Hotel</th>
                           </tr>
                         </thead>
@@ -6971,9 +6997,10 @@ function PublicCrewSheet() {
                                 )}
                               </td>
                               <td>{x.role}</td>
-                              <td>{x.department}</td>
-                              <td>{x.mobile}</td>
-                              <td>{x.email}</td>
+                              <td>
+                                {x.mobile}
+                                {x.email && <><br />{x.email}</>}
+                              </td>
                               <td>{x.hotel} {x.room_number}</td>
                             </tr>
                           ))}
