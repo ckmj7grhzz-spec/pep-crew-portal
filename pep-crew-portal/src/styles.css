@@ -5867,3 +5867,95 @@ button.calendarEventListItem {
 .calendarEventDrawerSection span {
   line-height: 1.45;
 }
+
+/* Calendar day click booking modal */
+.calendarContinuousDayButton {
+  width: 100%;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.calendarContinuousDayButton:hover {
+  background: #f8fafc;
+}
+
+.calendarDayBookingOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(15, 23, 42, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.calendarDayBookingModal {
+  width: min(920px, 96vw);
+  max-height: 92vh;
+  overflow: auto;
+  background: #ffffff;
+  border: 1px solid var(--pep-border);
+  border-radius: 22px;
+  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.34);
+}
+
+.calendarDayBookingHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px 26px 18px;
+  border-bottom: 1px solid var(--pep-border);
+}
+
+.calendarDayBookingHeader h2 {
+  margin: 0 0 8px;
+  font-size: 30px;
+}
+
+.calendarDayBookingHeader p:last-child {
+  margin: 0;
+  color: var(--pep-muted);
+  font-weight: 700;
+}
+
+.calendarDayBookingClose {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 999px;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.calendarDayBookingForm {
+  margin: 0;
+  padding: 24px 26px 26px;
+}
+
+.resourceLinkedCalendarEvent {
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--calendar-event-colour), transparent 72%);
+}
+
+.resourceLinkedCalendarEvent .calendarEventBarText small,
+.resourceBookingCalendarEvent .calendarEventBarText small {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+@media (max-width: 720px) {
+  .calendarDayBookingOverlay {
+    padding: 12px;
+    align-items: flex-start;
+  }
+
+  .calendarDayBookingHeader,
+  .calendarDayBookingForm {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+}
