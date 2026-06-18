@@ -559,6 +559,15 @@ function AdminPage() {
   const [resourceSearch, setResourceSearch] = useState(() => readStoredValue('pep.resourceSearch', ''))
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState(null)
   const [selectedCalendarDay, setSelectedCalendarDay] = useState(null)
+  const [openCalendarListGroups, setOpenCalendarListGroups] = useState(() => readStoredValue('pep.openCalendarListGroups', {
+    projects: true,
+    dry_hire: false,
+    crew: false,
+    freelancers: false,
+    rooms: false,
+    vehicles: false,
+    led_trailers: false,
+  }))
   const [calendarEventCounts, setCalendarEventCounts] = useState(null)
   const [calendarEventCountsLoading, setCalendarEventCountsLoading] = useState(false)
   const [calendarSettings, setCalendarSettings] = useState(() => {
@@ -684,6 +693,10 @@ function AdminPage() {
   useEffect(() => {
     writeStoredValue('pep.resourceSearch', resourceSearch)
   }, [resourceSearch])
+
+  useEffect(() => {
+    writeStoredValue('pep.openCalendarListGroups', openCalendarListGroups)
+  }, [openCalendarListGroups])
 
   useEffect(() => {
     writeStoredValue('pep.calendarFilters', calendarFilters)
@@ -964,6 +977,57 @@ function AdminPage() {
     return resourceCalendars.find(resource => String(resource.id) === String(resourceId))
   }
 
+  function getResourceBookingsForEvent(eventRecord) {
+    if (!eventRecord?.id) return []
+
+    return resourceBookings
+      .filter(booking => booking.active !== false)
+      .map(booking => {
+        const resource = booking.resource_calendar || getResourceCalendarById(booking.resource_calendar_id)
+        const linkedEvent = booking.linked_event || findLinkedEventForBooking(booking)
+
+        return {
+          ...booking,
+          resource_calendar: resource,
+          linked_event: linkedEvent,
+          resource_category: resource?.category || 'projects',
+          resource_colour: resource?.colour || getCalendarCategoryColour(resource?.category || 'projects'),
+        }
+      })
+      .filter(booking => String(booking.linked_event?.id || booking.event_id || '') === String(eventRecord.id))
+  }
+
+  function toggleCalendarListGroup(category) {
+    setOpenCalendarListGroups(previous => ({
+      ...previous,
+      [category]: previous[category] === false,
+    }))
+  }
+
+  function getCalendarListGroupLabel(category) {
+    return CALENDAR_CATEGORY_LABELS[category] || category
+  }
+
+  function getCalendarListGroups(visibleEvents) {
+    const baseGroups = Object.keys(CALENDAR_CATEGORY_LABELS).reduce((groups, category) => {
+      groups[category] = []
+      return groups
+    }, {})
+
+    visibleEvents.forEach(item => {
+      const category = item.calendar_item_type === 'resource_booking'
+        ? item.resource_category || 'projects'
+        : 'projects'
+
+      if (!baseGroups[category]) baseGroups[category] = []
+      baseGroups[category].push(item)
+    })
+
+    return Object.entries(baseGroups)
+      .map(([category, items]) => ({ category, items }))
+      .filter(group => group.items.length > 0)
+  }
+
   function normaliseBookingMatchText(value) {
     return String(value || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, ' ')
   }
@@ -1076,7 +1140,9 @@ function AdminPage() {
     }
 
     setMessage(bookingIds.length > 1 ? 'Resource bookings deleted.' : 'Resource booking deleted.')
-    closeCalendarEventDetails()
+    if (selectedCalendarEvent?.calendar_item_type === 'resource_booking') {
+      closeCalendarEventDetails()
+    }
     await loadResourceBookings()
   }
 
@@ -1648,6 +1714,19 @@ function AdminPage() {
     setSelectedCalendarEvent(eventRecord)
     setCalendarEventCounts(null)
 
+    if (eventRecord.calendar_item_type !== 'resource_booking') {
+      setResourceBookingForm(current => ({
+        ...current,
+        resource_calendar_id: '',
+        event_id: eventRecord.id || '',
+        title: eventRecord.show_name || '',
+        booking_type: 'Crew Sheet Assignment',
+        start_date: eventRecord.start_date || current.start_date || '',
+        end_date: eventRecord.end_date || eventRecord.start_date || current.end_date || '',
+        notes: '',
+      }))
+    }
+
     if (eventRecord.calendar_item_type === 'resource_booking') {
       setCalendarEventCountsLoading(false)
       return
@@ -1703,6 +1782,13 @@ function AdminPage() {
     const status = isBooking ? 'resource_booking' : getCrewSheetStatus(selectedCalendarEvent)
     const statusLabel = isBooking ? selectedCalendarEvent.booking_type || 'Resource Booking' : getCrewSheetStatusLabel(status)
     const linkedEvent = selectedCalendarEvent.linked_event
+    const assignedResourceBookings = isBooking ? [] : getResourceBookingsForEvent(selectedCalendarEvent)
+    const assignedResourcesByCategory = assignedResourceBookings.reduce((groups, booking) => {
+      const category = booking.resource_category || booking.resource_calendar?.category || 'projects'
+      if (!groups[category]) groups[category] = []
+      groups[category].push(booking)
+      return groups
+    }, {})
 
     return (
       <aside className="calendarEventDrawer" aria-label="Calendar event details">
@@ -1783,6 +1869,74 @@ function AdminPage() {
               <div className="calendarEventDrawerSection">
                 <strong>Project Manager</strong>
                 <span>{selectedCalendarEvent.project_manager || 'Not assigned'}</span>
+              </div>
+
+              <div className="calendarEventDrawerSection projectResourceManager">
+                <div className="projectResourceManagerHeader">
+                  <div>
+                    <strong>Assigned Resources</strong>
+                    <span>Add crew, vehicles, rooms or trailers to this project without leaving the calendar.</span>
+                  </div>
+                </div>
+
+                {assignedResourceBookings.length ? (
+                  <div className="projectAssignedResourceList">
+                    {Object.entries(assignedResourcesByCategory).map(([category, bookings]) => (
+                      <div className="projectAssignedResourceGroup" key={category}>
+                        <small>{getCalendarListGroupLabel(category)}</small>
+                        {bookings.map(booking => (
+                          <div className="projectAssignedResourceItem" key={booking.id} style={{ '--assigned-resource-colour': booking.resource_colour }}>
+                            <span className="projectAssignedResourceDot"></span>
+                            <div>
+                              <strong>{booking.resource_calendar?.name || booking.booking_name || 'Resource'}</strong>
+                              <span>{formatDate(booking.start_date)} → {formatDate(booking.end_date || booking.start_date)}</span>
+                            </div>
+                            <button type="button" onClick={() => deleteResourceBooking(booking.id)}>Remove</button>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="projectAssignedResourceEmpty">No resources assigned to this project yet.</p>
+                )}
+
+                <form className="projectResourceAssignForm" onSubmit={saveResourceBooking}>
+                  <label>
+                    Resource
+                    <select value={resourceBookingForm.resource_calendar_id} onChange={e => updateResourceBookingField('resource_calendar_id', e.target.value)}>
+                      <option value="">Choose resource...</option>
+                      {Object.keys(CALENDAR_CATEGORY_LABELS).map(category => {
+                        const resources = getResourceCalendarsForCategory(category).filter(resource => resource.active !== false)
+                        if (!resources.length) return null
+                        return (
+                          <optgroup label={CALENDAR_CATEGORY_LABELS[category]} key={category}>
+                            {resources.map(resource => (
+                              <option value={resource.id} key={resource.id}>{resource.name}</option>
+                            ))}
+                          </optgroup>
+                        )
+                      })}
+                    </select>
+                  </label>
+
+                  <label>
+                    Start Date
+                    <input type="date" value={resourceBookingForm.start_date} onChange={e => updateResourceBookingField('start_date', e.target.value)} />
+                  </label>
+
+                  <label>
+                    End Date
+                    <input type="date" value={resourceBookingForm.end_date} onChange={e => updateResourceBookingField('end_date', e.target.value)} />
+                  </label>
+
+                  <label className="projectResourceAssignNotes">
+                    Notes
+                    <input value={resourceBookingForm.notes} onChange={e => updateResourceBookingField('notes', e.target.value)} placeholder="Optional notes" />
+                  </label>
+
+                  <button type="submit" className="primaryButton">Add Resource</button>
+                </form>
               </div>
 
               <div className="calendarEventDrawerStats">
@@ -2367,16 +2521,38 @@ function AdminPage() {
           <p className="eyebrowDark">Event list</p>
           <h2>Events in this view</h2>
           {visibleEvents.length ? (
-            <div className="calendarEventList">
-              {visibleEvents.map(eventRecord => (
-                <button type="button" className="calendarEventListItem" onClick={() => openCalendarEventDetails(eventRecord)} key={eventRecord.id}>
-                  <div>
-                    <strong>{eventRecord.show_name}</strong>
-                    <span>{eventRecord.venue || 'Venue TBC'}</span>
+            <div className="calendarGroupedEventList">
+              {getCalendarListGroups(visibleEvents).map(group => {
+                const isOpen = openCalendarListGroups[group.category] !== false
+                return (
+                  <div className={isOpen ? 'calendarListGroup open' : 'calendarListGroup'} key={group.category}>
+                    <button type="button" className="calendarListGroupHeader" onClick={() => toggleCalendarListGroup(group.category)}>
+                      <span className="calendarListGroupTitle">
+                        <span className="calendarListGroupDot" style={{ '--calendar-list-group-colour': getCalendarCategoryColour(group.category) }}></span>
+                        <strong>{getCalendarListGroupLabel(group.category)}</strong>
+                      </span>
+                      <span className="calendarListGroupMeta">
+                        <small>{group.items.length}</small>
+                        <ChevronDown size={16} className={isOpen ? 'chevron open' : 'chevron'} />
+                      </span>
+                    </button>
+
+                    {isOpen && (
+                      <div className="calendarEventList">
+                        {group.items.map(eventRecord => (
+                          <button type="button" className="calendarEventListItem" onClick={() => openCalendarEventDetails(eventRecord)} key={eventRecord.id}>
+                            <div>
+                              <strong>{eventRecord.show_name}</strong>
+                              <span>{eventRecord.resource_calendars?.length ? eventRecord.resource_calendars.map(resource => resource.name).join(' · ') : eventRecord.venue || 'Venue TBC'}</span>
+                            </div>
+                            <small>{formatDate(eventRecord.start_date)} → {formatDate(eventRecord.end_date)}</small>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <small>{formatDate(eventRecord.start_date)} → {formatDate(eventRecord.end_date)}</small>
-                </button>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <Empty text="No visible calendar items in this view." />
