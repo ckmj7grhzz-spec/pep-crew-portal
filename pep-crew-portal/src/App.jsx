@@ -1269,6 +1269,16 @@ function AdminPage() {
       active: member.active !== false,
       calendar_colour: member.calendar_colour || '#16a34a',
     })
+
+    window.setTimeout(() => {
+      const form = document.getElementById('staff-edit-form')
+      if (form) {
+        form.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+      }
+    }, 120)
   }
 
   async function saveStaffMember(e) {
@@ -3211,7 +3221,7 @@ function AdminPage() {
                   </button>
                 )}
 
-            <form onSubmit={saveStaffMember} className="adminForm staffForm">
+            <form id="staff-edit-form" onSubmit={saveStaffMember} className="adminForm staffForm">
               <label>
                 Name
                 <input value={staffForm.name} onChange={e => updateStaffField('name', e.target.value)} placeholder="Liam Howard" />
