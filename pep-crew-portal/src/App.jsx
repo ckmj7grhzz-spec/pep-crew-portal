@@ -43,7 +43,16 @@ function slugify(text) {
 }
 
 
-function cleanPathSegment(value) {
+function personSlug(text) {
+  return String(text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
+
+
+function cleanRouteSlug(value) {
   return decodeURIComponent(String(value || ''))
     .split('?')[0]
     .split('#')[0]
@@ -51,42 +60,50 @@ function cleanPathSegment(value) {
     .trim()
 }
 
-function getEventRouteSlug(eventRecord) {
-  return cleanPathSegment(eventRecord?.public_slug || eventRecord?.id || '')
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || ''))
 }
 
-async function findEventBySlugOrId(slugOrId, options = {}) {
-  const cleanSlug = cleanPathSegment(slugOrId)
-  if (!cleanSlug) return { data: null, error: new Error('Missing event slug') }
+function getEventSlugFromPath(prefix = '') {
+  const path = window.location.pathname || ''
+  if (prefix && path.startsWith(prefix)) {
+    return cleanRouteSlug(path.slice(prefix.length))
+  }
+  return cleanRouteSlug(path)
+}
+
+async function findEventBySlugOrId(routeValue, { requirePublished = false } = {}) {
+  const slug = cleanRouteSlug(routeValue)
+  if (!slug) return { data: null, error: new Error('Missing crew sheet slug') }
 
   let query = supabase
     .from('Events')
     .select('*')
-    .eq('public_slug', cleanSlug)
+    .eq('public_slug', slug)
 
-  if (options.publishedOnly) query = query.eq('share_enabled', true)
+  if (requirePublished) query = query.eq('share_enabled', true)
 
   let result = await query.maybeSingle()
-  if (result.data || result.error) return result
+  if (result.data || !isUuid(slug)) return result
 
   query = supabase
     .from('Events')
     .select('*')
-    .eq('id', cleanSlug)
+    .eq('id', slug)
 
-  if (options.publishedOnly) query = query.eq('share_enabled', true)
+  if (requirePublished) query = query.eq('share_enabled', true)
 
-  result = await query.maybeSingle()
-  return result
+  return query.maybeSingle()
 }
 
+function getEventAdminHref(eventRecord) {
+  const routeKey = cleanRouteSlug(eventRecord?.public_slug) || eventRecord?.id || ''
+  return `/admin/event/${encodeURIComponent(routeKey)}`
+}
 
-function personSlug(text) {
-  return String(text || '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
+function getEventPublicHref(eventRecord) {
+  const routeKey = cleanRouteSlug(eventRecord?.public_slug) || eventRecord?.id || ''
+  return `/${encodeURIComponent(routeKey)}`
 }
 
 function Accordion({ title, subtitle, icon: Icon, children }) {
@@ -1262,14 +1279,14 @@ function AdminPage() {
     e.preventDefault()
     setMessage('')
 
-    if (!form.show_name) {
-      setMessage('Show name is required.')
+    if (!form.show_name || !form.public_slug) {
+      setMessage('Show name and public slug are required.')
       return
     }
 
     const eventPayload = {
       ...form,
-      public_slug: cleanPathSegment(form.public_slug) || slugify(form.show_name),
+      public_slug: cleanRouteSlug(form.public_slug) || slugify(form.show_name),
       share_enabled: form.share_enabled !== false,
     }
 
@@ -1321,7 +1338,7 @@ function AdminPage() {
   }
 
   function copyLink(publicSlug) {
-    const url = `${window.location.origin}/${publicSlug}`
+    const url = `${window.location.origin}/${cleanRouteSlug(publicSlug)}`
     navigator.clipboard.writeText(url)
     setMessage(`Copied: ${url}`)
   }
@@ -1908,7 +1925,7 @@ function AdminPage() {
 
                 <div className="calendarEventDrawerActions">
                   {linkedEvent?.public_slug && (
-                    <a className="primaryButton" href={`/admin/event/${getEventRouteSlug(linkedEvent)}`}>
+                    <a className="primaryButton" href={getEventAdminHref(linkedEvent)}>
                       Open Crew Sheet
                     </a>
                   )}
@@ -2007,7 +2024,7 @@ function AdminPage() {
                 </section>
 
                 <div className="calendarEventDrawerActions">
-                  <a className="primaryButton" href={`/admin/event/${getEventRouteSlug(selectedCalendarEvent)}`}>
+                  <a className="primaryButton" href={getEventAdminHref(selectedCalendarEvent)}>
                     Open Crew Sheet
                   </a>
                   <button type="button" className="secondaryButton" onClick={closeCalendarEventDetails}>
@@ -2693,11 +2710,11 @@ function AdminPage() {
         </div>
 
         <div className="adminActions">
-          <a href={`/admin/event/${getEventRouteSlug(eventRecord)}`}>
+          <a href={getEventAdminHref(eventRecord)}>
             <Settings size={16} /> Manage
           </a>
-          <a href={`/${getEventRouteSlug(eventRecord)}`} target="_blank" rel="noreferrer">Open</a>
-          <button type="button" onClick={() => copyLink(getEventRouteSlug(eventRecord))}>
+          <a href={getEventPublicHref(eventRecord)} target="_blank" rel="noreferrer">Open</a>
+          <button type="button" onClick={() => copyLink(cleanRouteSlug(eventRecord.public_slug) || eventRecord.id)}>
             <Copy size={16} /> Copy Link
           </button>
           {crewSheetStatus === 'in_progress' && (
@@ -3350,7 +3367,7 @@ function AdminPage() {
 }
 
 function EventManagerPage() {
-  const slug = cleanPathSegment(window.location.pathname.replace('/admin/event/', ''))
+  const slug = getEventSlugFromPath('/admin/event/')
   const [event, setEvent] = useState(null)
   const [eventDetailsForm, setEventDetailsForm] = useState({
     show_name: '',
@@ -3481,7 +3498,7 @@ function EventManagerPage() {
   async function loadEventManager() {
     setLoading(true)
 
-    const { data: eventData, error: eventError } = await findEventBySlugOrId(slug)
+    const { data: eventData, error: eventError } = await findEventBySlugOrId(slug, { requirePublished: false })
 
     if (eventError || !eventData) {
       setMessage('Event not found.')
@@ -5052,7 +5069,7 @@ function EventManagerPage() {
           </div>
 
           <div className="adminActions managerTopActions">
-            <a href={`/${getEventRouteSlug(event)}`} target="_blank" rel="noreferrer">Open Public Sheet</a>
+            <a href={getEventPublicHref(event)} target="_blank" rel="noreferrer">Open Public Sheet</a>
           </div>
         </div>
       </section>
@@ -5134,7 +5151,7 @@ function EventManagerPage() {
             <h2>Overview</h2>
             <p>This is the admin overview for this PEP crew sheet.</p>
             <div className="overviewGrid">
-              <div><strong>Public Link</strong><a href={`/${getEventRouteSlug(event)}`} target="_blank" rel="noreferrer">/{getEventRouteSlug(event)}</a></div>
+              <div><strong>Public Link</strong><a href={getEventPublicHref(event)} target="_blank" rel="noreferrer">/{event.public_slug}</a></div>
               <div><strong>Current RMS ID</strong><span>{event.current_rms_id || 'Not linked yet'}</span></div>
               <div><strong>Project Manager</strong><span>{event.project_manager || 'Not set'}</span></div>
               <div><strong>Venue</strong><span>{event.venue || 'Not set'}</span></div>
@@ -6247,7 +6264,7 @@ function EventManagerPage() {
 
 function CrewPersonalView() {
   const parts = window.location.pathname.split('/').filter(Boolean)
-  const eventSlug = cleanPathSegment(parts[0])
+  const eventSlug = cleanRouteSlug(parts[0])
   const crewId = parts[2]
 
   const [event, setEvent] = useState(null)
@@ -6265,7 +6282,7 @@ function CrewPersonalView() {
     async function loadCrewView() {
       setLoading(true)
 
-      const { data: eventData, error: eventError } = await findEventBySlugOrId(eventSlug, { publishedOnly: true })
+      const { data: eventData, error: eventError } = await findEventBySlugOrId(eventSlug, { requirePublished: true })
 
       if (eventError || !eventData) {
         setError('Crew sheet not found or not published.')
@@ -6365,7 +6382,7 @@ function CrewPersonalView() {
 
       <section className="eventCard crewQuickCard">
         <div className="crewPersonalTopline">
-          <a href={`/${getEventRouteSlug(event)}`} className="backLink"><ArrowLeft size={16} /> Back to Full Call Sheet</a>
+          <a href={getEventPublicHref(event)} className="backLink"><ArrowLeft size={16} /> Back to Full Call Sheet</a>
           <span className="crewPersonalBadge">Crew View</span>
         </div>
 
@@ -6615,7 +6632,7 @@ function CrewPersonalView() {
 }
 
 function PublicCrewSheet() {
-  const slug = cleanPathSegment(window.location.pathname.replace(/^\//, '')) || 'test-pep-show'
+  const slug = getEventSlugFromPath('/') || 'test-pep-show'
 
   const [event, setEvent] = useState(null)
   const [data, setData] = useState({
@@ -6635,12 +6652,7 @@ function PublicCrewSheet() {
     async function loadCrewSheet() {
       setLoading(true)
 
-      const { data: eventData, error: eventError } = await supabase
-        .from('Events')
-        .select('*')
-        .eq('public_slug', slug)
-        .eq('share_enabled', true)
-        .single()
+      const { data: eventData, error: eventError } = await findEventBySlugOrId(slug, { requirePublished: true })
 
       if (eventError || !eventData) {
         setError('Crew sheet not found or not published.')
