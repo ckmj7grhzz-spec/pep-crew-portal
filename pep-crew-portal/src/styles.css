@@ -1,4 +1,3 @@
-
 * {
   box-sizing: border-box;
 }
@@ -5833,4 +5832,38 @@ button.calendarEventListItem {
   .resourceBookingForm .formWide {
     grid-column: auto;
   }
+}
+
+
+/* Resource Bookings grouped/intertwined bars */
+.calendarEventBar.resourceBookingCalendarEvent,
+.calendarEventPill.resourceBookingCalendarEvent {
+  background: var(--calendar-event-background, var(--calendar-event-colour, #64748b)) !important;
+  border-color: color-mix(in srgb, var(--calendar-event-colour, #64748b) 75%, #000 25%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--calendar-event-colour, #64748b) 28%, transparent) !important;
+}
+
+.calendarEventBar.resourceBookingCalendarEvent small,
+.calendarEventPill.resourceBookingCalendarEvent small {
+  color: rgba(255,255,255,0.86) !important;
+}
+
+.calendarEventBar.resourceBookingCalendarEvent .calendarEventBarText,
+.calendarEventPill.resourceBookingCalendarEvent .calendarEventBarText {
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.38);
+}
+
+.calendarEventBar.resourceBookingCalendarEvent::before,
+.calendarEventPill.resourceBookingCalendarEvent::before {
+  content: '';
+  width: 8px;
+  align-self: stretch;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.78);
+  flex: 0 0 auto;
+}
+
+.calendarEventDrawerSection span {
+  line-height: 1.45;
 }
