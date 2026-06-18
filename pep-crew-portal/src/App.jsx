@@ -6745,6 +6745,8 @@ function PublicCrewSheet() {
     schedule_items: [],
     documents: [],
     notes: [],
+    resource_bookings: [],
+    resource_calendars: [],
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -6776,7 +6778,22 @@ function PublicCrewSheet() {
         results[table] = data || []
       }
 
+      const { data: publicResourceBookings } = await supabase
+        .from('resource_bookings')
+        .select('*')
+        .eq('event_id', eventData.id)
+        .eq('active', true)
+        .order('created_at', { ascending: true })
+
+      const { data: publicResourceCalendars } = await supabase
+        .from('resource_calendars')
+        .select('*')
+        .order('category', { ascending: true })
+        .order('name', { ascending: true })
+
       results.documents = (results.documents || []).filter(document => document.is_public !== false)
+      results.resource_bookings = publicResourceBookings || []
+      results.resource_calendars = publicResourceCalendars || []
 
       setData(results)
       setLoading(false)
@@ -6788,6 +6805,44 @@ function PublicCrewSheet() {
   if (loading) return <main className="page"><p>Loading PEP crew sheet...</p></main>
   if (error) return <main className="page"><p>{error}</p></main>
 
+  const publicResourceCalendarById = (data.resource_calendars || []).reduce((map, resource) => {
+    map[String(resource.id)] = resource
+    return map
+  }, {})
+
+  const publicResourceBookings = (data.resource_bookings || [])
+    .map(booking => ({
+      ...booking,
+      resource_calendar: publicResourceCalendarById[String(booking.resource_calendar_id)],
+    }))
+    .filter(booking => booking.resource_calendar)
+
+  const publicCrewResourceBookings = publicResourceBookings.filter(booking =>
+    ['crew', 'freelancers'].includes(booking.resource_calendar?.category)
+  )
+
+  const publicTransportResourceBookings = publicResourceBookings.filter(booking =>
+    ['vehicles', 'led_trailers'].includes(booking.resource_calendar?.category)
+  )
+
+  const publicCrewRows = [
+    ...(data.crew || []).map(member => ({ ...member, source: 'crew_table' })),
+    ...publicCrewResourceBookings
+      .filter(booking => !(data.crew || []).some(member =>
+        String(member.name || '').trim().toLowerCase() === String(booking.resource_calendar?.name || '').trim().toLowerCase()
+      ))
+      .map(booking => ({
+        id: `resource-${booking.id}`,
+        name: booking.resource_calendar?.name || booking.booking_name || 'Booked resource',
+        role: CALENDAR_CATEGORY_LABELS[booking.resource_calendar?.category] || booking.booking_type || 'Booked Resource',
+        mobile: '',
+        hotel: '',
+        room_number: '',
+        notes: booking.notes || '',
+        source: 'resource_booking',
+      })),
+  ]
+
   function renderPublicSectionContent(sectionId) {
     return (
       <section className="eventCard publicSectionPanel publicSectionPanelInline">
@@ -6798,7 +6853,7 @@ function PublicCrewSheet() {
                       <h2>Crew Members</h2>
                     </div>
       
-                    {data.crew.length ? (
+                    {publicCrewRows.length ? (
                       <table>
                         <thead>
                           <tr>
@@ -6809,10 +6864,14 @@ function PublicCrewSheet() {
                           </tr>
                         </thead>
                         <tbody>
-                          {data.crew.map(x => (
+                          {publicCrewRows.map(x => (
                             <tr key={x.id}>
                               <td>
-                                <a href={`/${slug}/crew/${x.id}`}>{x.name}</a>
+                                {x.source === 'crew_table' ? (
+                                  <a href={`/${slug}/crew/${x.id}`}>{x.name}</a>
+                                ) : (
+                                  <span>{x.name}</span>
+                                )}
                               </td>
                               <td>{x.role}</td>
                               <td>{x.mobile}</td>
@@ -6906,6 +6965,31 @@ function PublicCrewSheet() {
                       ))
                     ) : (
                       <Empty text="No transfers added yet." />
+                    )}
+                  </>
+                )}
+      
+                {sectionId === 'transport' && (
+                  <>
+                    <div className="publicSectionPanelHeader">
+                      <p className="eyebrowDark">Transport</p>
+                      <h2>Vehicles & LED Trailers</h2>
+                    </div>
+
+                    {publicTransportResourceBookings.length ? (
+                      publicTransportResourceBookings.map(x => (
+                        <div className="item publicResourceItem" key={x.id}>
+                          <strong>{x.resource_calendar?.name || x.booking_name || 'Booked transport'}</strong>
+                          <p>{CALENDAR_CATEGORY_LABELS[x.resource_calendar?.category] || 'Transport Resource'}</p>
+                          <small>
+                            {formatDate(x.start_date)}
+                            {x.end_date && x.end_date !== x.start_date && ` to ${formatDate(x.end_date)}`}
+                          </small>
+                          {x.notes && <p>{x.notes}</p>}
+                        </div>
+                      ))
+                    ) : (
+                      <Empty text="No vehicles or LED trailers booked yet." />
                     )}
                   </>
                 )}
@@ -7075,7 +7159,7 @@ function PublicCrewSheet() {
 
         <div className="publicQuickStats">
           <div>
-            <strong>{data.crew.length}</strong>
+            <strong>{publicCrewRows.length}</strong>
             <span>Crew</span>
           </div>
           <div>
@@ -7120,13 +7204,14 @@ function PublicCrewSheet() {
 
       <div className="publicSectionGrid">
         {[
-          { id: 'crew', title: 'Crew', subtitle: `${data.crew.length} crew members`, Icon: Users },
+          { id: 'crew', title: 'Crew', subtitle: `${publicCrewRows.length} crew members`, Icon: Users },
           { id: 'flights', title: 'Flights', subtitle: `${data.flights.length} flight records`, Icon: Plane },
           { id: 'transfers', title: 'Transfers', subtitle: `${data.transfers.length} transfer records`, Icon: Car },
           { id: 'hotels', title: 'Hotels', subtitle: `${data.hotels.length} hotel records`, Icon: Hotel },
           { id: 'schedule', title: 'Schedule', subtitle: `${data.schedule_items.length} schedule items`, Icon: CalendarDays },
           { id: 'documents', title: 'Documents', subtitle: `${data.documents.length} documents`, Icon: FileText },
-          { id: 'notes', title: 'Notes', subtitle: `${data.notes.length} notes`, Icon: StickyNote, fullWidth: true },
+          { id: 'transport', title: 'Transport', subtitle: `${publicTransportResourceBookings.length} vehicles / trailers`, Icon: Car },
+          { id: 'notes', title: 'Notes', subtitle: `${data.notes.length} notes`, Icon: StickyNote },
         ].map(section => {
           const Icon = section.Icon
           const isOpen = openPublicSection === section.id
