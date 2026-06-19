@@ -1,4 +1,3 @@
-// Conflict Centre V2: Reports now surface resource clashes and missing information
 import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDown, Plus, Copy, Settings, ArrowLeft, LogOut, Eye, EyeOff } from 'lucide-react'
@@ -462,6 +461,31 @@ function getStaffTypeBadgeClass(type) {
   return 'staffTypeBadge staffBadge'
 }
 
+const STAFF_AVAILABILITY_OPTIONS = [
+  { value: 'available', label: 'Available', tone: 'available' },
+  { value: 'holiday', label: 'Holiday', tone: 'holiday' },
+  { value: 'sick', label: 'Sick', tone: 'sick' },
+  { value: 'training', label: 'Training', tone: 'training' },
+  { value: 'unavailable', label: 'Unavailable', tone: 'unavailable' },
+]
+
+function getStaffAvailabilityStatus(memberOrStatus) {
+  const rawStatus = typeof memberOrStatus === 'string'
+    ? memberOrStatus
+    : memberOrStatus?.availability_status
+
+  return rawStatus || 'available'
+}
+
+function getStaffAvailabilityOption(memberOrStatus) {
+  const status = getStaffAvailabilityStatus(memberOrStatus)
+  return STAFF_AVAILABILITY_OPTIONS.find(option => option.value === status) || STAFF_AVAILABILITY_OPTIONS[0]
+}
+
+function getStaffAvailabilityBadgeClass(memberOrStatus) {
+  return `staffAvailabilityBadge staffAvailability-${getStaffAvailabilityOption(memberOrStatus).tone}`
+}
+
 
 function parseCalendarDate(value) {
   if (!value) return null
@@ -809,56 +833,6 @@ const CALENDAR_COLOUR_LABELS = {
 
 const CALENDAR_CATEGORY_LABELS = CALENDAR_COLOUR_LABELS
 
-
-const PROJECT_STATUS_OPTIONS = [
-  { value: 'draft', label: 'Draft' },
-  { value: 'planning', label: 'Planning' },
-  { value: 'confirmed', label: 'Confirmed' },
-  { value: 'live', label: 'Live' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'archived', label: 'Archived' },
-]
-
-const PROJECT_STATUS_LABELS = PROJECT_STATUS_OPTIONS.reduce((labels, option) => {
-  labels[option.value] = option.label
-  return labels
-}, {})
-
-function normaliseProjectStatus(status) {
-  if (!status) return 'planning'
-  if (status === 'in_progress') return 'planning'
-  if (status === 'ready_to_go') return 'confirmed'
-  if (status === 'show_complete') return 'completed'
-  return PROJECT_STATUS_LABELS[status] ? status : 'planning'
-}
-
-function getProjectStatusLabel(status) {
-  return PROJECT_STATUS_LABELS[normaliseProjectStatus(status)] || 'Planning'
-}
-
-function getProjectStatusClass(status) {
-  const cleanStatus = normaliseProjectStatus(status)
-  if (cleanStatus === 'draft') return 'statusDraft'
-  if (cleanStatus === 'planning') return 'statusPlanning'
-  if (cleanStatus === 'confirmed') return 'statusConfirmed'
-  if (cleanStatus === 'live') return 'statusLive'
-  if (cleanStatus === 'completed') return 'statusComplete'
-  if (cleanStatus === 'archived') return 'statusArchived'
-  return 'statusPlanning'
-}
-
-function isCompletedProjectStatus(status) {
-  return ['completed', 'archived'].includes(normaliseProjectStatus(status))
-}
-
-function isAttentionProjectStatus(status) {
-  return ['draft', 'planning'].includes(normaliseProjectStatus(status))
-}
-
-function isReadyProjectStatus(status) {
-  return ['confirmed', 'live'].includes(normaliseProjectStatus(status))
-}
-
 function AdminPage() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -950,6 +924,7 @@ function AdminPage() {
     phone: '',
     email: '',
     employment_type: 'Full Time',
+    availability_status: 'available',
     skills: '',
     notes: '',
     active: true,
@@ -966,7 +941,7 @@ function AdminPage() {
     operations_contact_name: '',
     operations_contact_phone: '',
     emergency_contact_number: '',
-    crew_sheet_status: 'draft',
+    crew_sheet_status: 'in_progress',
     public_slug: '',
     share_enabled: true,
     current_rms_id: '',
@@ -1434,6 +1409,7 @@ function AdminPage() {
       phone: '',
       email: '',
       employment_type: 'Full Time',
+      availability_status: 'available',
       skills: '',
       notes: '',
       active: true,
@@ -1451,6 +1427,7 @@ function AdminPage() {
       phone: member.phone || '',
       email: member.email || '',
       employment_type: getStaffEmploymentType(member),
+      availability_status: getStaffAvailabilityStatus(member),
       skills: member.skills || '',
       notes: member.notes || '',
       active: member.active !== false,
@@ -1601,7 +1578,7 @@ function AdminPage() {
       operations_contact_name: '',
       operations_contact_phone: '',
       emergency_contact_number: '',
-      crew_sheet_status: 'draft',
+      crew_sheet_status: 'in_progress',
       public_slug: '',
       share_enabled: true,
       current_rms_id: '',
@@ -1680,23 +1657,26 @@ function AdminPage() {
   }
 
   function getCrewSheetStatus(eventRecord) {
-    return normaliseProjectStatus(eventRecord?.crew_sheet_status)
+    return eventRecord.crew_sheet_status || 'in_progress'
   }
 
   function getCrewSheetStatusLabel(status) {
-    return getProjectStatusLabel(status)
+    if (status === 'ready_to_go') return 'Ready To Go'
+    if (status === 'show_complete') return 'Show Complete'
+    return 'In Progress'
   }
 
   function getCrewSheetStatusClass(status) {
-    return getProjectStatusClass(status)
+    if (status === 'ready_to_go') return 'statusGreen'
+    if (status === 'show_complete') return 'statusComplete'
+    return 'statusOrange'
   }
 
   async function updateCrewSheetStatus(eventRecord, status) {
-    const cleanStatus = normaliseProjectStatus(status)
     const payload = {
-      crew_sheet_status: cleanStatus,
-      crew_sheet_ready_at: ['confirmed', 'live'].includes(cleanStatus) ? new Date().toISOString() : null,
-      show_completed_at: cleanStatus === 'completed' ? new Date().toISOString() : null,
+      crew_sheet_status: status,
+      crew_sheet_ready_at: status === 'ready_to_go' ? new Date().toISOString() : null,
+      show_completed_at: status === 'show_complete' ? new Date().toISOString() : null,
     }
 
     const { error } = await supabase
@@ -1709,20 +1689,15 @@ function AdminPage() {
       return
     }
 
-    setMessage(`${eventRecord.show_name} moved to ${getCrewSheetStatusLabel(cleanStatus)}.`)
+    setMessage(`${eventRecord.show_name} marked as ${getCrewSheetStatusLabel(status)}.`)
     loadEvents()
   }
 
   const totalCrewSheets = events.length
-  const draftCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'draft')
-  const planningCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'planning')
-  const confirmedCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'confirmed')
-  const liveCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'live')
-  const archivedCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'archived')
-  const readyCrewSheets = events.filter(eventRecord => isReadyProjectStatus(getCrewSheetStatus(eventRecord)))
-  const completedCrewSheets = events.filter(eventRecord => isCompletedProjectStatus(getCrewSheetStatus(eventRecord)))
-  const activeCrewSheets = events.filter(eventRecord => !isCompletedProjectStatus(getCrewSheetStatus(eventRecord)))
-  const inProgressCrewSheets = events.filter(eventRecord => isAttentionProjectStatus(getCrewSheetStatus(eventRecord)))
+  const readyCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'ready_to_go')
+  const completedCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'show_complete')
+  const activeCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) !== 'show_complete')
+  const inProgressCrewSheets = events.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'in_progress' || !eventRecord.crew_sheet_status)
 
   const crewSheetSearchTerm = crewSheetSearch.trim().toLowerCase()
   const filteredCrewSheets = crewSheetSearchTerm
@@ -1743,14 +1718,9 @@ function AdminPage() {
       })
     : events
 
-  const filteredDraftCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'draft')
-  const filteredPlanningCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'planning')
-  const filteredConfirmedCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'confirmed')
-  const filteredLiveCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'live')
-  const filteredCompletedCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'completed')
-  const filteredArchivedCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'archived')
-  const filteredInProgressCrewSheets = filteredCrewSheets.filter(eventRecord => isAttentionProjectStatus(getCrewSheetStatus(eventRecord)))
-  const filteredReadyCrewSheets = filteredCrewSheets.filter(eventRecord => isReadyProjectStatus(getCrewSheetStatus(eventRecord)))
+  const filteredReadyCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'ready_to_go')
+  const filteredCompletedCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'show_complete')
+  const filteredInProgressCrewSheets = filteredCrewSheets.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'in_progress' || !eventRecord.crew_sheet_status)
 
   const staffSearchTerm = staffSearch.trim().toLowerCase()
   const filteredStaffMembers = staffSearchTerm
@@ -1762,6 +1732,7 @@ function AdminPage() {
           member.phone,
           member.email,
           member.employment_type,
+          getStaffAvailabilityOption(member).label,
           member.skills,
         ]
           .filter(Boolean)
@@ -1774,8 +1745,14 @@ function AdminPage() {
 
   const activeStaffMembers = filteredStaffMembers.filter(member => member.active !== false)
   const inactiveStaffMembers = filteredStaffMembers.filter(member => member.active === false)
+  const allActiveStaffMembers = staffMembers.filter(member => member.active !== false)
   const fullTimeStaff = staffMembers.filter(member => getStaffEmploymentType(member) === 'Full Time' && member.active !== false)
   const freelancerStaff = staffMembers.filter(member => ['Freelancer', 'Contractor'].includes(getStaffEmploymentType(member)) && member.active !== false)
+  const availableStaff = allActiveStaffMembers.filter(member => getStaffAvailabilityStatus(member) === 'available')
+  const holidayStaff = allActiveStaffMembers.filter(member => getStaffAvailabilityStatus(member) === 'holiday')
+  const sickStaff = allActiveStaffMembers.filter(member => getStaffAvailabilityStatus(member) === 'sick')
+  const trainingStaff = allActiveStaffMembers.filter(member => getStaffAvailabilityStatus(member) === 'training')
+  const unavailableStaff = allActiveStaffMembers.filter(member => getStaffAvailabilityStatus(member) === 'unavailable')
 
 
   const calendarFocus = parseCalendarDate(calendarFocusDate) || new Date()
@@ -1837,7 +1814,7 @@ function AdminPage() {
     if (eventRecord.calendar_item_type === 'resource_booking') return 'resourceBookingCalendarEvent'
     if (eventRecord.has_resource_bookings) return 'projectCalendarEvent resourceLinkedCalendarEvent'
     const status = getCrewSheetStatus(eventRecord)
-    if (isCompletedProjectStatus(status)) return 'completeCalendarEvent'
+    if (status === 'show_complete') return 'completeCalendarEvent'
     return 'projectCalendarEvent'
   }
 
@@ -1846,7 +1823,7 @@ function AdminPage() {
       return eventRecord.colour || eventRecord.resource_calendar?.colour || getCalendarCategoryColour(eventRecord.resource_category || 'projects')
     }
     const status = getCrewSheetStatus(eventRecord)
-    if (isCompletedProjectStatus(status)) return '#050505'
+    if (status === 'show_complete') return '#050505'
     return getCalendarCategoryColour('projects')
   }
 
@@ -2135,7 +2112,7 @@ function AdminPage() {
       start_date: selectedEventEditForm.start_date || null,
       end_date: selectedEventEditForm.end_date || selectedEventEditForm.start_date || null,
       project_manager: selectedEventEditForm.project_manager,
-      crew_sheet_status: normaliseProjectStatus(selectedEventEditForm.crew_sheet_status),
+      crew_sheet_status: selectedEventEditForm.crew_sheet_status || 'in_progress',
     }
 
     const { error } = await supabase
@@ -2603,10 +2580,10 @@ function AdminPage() {
                     </label>
                     <label>
                       <strong>Status</strong>
-                      <select value={normaliseProjectStatus(selectedEventEditForm?.crew_sheet_status)} onChange={e => updateSelectedEventEditField('crew_sheet_status', e.target.value)}>
-                        {PROJECT_STATUS_OPTIONS.map(option => (
-                          <option value={option.value} key={option.value}>{option.label}</option>
-                        ))}
+                      <select value={selectedEventEditForm?.crew_sheet_status || 'in_progress'} onChange={e => updateSelectedEventEditField('crew_sheet_status', e.target.value)}>
+                        <option value="in_progress">In Progress</option>
+                        <option value="ready_to_go">Ready To Go</option>
+                        <option value="show_complete">Show Complete</option>
                       </select>
                     </label>
                   </div>
@@ -3122,9 +3099,9 @@ function AdminPage() {
     }
 
     const visibleEvents = getCalendarSourceItems().filter(eventRecord => eventOverlapsRange(eventRecord, rangeStart, rangeEnd))
-    const readyVisible = visibleEvents.filter(eventRecord => isReadyProjectStatus(getCrewSheetStatus(eventRecord)))
-    const inProgressVisible = visibleEvents.filter(eventRecord => isAttentionProjectStatus(getCrewSheetStatus(eventRecord)))
-    const completeVisible = visibleEvents.filter(eventRecord => isCompletedProjectStatus(getCrewSheetStatus(eventRecord)))
+    const readyVisible = visibleEvents.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'ready_to_go')
+    const inProgressVisible = visibleEvents.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'in_progress' || !eventRecord.crew_sheet_status)
+    const completeVisible = visibleEvents.filter(eventRecord => getCrewSheetStatus(eventRecord) === 'show_complete')
 
     return (
       <>
@@ -3247,7 +3224,7 @@ function AdminPage() {
 
           <div className="calendarOverviewGrid">
             <div><strong>{visibleEvents.length}</strong><span>Events in view</span></div>
-            <div className={readyVisible.length ? 'statusGreen' : ''}><strong>{readyVisible.length}</strong><span>Confirmed / Live</span></div>
+            <div className={readyVisible.length ? 'statusGreen' : ''}><strong>{readyVisible.length}</strong><span>Ready To Go</span></div>
             <div><strong>{inProgressVisible.length}</strong><span>In Progress</span></div>
             <div className={completeVisible.length ? 'statusComplete' : ''}><strong>{completeVisible.length}</strong><span>Show Complete</span></div>
           </div>
@@ -3308,8 +3285,9 @@ function AdminPage() {
   }
 
   function renderStaffMemberCard(member) {
+    const availabilityOption = getStaffAvailabilityOption(member)
     return (
-      <div className={member.active === false ? 'staffMemberCard inactiveStaffMemberCard' : 'staffMemberCard'} key={member.id} style={{ '--staff-calendar-colour': getStaffCalendarColour(member) }}>
+      <div className={`${member.active === false ? 'staffMemberCard inactiveStaffMemberCard' : 'staffMemberCard'} staffAvailabilityCard-${availabilityOption.tone}`} key={member.id} style={{ '--staff-calendar-colour': getStaffCalendarColour(member) }}>
         <div className="staffMemberMain">
           <div>
             <div className="staffMemberTitleRow">
@@ -3319,6 +3297,9 @@ function AdminPage() {
                 {getStaffEmploymentType(member)}
               </span>
               {member.active === false && <span className="staffTypeBadge inactiveBadge">Inactive</span>}
+              <span className={getStaffAvailabilityBadgeClass(member)}>
+                {availabilityOption.label}
+              </span>
             </div>
             <p>{member.role || 'No role set'}{member.department ? ` · ${member.department}` : ''}</p>
             <small>{member.phone || 'No phone'}{member.email ? ` · ${member.email}` : ''}</small>
@@ -3376,11 +3357,11 @@ function AdminPage() {
 
   function renderCrewSheetCard(eventRecord) {
     const crewSheetStatus = getCrewSheetStatus(eventRecord)
-    const crewSheetCardClass = isReadyProjectStatus(crewSheetStatus)
+    const crewSheetCardClass = crewSheetStatus === 'ready_to_go'
       ? 'adminListItem crewSheetReadyCard'
-      : isCompletedProjectStatus(crewSheetStatus)
+      : crewSheetStatus === 'show_complete'
         ? 'adminListItem crewSheetCompleteCard'
-        : `adminListItem projectStatusCard projectStatusCard-${crewSheetStatus}`
+        : 'adminListItem'
 
     return (
       <div className={crewSheetCardClass} key={eventRecord.id}>
@@ -3407,18 +3388,26 @@ function AdminPage() {
           <button type="button" onClick={() => copyLink(cleanRouteSlug(eventRecord.public_slug) || eventRecord.id)}>
             <Copy size={16} /> Copy Link
           </button>
-          <label className="projectStatusAction">
-            Status
-            <select
-              className="projectStatusSelect"
-              value={crewSheetStatus}
-              onChange={e => updateCrewSheetStatus(eventRecord, e.target.value)}
-            >
-              {PROJECT_STATUS_OPTIONS.map(option => (
-                <option value={option.value} key={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
+          {crewSheetStatus === 'in_progress' && (
+            <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'ready_to_go')}>
+              Mark Ready
+            </button>
+          )}
+          {crewSheetStatus === 'ready_to_go' && (
+            <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'in_progress')}>
+              Mark In Progress
+            </button>
+          )}
+          {crewSheetStatus !== 'show_complete' && (
+            <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'show_complete')}>
+              Mark Show Complete
+            </button>
+          )}
+          {crewSheetStatus === 'show_complete' && (
+            <button type="button" onClick={() => updateCrewSheetStatus(eventRecord, 'in_progress')}>
+              Reopen
+            </button>
+          )}
           <button type="button" onClick={() => togglePublished(eventRecord)}>
             {eventRecord.share_enabled ? 'Unpublish' : 'Publish'}
           </button>
@@ -3431,11 +3420,11 @@ function AdminPage() {
   }
 
   function renderCrewSheetGroup(title, records, className, emptyText) {
-    const groupId = className === 'confirmedCrewSheetGroup' || className === 'liveCrewSheetGroup'
+    const groupId = className === 'readyCrewSheetGroup'
       ? 'projects-ready-list'
-      : className === 'draftCrewSheetGroup' || className === 'planningCrewSheetGroup'
+      : className === 'inProgressCrewSheetGroup'
         ? 'projects-active-list'
-        : className === 'completedCrewSheetGroup' || className === 'archivedCrewSheetGroup'
+        : className === 'completeCrewSheetGroup'
           ? 'projects-completed-list'
           : undefined
 
@@ -3525,6 +3514,14 @@ function AdminPage() {
           <button type="button" className="statusStripItem movementMetric" onClick={() => goToPortalSection('staff', 'staff-directory-section', { staffGroup: 'staff' })}>
             <span>Crew Today</span>
             <strong>{getLiveResourceBookingCount('crew') + getLiveResourceBookingCount('freelancers')}</strong>
+          </button>
+          <button type="button" className="statusStripItem availableMetric" onClick={() => goToPortalSection('staff', 'staff-availability-section')}>
+            <span>Available Staff</span>
+            <strong>{availableStaff.length}</strong>
+          </button>
+          <button type="button" className="statusStripItem holidayMetric" onClick={() => goToPortalSection('staff', 'staff-leave-section')}>
+            <span>On Holiday</span>
+            <strong>{holidayStaff.length}</strong>
           </button>
           <button type="button" className="statusStripItem vehicleMetric" onClick={() => goToPortalSection('operations_calendar', 'resource-section-vehicles', { resourceGroup: 'vehicles' })}>
             <span>Vehicles Out</span>
@@ -3651,11 +3648,11 @@ function AdminPage() {
             <div>
               <p className="eyebrowDark">Projects</p>
               <h2>Project Management</h2>
-              <p>Create projects, manage existing crew sheets and move each job through Draft, Planning, Confirmed, Live, Completed and Archived.</p>
+              <p>Create projects, manage existing crew sheets and separate active, ready and completed jobs from the live operations dashboard.</p>
             </div>
             <div className="projectSummaryGrid">
               <div><strong>{activeCrewSheets.length}</strong><span>Active Projects</span></div>
-              <div><strong>{readyCrewSheets.length}</strong><span>Confirmed / Live</span></div>
+              <div><strong>{readyCrewSheets.length}</strong><span>Ready To Go</span></div>
               <div><strong>{completedCrewSheets.length}</strong><span>Completed</span></div>
             </div>
           </section>
@@ -3816,12 +3813,9 @@ function AdminPage() {
             ) : events.length ? (
               filteredCrewSheets.length ? (
                 <div className="crewSheetGroupedList">
-                  {renderCrewSheetGroup('Draft', filteredDraftCrewSheets, 'draftCrewSheetGroup', 'No matching draft projects found.')}
-                  {renderCrewSheetGroup('Planning', filteredPlanningCrewSheets, 'planningCrewSheetGroup', 'No matching planning projects found.')}
-                  {renderCrewSheetGroup('Confirmed', filteredConfirmedCrewSheets, 'confirmedCrewSheetGroup', 'No matching confirmed projects found.')}
-                  {renderCrewSheetGroup('Live', filteredLiveCrewSheets, 'liveCrewSheetGroup', 'No matching live projects found.')}
-                  {renderCrewSheetGroup('Completed', filteredCompletedCrewSheets, 'completedCrewSheetGroup', 'No matching completed projects found.')}
-                  {renderCrewSheetGroup('Archived', filteredArchivedCrewSheets, 'archivedCrewSheetGroup', 'No matching archived projects found.')}
+                  {renderCrewSheetGroup('Ready To Go', filteredReadyCrewSheets, 'readyCrewSheetGroup', 'No matching projects are marked ready.')}
+                  {renderCrewSheetGroup('In Progress', filteredInProgressCrewSheets, 'inProgressCrewSheetGroup', 'No matching projects are currently in progress.')}
+                  {renderCrewSheetGroup('Show Complete', filteredCompletedCrewSheets, 'completeCrewSheetGroup', 'No matching completed shows found.')}
                 </div>
               ) : (
                 <Empty text="No projects match your search." />
@@ -3860,8 +3854,16 @@ function AdminPage() {
                 <span>Freelancers / Contractors</span>
               </div>
               <div>
-                <strong>{staffMembers.filter(member => member.active === false).length}</strong>
-                <span>Inactive</span>
+                <strong>{availableStaff.length}</strong>
+                <span>Available</span>
+              </div>
+              <div>
+                <strong>{holidayStaff.length}</strong>
+                <span>On Holiday</span>
+              </div>
+              <div>
+                <strong>{sickStaff.length + unavailableStaff.length}</strong>
+                <span>Sick / Unavailable</span>
               </div>
             </div>
           </section>
@@ -3930,6 +3932,15 @@ function AdminPage() {
               </label>
 
               <label>
+                Availability Status
+                <select value={staffForm.availability_status || 'available'} onChange={e => updateStaffField('availability_status', e.target.value)}>
+                  {STAFF_AVAILABILITY_OPTIONS.map(option => (
+                    <option value={option.value} key={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
                 Calendar Colour
                 <input type="color" value={staffForm.calendar_colour || '#16a34a'} onChange={e => updateStaffField('calendar_colour', e.target.value)} />
               </label>
@@ -3972,21 +3983,51 @@ function AdminPage() {
               <div>
                 <p className="eyebrowDark">Availability</p>
                 <h2>Holiday / Leave</h2>
-                <p>Holiday and absence tracking will sit here. This is currently a placeholder for the next leave-management phase.</p>
+                <p>Live staff availability is now driven from each staff member's Availability Status field.</p>
               </div>
             </div>
-            <div className="portalPlaceholderGrid">
-              <div>
-                <strong>0</strong>
-                <span>People on holiday today</span>
+            <div className="portalPlaceholderGrid staffAvailabilitySummaryGrid" id="staff-availability-section">
+              <div className="availabilitySummaryAvailable">
+                <strong>{availableStaff.length}</strong>
+                <span>Available</span>
               </div>
-              <div>
-                <strong>0</strong>
-                <span>Pending leave requests</span>
+              <div className="availabilitySummaryHoliday">
+                <strong>{holidayStaff.length}</strong>
+                <span>On Holiday</span>
               </div>
-              <div>
-                <strong>0</strong>
-                <span>Unavailable today</span>
+              <div className="availabilitySummarySick">
+                <strong>{sickStaff.length}</strong>
+                <span>Sick</span>
+              </div>
+              <div className="availabilitySummaryTraining">
+                <strong>{trainingStaff.length}</strong>
+                <span>Training</span>
+              </div>
+              <div className="availabilitySummaryUnavailable">
+                <strong>{unavailableStaff.length}</strong>
+                <span>Unavailable</span>
+              </div>
+            </div>
+
+            <div className="staffAvailabilityPanels">
+              <div className="staffAvailabilityPanel">
+                <h3>Holiday</h3>
+                {holidayStaff.length ? holidayStaff.map(member => (
+                  <div className="staffAvailabilityMiniRow" key={member.id}>
+                    <strong>{member.name}</strong>
+                    <span>{member.role || 'No role set'}</span>
+                  </div>
+                )) : <Empty text="No one is marked as on holiday." />}
+              </div>
+
+              <div className="staffAvailabilityPanel">
+                <h3>Sick / Unavailable</h3>
+                {[...sickStaff, ...unavailableStaff].length ? [...sickStaff, ...unavailableStaff].map(member => (
+                  <div className="staffAvailabilityMiniRow" key={member.id}>
+                    <strong>{member.name}</strong>
+                    <span>{getStaffAvailabilityOption(member).label} · {member.role || 'No role set'}</span>
+                  </div>
+                )) : <Empty text="No sick or unavailable staff recorded." />}
               </div>
             </div>
           </section>
@@ -4273,9 +4314,22 @@ function AdminPage() {
             </div>
           </section>
 
+          <section className="eventCard reportsSectionCard" id="staff-availability-report">
+            <p className="eyebrowDark">Staff Availability</p>
+            <h2>People Status</h2>
+            <p>Snapshot of staff availability based on the status selected in the Staff tab.</p>
+            <div className="portalPlaceholderGrid staffAvailabilitySummaryGrid">
+              <div className="availabilitySummaryAvailable"><strong>{availableStaff.length}</strong><span>Available</span></div>
+              <div className="availabilitySummaryHoliday"><strong>{holidayStaff.length}</strong><span>Holiday</span></div>
+              <div className="availabilitySummarySick"><strong>{sickStaff.length}</strong><span>Sick</span></div>
+              <div className="availabilitySummaryTraining"><strong>{trainingStaff.length}</strong><span>Training</span></div>
+              <div className="availabilitySummaryUnavailable"><strong>{unavailableStaff.length}</strong><span>Unavailable</span></div>
+            </div>
+          </section>
+
           <section className="eventCard reportsSectionCard" id="completed-projects-report">
             <p className="eyebrowDark">Completed Projects</p>
-            <h2>Completed / Archived</h2>
+            <h2>Show Complete</h2>
             {completedCrewSheets.length ? (
               <div className="calendarEventList">
                 {completedCrewSheets.map(eventRecord => (
@@ -4295,7 +4349,7 @@ function AdminPage() {
 
           <section className="eventCard reportsSectionCard" id="readiness-report">
             <p className="eyebrowDark">Readiness</p>
-            <h2>Confirmed / Live</h2>
+            <h2>Ready To Go</h2>
             {readyCrewSheets.length ? (
               <div className="calendarEventList">
                 {readyCrewSheets.map(eventRecord => (
@@ -4309,7 +4363,7 @@ function AdminPage() {
                 ))}
               </div>
             ) : (
-              <Empty text="No projects are marked confirmed or live yet." />
+              <Empty text="No crew sheets are marked ready to go yet." />
             )}
           </section>
         </>
@@ -4327,7 +4381,7 @@ function EventManagerPage() {
     start_date: '',
     end_date: '',
     project_manager: '',
-    crew_sheet_status: 'draft',
+    crew_sheet_status: 'in_progress',
   })
 
   const [eventResourceBookingForm, setEventResourceBookingForm] = useState({
@@ -4466,7 +4520,7 @@ function EventManagerPage() {
       start_date: eventData.start_date || '',
       end_date: eventData.end_date || eventData.start_date || '',
       project_manager: eventData.project_manager || '',
-      crew_sheet_status: normaliseProjectStatus(eventData.crew_sheet_status),
+      crew_sheet_status: eventData.crew_sheet_status || 'in_progress',
     })
     setEventLocationForm({
       venue_address: eventData.venue_address || '',
@@ -4647,7 +4701,7 @@ function EventManagerPage() {
       start_date: eventDetailsForm.start_date || null,
       end_date: eventDetailsForm.end_date || eventDetailsForm.start_date || null,
       project_manager: eventDetailsForm.project_manager,
-      crew_sheet_status: normaliseProjectStatus(eventDetailsForm.crew_sheet_status),
+      crew_sheet_status: eventDetailsForm.crew_sheet_status || 'in_progress',
     }
 
     const { error } = await supabase
@@ -6228,10 +6282,10 @@ function EventManagerPage() {
               </label>
               <label>
                 Status
-                <select value={normaliseProjectStatus(eventDetailsForm.crew_sheet_status)} onChange={e => updateEventDetailsField('crew_sheet_status', e.target.value)}>
-                  {PROJECT_STATUS_OPTIONS.map(option => (
-                    <option value={option.value} key={option.value}>{option.label}</option>
-                  ))}
+                <select value={eventDetailsForm.crew_sheet_status} onChange={e => updateEventDetailsField('crew_sheet_status', e.target.value)}>
+                  <option value="in_progress">In Progress</option>
+                  <option value="ready_to_go">Ready To Go</option>
+                  <option value="show_complete">Show Complete</option>
                 </select>
               </label>
               <button className="primaryButton" type="submit">Save Live Details</button>
