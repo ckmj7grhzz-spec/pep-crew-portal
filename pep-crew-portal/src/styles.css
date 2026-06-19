@@ -8,6 +8,9 @@
   --pep-green-dark: #15803d;
   --pep-bg: #f4f7fb;
   --pep-card: #ffffff;
+  --pep-subcard: #f8fafc;
+  --pep-subcard-alt: rgba(15, 23, 42, 0.04);
+  --pep-subcard-strong: rgba(15, 23, 42, 0.065);
   --pep-border: #e5e7eb;
   --pep-text: #0f172a;
   --pep-muted: #64748b;
@@ -6296,4 +6299,207 @@ button.calendarEventListItem {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
+}
+
+/* =========================================================
+   Global Admin Contrast Hierarchy
+   Keeps main cards white and gives nested/admin sections
+   a subtle light-grey contrast so stacked headers are readable.
+   ========================================================= */
+
+/* Main admin cards stay clean white */
+.eventCard,
+.managerHeaderCard,
+.compactControlCard,
+.accordion,
+.adminListItem,
+.calendarEventDrawer,
+.documentPreviewModal {
+  background: var(--pep-card);
+}
+
+/* Nested/open content areas use light grey */
+.accordionBody,
+.overviewGrid div,
+.missingGrid div,
+.dashboardSummary div,
+.statsGrid div,
+.locationNotes,
+.csvTemplateBox,
+.documentVisibilityToggle,
+.documentCategoryBar,
+.uploadCard,
+.importCard,
+.workbookImportCard,
+.globalSearchBox,
+.filterBar,
+.publicLocationNotes {
+  background: var(--pep-subcard);
+}
+
+/* Forms inside admin cards need their own contrast block */
+.adminForm:not(.loginForm),
+.staffForm,
+.projectResourceAddForm,
+.calendarProjectEditForm,
+.resourceBookingForm,
+.calendarSettingsForm,
+.resourceCalendarForm,
+.workbookImportForm {
+  background: var(--pep-subcard);
+  border: 1px solid var(--pep-border);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+/* Prevent nested forms becoming too heavy on mobile/compact cards */
+.eventCard > .adminForm:first-child,
+.eventCard > form.adminForm:first-child {
+  margin-top: 18px;
+}
+
+/* List rows alternate subtly so cards do not blend into their parent */
+.adminListItem:nth-child(even),
+.item:nth-child(even),
+.assignedResourceGroup,
+.calendarEventDrawerSection,
+.calendarEventDrawerStats,
+.projectResourceManager,
+.calendarDayBookingModalBody,
+.calendarResourceSearch,
+.calendarKeyList,
+.calendarSubCalendarList,
+.resourceConflictWarning,
+.publicTransportGrid,
+.publicResourceGrid,
+.bookedResourceGrid,
+.publicNotesGrid,
+.publicInfoGrid {
+  background: var(--pep-subcard);
+  border: 1px solid var(--pep-border);
+  border-radius: 14px;
+}
+
+/* Inner sections get a slightly stronger shade when sitting inside grey */
+.accordionBody .adminListItem,
+.eventCard .accordionBody,
+.calendarEventDrawerBody > section,
+.calendarEventDrawerBody > form,
+.calendarEventDrawerBody > div,
+.documentPreviewFooter,
+.documentPreviewHeader {
+  background: var(--pep-subcard-alt);
+}
+
+/* Keep status cards and warning/success colours intact */
+.statusRed,
+.statusOrange,
+.statusGreen,
+.crewSheetReadyCard,
+.crewSheetCompleteCard,
+.resourceConflictWarning,
+.conflictWarningPanel,
+.editNotice,
+.fileUploadBox,
+.publicDateCard {
+  background: inherit;
+}
+
+/* Restore explicit status backgrounds after global nesting */
+.statusRed {
+  background: var(--red-bg) !important;
+}
+
+.statusOrange {
+  background: var(--orange-bg) !important;
+}
+
+.statusGreen {
+  background: var(--green-bg) !important;
+}
+
+.adminListItem.crewSheetReadyCard {
+  background: var(--pep-green) !important;
+}
+
+.adminListItem.crewSheetCompleteCard {
+  background: #050505 !important;
+}
+
+/* Calendar/admin modal section separation */
+.calendarEventDrawerBody {
+  display: grid;
+  gap: 16px;
+}
+
+.calendarEventDrawerGrid,
+.projectEditGrid,
+.assignedResourceList,
+.calendarEventDrawerActions {
+  background: #ffffff;
+  border: 1px solid var(--pep-border);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+/* Resource sidebar: parent area white, children grey */
+.calendarKeySidebar {
+  background: #ffffff;
+}
+
+.calendarKeyGroup {
+  background: var(--pep-subcard);
+  border: 1px solid var(--pep-border);
+  border-radius: 14px;
+  padding: 8px;
+}
+
+.calendarSubCalendarItem {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 10px;
+}
+
+/* Tables remain readable inside grey cards */
+.accordionBody table,
+.eventCard table {
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Public/admin info blocks that sit under headers */
+.publicOverviewCard,
+.eventContactsCard,
+.compactEventContactsCard {
+  background: var(--pep-card);
+}
+
+.publicOverviewCard > div:not(.publicOverviewHeader),
+.eventContactsGrid > div {
+  background: var(--pep-subcard);
+  border: 1px solid var(--pep-border);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+/* Mobile keeps the hierarchy but reduces padding */
+@media (max-width: 720px) {
+  .adminForm:not(.loginForm),
+  .staffForm,
+  .projectResourceAddForm,
+  .calendarProjectEditForm,
+  .resourceBookingForm,
+  .calendarSettingsForm,
+  .resourceCalendarForm,
+  .workbookImportForm {
+    padding: 14px;
+  }
+
+  .calendarEventDrawerGrid,
+  .projectEditGrid,
+  .assignedResourceList,
+  .calendarEventDrawerActions {
+    padding: 12px;
+  }
 }
