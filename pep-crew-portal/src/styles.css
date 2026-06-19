@@ -6732,51 +6732,52 @@ button.calendarEventListItem {
   }
 }
 
-/* Dashboard large action cards - clearer, easier to scan */
+
+/* Dashboard action cards - compact, readable, no arrow glyph */
 .adminOverviewGrid.dashboardCardGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(220px, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(5, minmax(180px, 1fr));
+  gap: 16px;
   align-items: stretch;
 }
 
 .adminOverviewGrid .dashboardMetricCard,
 .adminOverviewGrid button.dashboardMetricCard {
-  min-height: 170px;
-  padding: 26px 26px 24px;
-  border-radius: 22px;
+  min-height: 132px;
+  padding: 18px 18px 16px;
+  border-radius: 18px;
   display: grid !important;
   grid-template-columns: auto 1fr;
   grid-template-rows: auto auto auto;
-  column-gap: 18px;
-  row-gap: 6px;
+  column-gap: 13px;
+  row-gap: 4px;
   align-content: start;
-  align-items: center;
+  align-items: start;
   text-align: left;
-  border-top-width: 8px;
+  border-top-width: 6px;
 }
 
 .dashboardMetricCard .dashboardMetricIcon {
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   grid-row: 1 / 4;
   align-self: start;
-  margin-top: 2px;
-  font-size: 14px;
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--metric-colour, var(--pep-green)) 18%, transparent);
+  margin-top: 3px;
+  font-size: 12px;
+  box-shadow: 0 7px 14px color-mix(in srgb, var(--metric-colour, var(--pep-green)) 14%, transparent);
 }
 
 .dashboardMetricCard strong {
   display: block;
-  font-size: clamp(42px, 3.4vw, 64px) !important;
-  line-height: 0.9;
-  letter-spacing: -0.06em;
+  font-size: clamp(34px, 2.7vw, 48px) !important;
+  line-height: 0.92;
+  letter-spacing: -0.055em;
   color: var(--pep-text);
 }
 
 .dashboardMetricCard span:not(.dashboardMetricIcon) {
   display: block;
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1.15;
   font-weight: 950;
   color: #334155;
@@ -6787,26 +6788,25 @@ button.calendarEventListItem {
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  margin-top: 8px;
-  padding: 7px 11px;
+  margin-top: 7px;
+  padding: 6px 10px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--metric-colour, var(--pep-green)) 10%, #ffffff);
-  color: color-mix(in srgb, var(--metric-colour, var(--pep-green)) 75%, #0f172a);
-  border: 1px solid color-mix(in srgb, var(--metric-colour, var(--pep-green)) 18%, #ffffff);
-  font-size: 12px;
+  background: color-mix(in srgb, var(--metric-colour, var(--pep-green)) 9%, #ffffff);
+  color: color-mix(in srgb, var(--metric-colour, var(--pep-green)) 72%, #0f172a);
+  border: 1px solid color-mix(in srgb, var(--metric-colour, var(--pep-green)) 16%, #ffffff);
+  font-size: 11px;
   line-height: 1;
   font-weight: 950;
 }
 
 .clickableDashboardCard small::after {
-  content: ' â†’';
-  margin-left: 4px;
+  content: '';
 }
 
 .adminOverviewGrid .dashboardMetricCard:hover,
 .adminOverviewGrid .clickableDashboardCard:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.14);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
 }
 
 .adminOverviewGrid .completedMetric span:not(.dashboardMetricIcon),
@@ -6828,28 +6828,34 @@ button.calendarEventListItem {
 
 @media (max-width: 1400px) {
   .adminOverviewGrid.dashboardCardGrid {
-    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1050px) {
+  .adminOverviewGrid.dashboardCardGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
   .adminOverviewGrid.dashboardCardGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 620px) {
+@media (max-width: 520px) {
   .adminOverviewGrid.dashboardCardGrid {
     grid-template-columns: 1fr;
   }
 
   .adminOverviewGrid .dashboardMetricCard,
   .adminOverviewGrid button.dashboardMetricCard {
-    min-height: 145px;
-    padding: 22px;
+    min-height: 118px;
+    padding: 16px;
   }
 
   .dashboardMetricCard strong {
-    font-size: 44px !important;
+    font-size: 38px !important;
   }
 }
