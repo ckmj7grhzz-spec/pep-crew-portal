@@ -12,6 +12,8 @@
   --pep-text: #0f172a;
   --pep-muted: #64748b;
   --pep-soft: #f8fafc;
+  --pep-subcard: #f8fafc;
+  --pep-subcard-alt: rgba(15, 23, 42, 0.04);
   --pep-blue: #1d4ed8;
   --red-bg: #fef2f2;
   --red-border: #fca5a5;
@@ -6443,4 +6445,210 @@ button.calendarEventListItem {
 .publicSheetTile,
 .publicSheetSectionCard {
   background: #ffffff;
+}
+
+
+/* Dashboard / portal navigation refresh */
+.pepAppHeaderHomeButton {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+}
+
+.pepAppHeaderHomeButton:hover {
+  opacity: 0.9;
+}
+
+.opsHomeHero {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 20px;
+  background: #ffffff;
+}
+
+.opsHomeHero h2 {
+  font-size: 42px;
+  margin: 0 0 8px;
+}
+
+.opsHomeDateCard {
+  min-width: 260px;
+  background: #0f172a;
+  color: #ffffff;
+  border-radius: 18px;
+  padding: 20px;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+}
+
+.opsHomeDateCard span {
+  color: rgba(255,255,255,0.72);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.opsHomeDateCard strong {
+  font-size: 20px;
+  line-height: 1.35;
+}
+
+.opsDashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 22px 0;
+}
+
+.opsDashboardCard {
+  border: 1px solid var(--pep-border);
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 22px;
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.opsDashboardCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(22, 163, 74, 0.55);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
+}
+
+.opsDashboardCard span {
+  color: var(--pep-muted);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.opsDashboardCard strong {
+  font-size: 42px;
+  line-height: 1;
+  color: var(--pep-text);
+}
+
+.opsDashboardCard small {
+  color: #475569;
+  font-weight: 800;
+}
+
+.dashboardTwoColumnGrid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 22px;
+}
+
+.dashboardPanelCard {
+  margin-top: 0;
+}
+
+.dashboardPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.dashboardPanelHeader h3 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.dashboardActivityList {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboardActivityList button {
+  width: 100%;
+  border: 1px solid var(--pep-border);
+  background: var(--pep-subcard);
+  border-radius: 14px;
+  padding: 16px;
+  text-align: left;
+  display: grid;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.dashboardActivityList button:hover {
+  border-color: var(--pep-green);
+  background: #ffffff;
+}
+
+.dashboardActivityList strong {
+  font-size: 17px;
+}
+
+.dashboardActivityList span,
+.dashboardActivityList small {
+  color: #475569;
+  font-weight: 800;
+}
+
+.dashboardResourceSummary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboardResourceSummary div {
+  background: var(--pep-subcard);
+  border: 1px solid var(--pep-border);
+  border-radius: 14px;
+  padding: 18px;
+  display: grid;
+  gap: 4px;
+}
+
+.dashboardResourceSummary strong {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.dashboardResourceSummary span {
+  color: var(--pep-muted);
+  font-weight: 900;
+}
+
+@media (max-width: 1000px) {
+  .opsHomeHero,
+  .dashboardPanelHeader {
+    display: grid;
+  }
+
+  .opsDashboardGrid,
+  .dashboardTwoColumnGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .opsHomeDateCard {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .opsDashboardGrid,
+  .dashboardResourceSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .opsHomeHero h2 {
+    font-size: 32px;
+  }
 }
