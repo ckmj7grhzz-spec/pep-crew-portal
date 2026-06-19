@@ -2137,6 +2137,120 @@ function AdminPage() {
     return conflictKeys.size
   }
 
+  function getDashboardConflictItems() {
+    const seen = new Set()
+    const items = []
+
+    ;(resourceBookings || [])
+      .filter(booking => booking.active !== false)
+      .forEach(booking => {
+        const resource = booking.resource_calendar || getResourceCalendarById(booking.resource_calendar_id)
+
+        getResourceConflicts(booking.resource_calendar_id, booking.start_date, booking.end_date || booking.start_date, booking.event_id)
+          .forEach(conflict => {
+            const key = [booking.id, conflict.id].map(value => String(value)).sort().join('|')
+            if (seen.has(key)) return
+            seen.add(key)
+
+            const linkedEvent = booking.linked_event || findLinkedEventForBooking(booking)
+            items.push({
+              key,
+              resource,
+              booking,
+              conflict,
+              primaryName: linkedEvent?.show_name || booking.booking_name || booking.title || 'Existing booking',
+              conflictName: conflict.linked_event?.show_name || conflict.booking_name || conflict.title || 'Existing booking',
+            })
+          })
+      })
+
+    return items
+  }
+
+  function getMissingInformationItems() {
+    return inProgressCrewSheets.map(eventRecord => ({
+      id: eventRecord.id,
+      title: eventRecord.show_name || 'Untitled crew sheet',
+      venue: eventRecord.venue || 'Venue TBC',
+      href: getEventAdminHref(eventRecord),
+      status: getCrewSheetStatusLabel(getCrewSheetStatus(eventRecord)),
+    }))
+  }
+
+  function goToPortalSection(tab, targetId = null, options = {}) {
+    setActivePortalTab(tab)
+
+    if (options.resourceGroup) {
+      setOpenResourceCalendarGroups(current => ({
+        ...current,
+        [options.resourceGroup]: true,
+      }))
+    }
+
+    if (options.staffGroup) {
+      setOpenStaffGroups(current => ({
+        ...current,
+        [options.staffGroup]: true,
+      }))
+    }
+
+    if (targetId) {
+      setTimeout(() => {
+        document.getElementById(targetId)?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+      }, 180)
+    }
+  }
+
+  function getResourceCategoryLiveBookings(category) {
+    const today = formatCalendarDateInput(new Date())
+
+    return (resourceBookings || [])
+      .filter(booking => booking.active !== false)
+      .filter(booking => rangesOverlap(today, today, booking.start_date, booking.end_date || booking.start_date))
+      .map(booking => ({
+        ...booking,
+        resource_calendar: booking.resource_calendar || getResourceCalendarById(booking.resource_calendar_id),
+        linked_event: booking.linked_event || findLinkedEventForBooking(booking),
+      }))
+      .filter(booking => booking.resource_calendar?.category === category)
+  }
+
+  function renderResourceCategorySummary(category, title, emptyText) {
+    const resources = getResourceCalendarsForCategory(category)
+    const liveBookings = getResourceCategoryLiveBookings(category)
+
+    return (
+      <section className="eventCard resourceCategorySummaryCard" id={`resource-section-${category}`}>
+        <div className="staffSectionHeader">
+          <div>
+            <p className="eyebrowDark">Resource Overview</p>
+            <h2>{title}</h2>
+            <p>{liveBookings.length} live booking{liveBookings.length === 1 ? '' : 's'} today · {resources.length} resource{resources.length === 1 ? '' : 's'} configured.</p>
+          </div>
+        </div>
+
+        {liveBookings.length ? (
+          <div className="resourceSummaryList">
+            {liveBookings.map(booking => (
+              <div className="resourceSummaryItem" key={booking.id}>
+                <div>
+                  <strong>{booking.resource_calendar?.name || booking.booking_name || 'Resource booking'}</strong>
+                  <span>{booking.linked_event?.show_name || booking.booking_name || 'Unlinked booking'}</span>
+                </div>
+                <small>{formatDate(booking.start_date)} → {formatDate(booking.end_date || booking.start_date)}</small>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty text={emptyText} />
+        )}
+      </section>
+    )
+  }
+
   function getResourceWarningCount(resourceId) {
     if (!selectedCalendarEvent || !resourceId) return 0
     const startDate = selectedCalendarEvent.start_date || formatCalendarDateInput(new Date())
@@ -2860,7 +2974,7 @@ function AdminPage() {
     return (
       <>
         {renderCalendarDayBookingModal()}
-        <section className="eventCard operationsCalendarCard">
+        <section className="eventCard operationsCalendarCard" id="operations-calendar-main">
           <div className="calendarToolbar">
             <div className="calendarNavGroup">
               <div className="calendarViewTabs" role="tablist" aria-label="Calendar views">
@@ -3025,6 +3139,15 @@ function AdminPage() {
             <Empty text="No visible calendar items in this view." />
           )}
         </section>
+
+        <section className="eventCard operationsResourcesHub" id="operations-resources-hub">
+          <p className="eyebrowDark">Operations Resources</p>
+          <h2>Resource Sections</h2>
+          <p>Dashboard cards jump here for vehicles, LED trailers and dry hire.</p>
+        </section>
+        {renderResourceCategorySummary('vehicles', 'Vehicles Out', 'No vehicles are booked out today.')}
+        {renderResourceCategorySummary('led_trailers', 'LED Trailers Out', 'No LED trailers are booked out today.')}
+        {renderResourceCategorySummary('dry_hire', 'Dry Hire Jobs', 'No dry hire resources are booked today.')}
       </>
     )
   }
@@ -3228,56 +3351,66 @@ function AdminPage() {
         </div>
 
         <div className="adminOverviewGrid dashboardCardGrid">
-          <div className="dashboardMetricCard projectMetric">
+          <button type="button" className="dashboardMetricCard projectMetric clickableDashboardCard" onClick={() => goToPortalSection('operations_calendar', 'operations-calendar-main')}>
             <span className="dashboardMetricIcon">●</span>
             <strong>{activeCrewSheets.length}</strong>
             <span>Active Projects</span>
-          </div>
-          <div className="dashboardMetricCard movementMetric">
+            <small>Open calendar</small>
+          </button>
+          <button type="button" className="dashboardMetricCard movementMetric clickableDashboardCard" onClick={() => goToPortalSection('staff', 'staff-directory-section', { staffGroup: 'staff' })}>
             <span className="dashboardMetricIcon">●</span>
             <strong>{getLiveResourceBookingCount('crew') + getLiveResourceBookingCount('freelancers')}</strong>
             <span>Crew Movements</span>
-          </div>
-          <div className="dashboardMetricCard staffMetric">
+            <small>Open staff</small>
+          </button>
+          <button type="button" className="dashboardMetricCard staffMetric clickableDashboardCard" onClick={() => goToPortalSection('staff', 'staff-directory-section')}>
             <span className="dashboardMetricIcon">●</span>
             <strong>{staffMembers.filter(member => member.active !== false).length}</strong>
             <span>Staff Assigned</span>
-          </div>
-          <div className="dashboardMetricCard holidayMetric">
+            <small>Open staff</small>
+          </button>
+          <button type="button" className="dashboardMetricCard holidayMetric clickableDashboardCard" onClick={() => goToPortalSection('staff', 'staff-leave-section')}>
             <span className="dashboardMetricIcon">●</span>
             <strong>0</strong>
             <span>Holiday / Leave</span>
-          </div>
-          <div className="dashboardMetricCard vehicleMetric">
+            <small>Open leave</small>
+          </button>
+          <button type="button" className="dashboardMetricCard vehicleMetric clickableDashboardCard" onClick={() => goToPortalSection('operations_calendar', 'resource-section-vehicles', { resourceGroup: 'vehicles' })}>
             <span className="dashboardMetricIcon">●</span>
             <strong>{getLiveResourceBookingCount('vehicles')}</strong>
             <span>Vehicles Out</span>
-          </div>
-          <div className="dashboardMetricCard trailerMetric">
+            <small>Open vehicles</small>
+          </button>
+          <button type="button" className="dashboardMetricCard trailerMetric clickableDashboardCard" onClick={() => goToPortalSection('operations_calendar', 'resource-section-led_trailers', { resourceGroup: 'led_trailers' })}>
             <span className="dashboardMetricIcon">●</span>
             <strong>{getLiveResourceBookingCount('led_trailers')}</strong>
             <span>LED Trailers Out</span>
-          </div>
-          <div className="dashboardMetricCard dryHireMetric">
+            <small>Open trailers</small>
+          </button>
+          <button type="button" className="dashboardMetricCard dryHireMetric clickableDashboardCard" onClick={() => goToPortalSection('operations_calendar', 'resource-section-dry_hire', { resourceGroup: 'dry_hire' })}>
             <span className="dashboardMetricIcon">●</span>
             <strong>{getLiveResourceBookingCount('dry_hire')}</strong>
             <span>Dry Hire Jobs</span>
-          </div>
-          <div className="dashboardMetricCard completedMetric">
+            <small>Open dry hire</small>
+          </button>
+          <button type="button" className="dashboardMetricCard completedMetric clickableDashboardCard" onClick={() => goToPortalSection('reports', 'completed-projects-report')}>
             <span className="dashboardMetricIcon">●</span>
             <strong>{completedCrewSheets.length}</strong>
             <span>Completed Projects</span>
-          </div>
-          <div className={getDashboardConflictCount() ? 'dashboardMetricCard warningMetric activeWarningMetric' : 'dashboardMetricCard warningMetric'}>
+            <small>Open completed</small>
+          </button>
+          <button type="button" className={getDashboardConflictCount() ? 'dashboardMetricCard warningMetric activeWarningMetric clickableDashboardCard' : 'dashboardMetricCard warningMetric clickableDashboardCard'} onClick={() => goToPortalSection('reports', 'issues-warnings-report')}>
             <span className="dashboardMetricIcon">●</span>
             <strong>{getDashboardConflictCount()}</strong>
             <span>Conflict Warnings</span>
-          </div>
-          <div className={inProgressCrewSheets.length ? 'dashboardMetricCard missingMetric activeWarningMetric' : 'dashboardMetricCard missingMetric'}>
+            <small>Open issues</small>
+          </button>
+          <button type="button" className={inProgressCrewSheets.length ? 'dashboardMetricCard missingMetric activeWarningMetric clickableDashboardCard' : 'dashboardMetricCard missingMetric clickableDashboardCard'} onClick={() => goToPortalSection('reports', 'issues-warnings-report')}>
             <span className="dashboardMetricIcon">●</span>
             <strong>{inProgressCrewSheets.length}</strong>
             <span>Missing Information</span>
-          </div>
+            <small>Open issues</small>
+          </button>
         </div>
 
         {readyCrewSheets.length > 0 && (
@@ -3594,7 +3727,31 @@ function AdminPage() {
             )}
           </section>
 
-          <section className="eventCard staffDirectoryCard">
+          <section className="eventCard staffLeaveCard" id="staff-leave-section">
+            <div className="staffSectionHeader">
+              <div>
+                <p className="eyebrowDark">Availability</p>
+                <h2>Holiday / Leave</h2>
+                <p>Holiday and absence tracking will sit here. This is currently a placeholder for the next leave-management phase.</p>
+              </div>
+            </div>
+            <div className="portalPlaceholderGrid">
+              <div>
+                <strong>0</strong>
+                <span>People on holiday today</span>
+              </div>
+              <div>
+                <strong>0</strong>
+                <span>Pending leave requests</span>
+              </div>
+              <div>
+                <strong>0</strong>
+                <span>Unavailable today</span>
+              </div>
+            </div>
+          </section>
+
+          <section className="eventCard staffDirectoryCard" id="staff-directory-section">
             <div className="staffSectionHeader">
               <div>
                 <p className="eyebrowDark">Directory</p>
@@ -3786,26 +3943,114 @@ function AdminPage() {
       )}
 
       {activePortalTab === 'reports' && (
-        <section className="eventCard portalPlaceholderCard">
-          <p className="eyebrowDark">Reports</p>
-          <h2>Reports coming soon</h2>
-          <p>This area will later show staff utilisation, upcoming jobs, readiness summaries and conflict reports.</p>
+        <>
+          <section className="eventCard reportsOverviewCard">
+            <p className="eyebrowDark">Reports</p>
+            <h2>Operations Reports</h2>
+            <p>Review readiness, completed projects, missing information and active warnings.</p>
 
-          <div className="portalPlaceholderGrid">
-            <div>
-              <strong>Upcoming Shows</strong>
-              <span>Summarise future events and their readiness state.</span>
+            <div className="portalPlaceholderGrid reportsSummaryGrid">
+              <div>
+                <strong>{readyCrewSheets.length}</strong>
+                <span>Ready Projects</span>
+              </div>
+              <div>
+                <strong>{completedCrewSheets.length}</strong>
+                <span>Completed Projects</span>
+              </div>
+              <div className={getDashboardConflictCount() ? 'statusRed' : ''}>
+                <strong>{getDashboardConflictCount()}</strong>
+                <span>Conflict Warnings</span>
+              </div>
+              <div className={inProgressCrewSheets.length ? 'statusOrange' : ''}>
+                <strong>{inProgressCrewSheets.length}</strong>
+                <span>Missing Info Items</span>
+              </div>
             </div>
-            <div>
-              <strong>Utilisation</strong>
-              <span>See who is heavily booked and who has availability.</span>
+          </section>
+
+          <section className="eventCard reportsSectionCard" id="issues-warnings-report">
+            <p className="eyebrowDark">Issues & Warnings</p>
+            <h2>Conflicts and Missing Information</h2>
+            <p>Active double-booking conflicts and crew sheets that still need attention.</p>
+
+            <div className="reportsTwoColumnGrid">
+              <div className="reportPanel warningReportPanel">
+                <h3>Conflict Warnings</h3>
+                {getDashboardConflictItems().length ? (
+                  <div className="reportIssueList">
+                    {getDashboardConflictItems().map(item => (
+                      <div className="reportIssueItem" key={item.key}>
+                        <strong>{item.resource?.name || 'Resource conflict'}</strong>
+                        <span>{item.primaryName} clashes with {item.conflictName}</span>
+                        <small>{formatDate(item.booking.start_date)} → {formatDate(item.booking.end_date || item.booking.start_date)}</small>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <Empty text="No resource conflicts detected." />
+                )}
+              </div>
+
+              <div className="reportPanel missingReportPanel">
+                <h3>Missing Information</h3>
+                {getMissingInformationItems().length ? (
+                  <div className="reportIssueList">
+                    {getMissingInformationItems().map(item => (
+                      <a className="reportIssueItem" href={item.href} key={item.id}>
+                        <strong>{item.title}</strong>
+                        <span>{item.venue}</span>
+                        <small>{item.status}</small>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <Empty text="No in-progress crew sheets need attention." />
+                )}
+              </div>
             </div>
-            <div>
-              <strong>Conflict Reports</strong>
-              <span>Highlight staff, travel or scheduling clashes.</span>
-            </div>
-          </div>
-        </section>
+          </section>
+
+          <section className="eventCard reportsSectionCard" id="completed-projects-report">
+            <p className="eyebrowDark">Completed Projects</p>
+            <h2>Show Complete</h2>
+            {completedCrewSheets.length ? (
+              <div className="calendarEventList">
+                {completedCrewSheets.map(eventRecord => (
+                  <a className="calendarEventListItem" href={getEventAdminHref(eventRecord)} key={eventRecord.id}>
+                    <div>
+                      <strong>{eventRecord.show_name}</strong>
+                      <span>{eventRecord.venue || 'Venue TBC'}</span>
+                    </div>
+                    <small>{formatDate(eventRecord.start_date)} → {formatDate(eventRecord.end_date)}</small>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <Empty text="No completed projects yet." />
+            )}
+          </section>
+
+          <section className="eventCard reportsSectionCard" id="readiness-report">
+            <p className="eyebrowDark">Readiness</p>
+            <h2>Ready To Go</h2>
+            {readyCrewSheets.length ? (
+              <div className="calendarEventList">
+                {readyCrewSheets.map(eventRecord => (
+                  <a className="calendarEventListItem" href={getEventAdminHref(eventRecord)} key={eventRecord.id}>
+                    <div>
+                      <strong>{eventRecord.show_name}</strong>
+                      <span>{eventRecord.venue || 'Venue TBC'}</span>
+                    </div>
+                    <small>{formatDate(eventRecord.start_date)} → {formatDate(eventRecord.end_date)}</small>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <Empty text="No crew sheets are marked ready to go yet." />
+            )}
+          </section>
+        </>
       )}
     </main>
   )
