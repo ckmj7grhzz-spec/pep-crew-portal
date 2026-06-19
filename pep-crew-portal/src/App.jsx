@@ -1,3 +1,4 @@
+// Conflict Centre V2: Reports now surface resource clashes and missing information
 import React, { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Users, Plane, Car, Hotel, CalendarDays, FileText, StickyNote, ChevronDown, Plus, Copy, Settings, ArrowLeft, LogOut, Eye, EyeOff } from 'lucide-react'
