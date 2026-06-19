@@ -7279,3 +7279,82 @@ button.calendarEventListItem {
     white-space: normal;
   }
 }
+
+/* Settings accordion headers */
+.settingsAccordionCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.settingsAccordionHeader {
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+  color: var(--pep-text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 26px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.settingsAccordionHeader:hover {
+  background: #f8fafc;
+}
+
+.settingsAccordionHeader h2 {
+  margin: 0 0 6px;
+}
+
+.settingsAccordionHeader small {
+  color: var(--pep-muted);
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.settingsAccordionMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--pep-muted);
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.settingsAccordionChevron {
+  transition: transform 0.2s ease;
+}
+
+.settingsAccordionChevron.open {
+  transform: rotate(180deg);
+}
+
+.settingsAccordionBody {
+  border-top: 1px solid var(--pep-border);
+  background: #f8fafc;
+  padding: 22px 26px 26px;
+}
+
+.settingsAccordionBody.calendarColourSettingsForm,
+.settingsAccordionBody .resourceCalendarForm {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .settingsAccordionHeader {
+    display: grid;
+    padding: 20px;
+  }
+
+  .settingsAccordionMeta {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .settingsAccordionBody {
+    padding: 20px;
+  }
+}
