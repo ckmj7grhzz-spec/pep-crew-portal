@@ -7359,109 +7359,182 @@ button.calendarEventListItem {
   }
 }
 
-
-/* Project workflow status v1 */
-.statusDraft {
-  background: #f1f5f9 !important;
-  border-color: #cbd5e1 !important;
-  color: #334155 !important;
+/* Staff Availability V3 */
+.staffAvailabilityBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid var(--pep-border);
 }
 
-.statusPlanning {
-  background: #fff7ed !important;
-  border-color: #fed7aa !important;
-  color: #9a3412 !important;
+.staffAvailability-available {
+  color: var(--green-text);
+  background: var(--green-bg);
+  border-color: var(--green-border);
 }
 
-.statusConfirmed {
+.staffAvailability-holiday {
+  color: #6b21a8;
+  background: #faf5ff;
+  border-color: #d8b4fe;
+}
+
+.staffAvailability-sick {
+  color: var(--red-text);
+  background: var(--red-bg);
+  border-color: var(--red-border);
+}
+
+.staffAvailability-training {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.staffAvailability-unavailable {
+  color: #111827;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.staffAvailabilityCard-holiday {
+  background: linear-gradient(90deg, #faf5ff 0, #ffffff 14%);
+}
+
+.staffAvailabilityCard-sick {
+  background: linear-gradient(90deg, #fef2f2 0, #ffffff 14%);
+}
+
+.staffAvailabilityCard-training {
+  background: linear-gradient(90deg, #eff6ff 0, #ffffff 14%);
+}
+
+.staffAvailabilityCard-unavailable {
+  background: linear-gradient(90deg, #f1f5f9 0, #ffffff 14%);
+}
+
+.statusStripItem.availableMetric {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.statusStripItem.availableMetric strong,
+.statusStripItem.availableMetric span {
+  color: var(--green-text);
+}
+
+.statusStripItem.holidayMetric {
+  border-color: #d8b4fe;
+  background: #faf5ff;
+}
+
+.statusStripItem.holidayMetric strong,
+.statusStripItem.holidayMetric span {
+  color: #6b21a8;
+}
+
+.staffAvailabilitySummaryGrid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.staffAvailabilitySummaryGrid > div {
+  min-height: 96px;
+}
+
+.availabilitySummaryAvailable {
+  background: var(--green-bg) !important;
+  border-color: var(--green-border) !important;
+}
+
+.availabilitySummaryAvailable strong,
+.availabilitySummaryAvailable span {
+  color: var(--green-text) !important;
+}
+
+.availabilitySummaryHoliday {
+  background: #faf5ff !important;
+  border-color: #d8b4fe !important;
+}
+
+.availabilitySummaryHoliday strong,
+.availabilitySummaryHoliday span {
+  color: #6b21a8 !important;
+}
+
+.availabilitySummarySick {
+  background: var(--red-bg) !important;
+  border-color: var(--red-border) !important;
+}
+
+.availabilitySummarySick strong,
+.availabilitySummarySick span {
+  color: var(--red-text) !important;
+}
+
+.availabilitySummaryTraining {
   background: #eff6ff !important;
   border-color: #bfdbfe !important;
+}
+
+.availabilitySummaryTraining strong,
+.availabilitySummaryTraining span {
   color: #1d4ed8 !important;
 }
 
-.statusLive {
-  background: #f0fdf4 !important;
-  border-color: #86efac !important;
-  color: #166534 !important;
+.availabilitySummaryUnavailable {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
 }
 
-.statusArchived {
-  background: #e2e8f0 !important;
-  border-color: #94a3b8 !important;
-  color: #334155 !important;
+.availabilitySummaryUnavailable strong,
+.availabilitySummaryUnavailable span {
+  color: #111827 !important;
 }
 
-.projectStatusAction {
-  display: inline-grid;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 900;
-  color: var(--pep-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.staffAvailabilityPanels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 20px;
 }
 
-.projectStatusSelect {
-  min-height: 40px;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 8px 10px;
+.staffAvailabilityPanel {
+  border: 1px solid var(--pep-border);
+  background: var(--pep-soft);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.staffAvailabilityPanel h3 {
+  margin: 0 0 14px;
+}
+
+.staffAvailabilityMiniRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
   background: #ffffff;
-  color: var(--pep-text);
-  font-weight: 900;
-  text-transform: none;
-  letter-spacing: 0;
+  border: 1px solid var(--pep-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
 }
 
-.projectStatusCard-draft {
-  border-left: 5px solid #94a3b8;
+.staffAvailabilityMiniRow span {
+  color: var(--pep-muted);
+  font-weight: 800;
+  text-align: right;
 }
 
-.projectStatusCard-planning {
-  border-left: 5px solid #f97316;
-}
-
-.projectStatusCard-confirmed {
-  border-left: 5px solid #2563eb;
-}
-
-.projectStatusCard-live {
-  border-left: 5px solid #16a34a;
-}
-
-.projectStatusCard-archived {
-  opacity: 0.86;
-}
-
-.crewSheetStatusGroup.draftCrewSheetGroup .crewSheetGroupHeader {
-  border-left-color: #94a3b8;
-}
-
-.crewSheetStatusGroup.planningCrewSheetGroup .crewSheetGroupHeader {
-  border-left-color: #f97316;
-}
-
-.crewSheetStatusGroup.confirmedCrewSheetGroup .crewSheetGroupHeader {
-  border-left-color: #2563eb;
-}
-
-.crewSheetStatusGroup.liveCrewSheetGroup .crewSheetGroupHeader {
-  border-left-color: #16a34a;
-}
-
-.crewSheetStatusGroup.completedCrewSheetGroup .crewSheetGroupHeader,
-.crewSheetStatusGroup.archivedCrewSheetGroup .crewSheetGroupHeader {
-  border-left-color: #111827;
-}
-
-
-/* Conflict Centre V2 visual polish */
-.reportIssueItem strong {
-  font-weight: 900;
-}
-.warningReportPanel .reportIssueItem {
-  border-left: 5px solid var(--red-border);
-}
-.missingReportPanel .reportIssueItem {
-  border-left: 5px solid var(--orange-border);
+@media (max-width: 900px) {
+  .staffAvailabilitySummaryGrid,
+  .staffAvailabilityPanels {
+    grid-template-columns: 1fr;
+  }
 }
