@@ -7453,3 +7453,15 @@ button.calendarEventListItem {
 .crewSheetStatusGroup.archivedCrewSheetGroup .crewSheetGroupHeader {
   border-left-color: #111827;
 }
+
+
+/* Conflict Centre V2 visual polish */
+.reportIssueItem strong {
+  font-weight: 900;
+}
+.warningReportPanel .reportIssueItem {
+  border-left: 5px solid var(--red-border);
+}
+.missingReportPanel .reportIssueItem {
+  border-left: 5px solid var(--orange-border);
+}
