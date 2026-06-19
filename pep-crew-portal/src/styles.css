@@ -6576,3 +6576,158 @@ button.calendarEventListItem {
     grid-template-columns: 1fr;
   }
 }
+
+/* Dashboard clickable navigation cards */
+.clickableDashboardCard {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.clickableDashboardCard small {
+  color: var(--pep-muted);
+  font-weight: 900;
+  margin-top: 4px;
+}
+
+.clickableDashboardCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+}
+
+.clickableDashboardCard:focus-visible {
+  outline: 3px solid rgba(22, 163, 74, 0.28);
+  outline-offset: 3px;
+}
+
+.completedMetric.clickableDashboardCard small {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* Operations resource jump sections */
+.operationsResourcesHub {
+  margin-top: 24px;
+}
+
+.resourceCategorySummaryCard {
+  scroll-margin-top: 110px;
+}
+
+.resourceSummaryList {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.resourceSummaryItem {
+  background: #ffffff;
+  border: 1px solid var(--pep-border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.resourceSummaryItem div {
+  display: grid;
+  gap: 4px;
+}
+
+.resourceSummaryItem strong {
+  font-size: 17px;
+}
+
+.resourceSummaryItem span,
+.resourceSummaryItem small {
+  color: var(--pep-muted);
+  font-weight: 800;
+}
+
+/* Staff/report jump targets */
+#staff-directory-section,
+#staff-leave-section,
+#completed-projects-report,
+#issues-warnings-report,
+#readiness-report,
+#operations-calendar-main,
+#operations-resources-hub {
+  scroll-margin-top: 110px;
+}
+
+/* Reports structure */
+.reportsSummaryGrid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.reportsTwoColumnGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.reportPanel {
+  background: #f8fafc;
+  border: 1px solid var(--pep-border);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.reportPanel h3 {
+  margin: 0 0 14px;
+}
+
+.reportIssueList {
+  display: grid;
+  gap: 10px;
+}
+
+.reportIssueItem {
+  background: #ffffff;
+  border: 1px solid var(--pep-border);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 4px;
+  text-decoration: none;
+  color: var(--pep-text);
+}
+
+.reportIssueItem strong {
+  color: var(--pep-text);
+}
+
+.reportIssueItem span,
+.reportIssueItem small {
+  color: var(--pep-muted);
+  font-weight: 800;
+}
+
+.warningReportPanel {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.missingReportPanel {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.staffLeaveCard .portalPlaceholderGrid {
+  margin-top: 18px;
+}
+
+@media (max-width: 900px) {
+  .reportsSummaryGrid,
+  .reportsTwoColumnGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .resourceSummaryItem {
+    display: grid;
+  }
+}
