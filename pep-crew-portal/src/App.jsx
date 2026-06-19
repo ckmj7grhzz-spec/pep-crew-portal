@@ -818,6 +818,10 @@ function AdminPage() {
     const storedTab = readStoredValue('pep.activePortalTab', 'dashboard')
     return storedTab === 'crew_sheets' ? 'projects' : storedTab
   })
+  const [openSettingsSections, setOpenSettingsSections] = useState(() => readStoredValue('pep.openSettingsSections', {
+    parentColours: false,
+    subCalendars: true,
+  }))
   const [crewSheetSearch, setCrewSheetSearch] = useState('')
   const [calendarView, setCalendarView] = useState(() => readStoredValue('pep.calendarView', 'month'))
   const [calendarFocusDate, setCalendarFocusDate] = useState(() => readStoredValue('pep.calendarFocusDate', formatCalendarDateInput(new Date())))
@@ -933,6 +937,10 @@ function AdminPage() {
   useEffect(() => {
     writeStoredValue('pep.activePortalTab', activePortalTab)
   }, [activePortalTab])
+
+  useEffect(() => {
+    writeStoredValue('pep.openSettingsSections', openSettingsSections)
+  }, [openSettingsSections])
 
   useEffect(() => {
     writeStoredValue('pep.calendarView', calendarView)
@@ -1488,6 +1496,13 @@ function AdminPage() {
 
   function changePortalTab(tab) {
     setActivePortalTab(tab)
+  }
+
+  function toggleSettingsSection(section) {
+    setOpenSettingsSections(current => ({
+      ...current,
+      [section]: !current[section],
+    }))
   }
 
   function toggleCreateCrewSheet() {
@@ -3976,140 +3991,162 @@ function AdminPage() {
 
           {message && <p className="adminMessage adminHomeMessage">{message}</p>}
 
-          <section className="eventCard calendarColourSettingsCard">
-            <div className="staffSectionHeader">
-              <div>
+          <section className={openSettingsSections.parentColours ? 'eventCard calendarColourSettingsCard settingsAccordionCard open' : 'eventCard calendarColourSettingsCard settingsAccordionCard'}>
+            <button
+              type="button"
+              className="settingsAccordionHeader"
+              onClick={() => toggleSettingsSection('parentColours')}
+            >
+              <span>
                 <p className="eyebrowDark">Calendar Colours</p>
                 <h2>Parent Calendar Colours</h2>
-                <p>These are the parent calendar colours for Projects, Dry Hire, Crew, Freelancers, Vehicles, Rooms and LED Trailers.</p>
-              </div>
-            </div>
+                <small>Projects, Dry Hire, Crew, Freelancers, Vehicles, Rooms and LED Trailers.</small>
+              </span>
+              <span className="settingsAccordionMeta">
+                {Object.keys(CALENDAR_COLOUR_LABELS).length} parent calendars
+                <ChevronDown className={openSettingsSections.parentColours ? 'settingsAccordionChevron open' : 'settingsAccordionChevron'} size={20} />
+              </span>
+            </button>
 
-            <form onSubmit={saveCalendarSettings} className="calendarColourSettingsForm">
-              {Object.entries(CALENDAR_COLOUR_LABELS).map(([category, label]) => (
-                <label className="calendarColourSettingRow" key={category}>
-                  <span>
-                    <strong>{label}</strong>
-                    <small>{category === 'projects' ? 'Current crew sheets and future Current RMS projects' : 'Future resource calendar category'}</small>
-                  </span>
-                  <input
-                    type="color"
-                    value={getCalendarCategoryColour(category)}
-                    onChange={e => updateCalendarSetting(category, e.target.value)}
-                  />
-                </label>
-              ))}
+            {openSettingsSections.parentColours && (
+              <form onSubmit={saveCalendarSettings} className="calendarColourSettingsForm settingsAccordionBody">
+                {Object.entries(CALENDAR_COLOUR_LABELS).map(([category, label]) => (
+                  <label className="calendarColourSettingRow" key={category}>
+                    <span>
+                      <strong>{label}</strong>
+                      <small>{category === 'projects' ? 'Current crew sheets and future Current RMS projects' : 'Future resource calendar category'}</small>
+                    </span>
+                    <input
+                      type="color"
+                      value={getCalendarCategoryColour(category)}
+                      onChange={e => updateCalendarSetting(category, e.target.value)}
+                    />
+                  </label>
+                ))}
 
-              <div className="calendarColourSettingsActions">
-                <button className="primaryButton" type="submit">Save Calendar Colours</button>
-                <button type="button" className="secondaryButton" onClick={() => setCalendarSettings(DEFAULT_CALENDAR_COLOURS)}>Reset Defaults</button>
-              </div>
-            </form>
+                <div className="calendarColourSettingsActions">
+                  <button className="primaryButton" type="submit">Save Calendar Colours</button>
+                  <button type="button" className="secondaryButton" onClick={() => setCalendarSettings(DEFAULT_CALENDAR_COLOURS)}>Reset Defaults</button>
+                </div>
+              </form>
+            )}
           </section>
 
-          <section className="eventCard resourceCalendarSettingsCard">
-            <div className="staffSectionHeader">
-              <div>
+          <section className={openSettingsSections.subCalendars ? 'eventCard resourceCalendarSettingsCard settingsAccordionCard open' : 'eventCard resourceCalendarSettingsCard settingsAccordionCard'}>
+            <button
+              type="button"
+              className="settingsAccordionHeader"
+              onClick={() => toggleSettingsSection('subCalendars')}
+            >
+              <span>
                 <p className="eyebrowDark">Resource Calendars</p>
                 <h2>Sub-calendar Management</h2>
-                <p>Create, edit, deactivate or delete sub-calendars under each parent calendar.</p>
-              </div>
-            </div>
+                <small>Create, edit, deactivate or delete sub-calendars under each parent calendar.</small>
+              </span>
+              <span className="settingsAccordionMeta">
+                {resourceCalendars.length} sub-calendar{resourceCalendars.length === 1 ? '' : 's'}
+                <ChevronDown className={openSettingsSections.subCalendars ? 'settingsAccordionChevron open' : 'settingsAccordionChevron'} size={20} />
+              </span>
+            </button>
 
-            <form onSubmit={saveResourceCalendar} className="resourceCalendarForm">
-              {editingResourceCalendarId && (
-                <div className="resourceCalendarEditNotice">
-                  Editing sub-calendar. Save changes or cancel to create a new one.
-                </div>
-              )}
-
-              <label>
-                Parent calendar
-                <select value={resourceCalendarForm.category} onChange={e => updateResourceCalendarField('category', e.target.value)}>
-                  {Object.entries(CALENDAR_COLOUR_LABELS).map(([category, label]) => (
-                    <option value={category} key={category}>{label}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Sub-calendar name
-                <input value={resourceCalendarForm.name} onChange={e => updateResourceCalendarField('name', e.target.value)} placeholder="Van 1, Meeting Room, Liam Howard" />
-              </label>
-
-              <label className="resourceCalendarColourField">
-                Colour
-                <input type="color" value={resourceCalendarForm.colour} onChange={e => updateResourceCalendarField('colour', e.target.value)} />
-              </label>
-
-              <label className="checkboxRow resourceCalendarActiveField">
-                <input type="checkbox" checked={resourceCalendarForm.active !== false} onChange={e => updateResourceCalendarField('active', e.target.checked)} />
-                Active
-              </label>
-
-              <button className="primaryButton" type="submit">{editingResourceCalendarId ? 'Save Sub-calendar' : 'Create Sub-calendar'}</button>
-              {editingResourceCalendarId && (
-                <button type="button" className="secondaryButton" onClick={resetResourceCalendarForm}>Cancel Edit</button>
-              )}
-            </form>
-
-            <div className="resourceCalendarList">
-              {resourceCalendarLoading ? (
-                <p>Loading resource calendars...</p>
-              ) : resourceCalendars.length ? (
-                Object.entries(CALENDAR_COLOUR_LABELS).map(([category, label]) => {
-                  const categoryResources = getResourceCalendarsForCategory(category)
-
-                  if (!categoryResources.length) return null
-
-                  return (
-                    <div className={openResourceCalendarGroups[category] ? 'resourceCalendarGroup open' : 'resourceCalendarGroup'} key={category}>
-                      <button
-                        type="button"
-                        className="resourceCalendarGroupHeader"
-                        style={{ '--calendar-key-colour': getCalendarCategoryColour(category) }}
-                        onClick={() => toggleResourceCalendarGroup(category)}
-                      >
-                        <span className="calendarKeyColour"></span>
-                        <strong>{label}</strong>
-                        <small>{categoryResources.length} sub-calendar{categoryResources.length === 1 ? '' : 's'}</small>
-                        <span className="resourceCalendarGroupChevron">{openResourceCalendarGroups[category] ? 'Hide' : 'Show'}</span>
-                      </button>
-
-                      {openResourceCalendarGroups[category] && (
-                        <div className="resourceCalendarRows">
-                        {categoryResources.map(resource => (
-                          <div className={resource.active === false ? 'resourceCalendarRow inactive' : 'resourceCalendarRow'} key={resource.id}>
-                            <div className="resourceCalendarNameBlock" style={{ '--calendar-key-colour': resource.colour || getCalendarCategoryColour(resource.category) }}>
-                              <span className="calendarKeyColour"></span>
-                              <div>
-                                <strong>{resource.name}</strong>
-                                <small>{resource.active === false ? 'Inactive' : 'Active'}</small>
-                              </div>
-                            </div>
-
-                            <div className="resourceCalendarRowActions">
-                              <button type="button" onClick={() => startEditResourceCalendar(resource)}>
-                                Edit
-                              </button>
-                              <button type="button" onClick={() => toggleResourceCalendarActive(resource)}>
-                                {resource.active === false ? 'Activate' : 'Deactivate'}
-                              </button>
-                              <button type="button" onClick={() => deleteResourceCalendar(resource.id)}>
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                        </div>
-                      )}
+            {openSettingsSections.subCalendars && (
+              <div className="settingsAccordionBody">
+                <form onSubmit={saveResourceCalendar} className="resourceCalendarForm">
+                  {editingResourceCalendarId && (
+                    <div className="resourceCalendarEditNotice">
+                      Editing sub-calendar. Save changes or cancel to create a new one.
                     </div>
-                  )
-                })
-              ) : (
-                <Empty text="No resource sub-calendars created yet." />
-              )}
-            </div>
+                  )}
+
+                  <label>
+                    Parent calendar
+                    <select value={resourceCalendarForm.category} onChange={e => updateResourceCalendarField('category', e.target.value)}>
+                      {Object.entries(CALENDAR_COLOUR_LABELS).map(([category, label]) => (
+                        <option value={category} key={category}>{label}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    Sub-calendar name
+                    <input value={resourceCalendarForm.name} onChange={e => updateResourceCalendarField('name', e.target.value)} placeholder="Van 1, Meeting Room, Liam Howard" />
+                  </label>
+
+                  <label className="resourceCalendarColourField">
+                    Colour
+                    <input type="color" value={resourceCalendarForm.colour} onChange={e => updateResourceCalendarField('colour', e.target.value)} />
+                  </label>
+
+                  <label className="checkboxRow resourceCalendarActiveField">
+                    <input type="checkbox" checked={resourceCalendarForm.active !== false} onChange={e => updateResourceCalendarField('active', e.target.checked)} />
+                    Active
+                  </label>
+
+                  <button className="primaryButton" type="submit">{editingResourceCalendarId ? 'Save Sub-calendar' : 'Create Sub-calendar'}</button>
+                  {editingResourceCalendarId && (
+                    <button type="button" className="secondaryButton" onClick={resetResourceCalendarForm}>Cancel Edit</button>
+                  )}
+                </form>
+
+                <div className="resourceCalendarList">
+                  {resourceCalendarLoading ? (
+                    <p>Loading resource calendars...</p>
+                  ) : resourceCalendars.length ? (
+                    Object.entries(CALENDAR_COLOUR_LABELS).map(([category, label]) => {
+                      const categoryResources = getResourceCalendarsForCategory(category)
+
+                      if (!categoryResources.length) return null
+
+                      return (
+                        <div className={openResourceCalendarGroups[category] ? 'resourceCalendarGroup open' : 'resourceCalendarGroup'} key={category}>
+                          <button
+                            type="button"
+                            className="resourceCalendarGroupHeader"
+                            style={{ '--calendar-key-colour': getCalendarCategoryColour(category) }}
+                            onClick={() => toggleResourceCalendarGroup(category)}
+                          >
+                            <span className="calendarKeyColour"></span>
+                            <strong>{label}</strong>
+                            <small>{categoryResources.length} sub-calendar{categoryResources.length === 1 ? '' : 's'}</small>
+                            <span className="resourceCalendarGroupChevron">{openResourceCalendarGroups[category] ? 'Hide' : 'Show'}</span>
+                          </button>
+
+                          {openResourceCalendarGroups[category] && (
+                            <div className="resourceCalendarRows">
+                            {categoryResources.map(resource => (
+                              <div className={resource.active === false ? 'resourceCalendarRow inactive' : 'resourceCalendarRow'} key={resource.id}>
+                                <div className="resourceCalendarNameBlock" style={{ '--calendar-key-colour': resource.colour || getCalendarCategoryColour(resource.category) }}>
+                                  <span className="calendarKeyColour"></span>
+                                  <div>
+                                    <strong>{resource.name}</strong>
+                                    <small>{resource.active === false ? 'Inactive' : 'Active'}</small>
+                                  </div>
+                                </div>
+
+                                <div className="resourceCalendarRowActions">
+                                  <button type="button" onClick={() => startEditResourceCalendar(resource)}>
+                                    Edit
+                                  </button>
+                                  <button type="button" onClick={() => toggleResourceCalendarActive(resource)}>
+                                    {resource.active === false ? 'Activate' : 'Deactivate'}
+                                  </button>
+                                  <button type="button" onClick={() => deleteResourceCalendar(resource.id)}>
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <Empty text="No resource sub-calendars created yet." />
+                  )}
+                </div>
+              </div>
+            )}
           </section>
         </>
       )}
