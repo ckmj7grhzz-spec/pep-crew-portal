@@ -2218,6 +2218,88 @@ function AdminPage() {
       .filter(booking => booking.resource_calendar?.category === category)
   }
 
+
+  function getTodayOperationItems() {
+    const today = new Date()
+    const items = []
+
+    activeCrewSheets
+      .filter(eventRecord => eventOverlapsDate(eventRecord, today))
+      .slice(0, 4)
+      .forEach(eventRecord => {
+        items.push({
+          key: `event-${eventRecord.id}`,
+          tone: 'project',
+          time: 'Today',
+          title: eventRecord.show_name || 'Untitled project',
+          detail: eventRecord.venue || 'Venue TBC',
+          action: () => goToPortalSection('operations_calendar', 'operations-calendar-main'),
+        })
+      })
+
+    ;['crew', 'freelancers', 'vehicles', 'led_trailers'].forEach(category => {
+      getResourceCategoryLiveBookings(category).slice(0, 2).forEach(booking => {
+        items.push({
+          key: `resource-${booking.id}`,
+          tone: category,
+          time: CALENDAR_CATEGORY_LABELS[category] || 'Resource',
+          title: booking.resource_calendar?.name || booking.booking_name || 'Resource booking',
+          detail: booking.linked_event?.show_name || booking.booking_name || 'Unlinked booking',
+          action: () => goToPortalSection('operations_calendar', `resource-section-${category}`, { resourceGroup: category }),
+        })
+      })
+    })
+
+    return items.slice(0, 6)
+  }
+
+  function getNextSevenDayProjects() {
+    const today = startOfCalendarDay(new Date())
+    const endDate = addCalendarDays(today, 7)
+
+    return activeCrewSheets
+      .filter(eventRecord => eventOverlapsRange(eventRecord, today, endDate))
+      .sort((a, b) => String(a.start_date || '').localeCompare(String(b.start_date || '')))
+      .slice(0, 5)
+      .map(eventRecord => ({
+        key: eventRecord.id,
+        title: eventRecord.show_name || 'Untitled project',
+        detail: `${formatShortCalendarDate(parseCalendarDate(eventRecord.start_date) || today)} · ${eventRecord.venue || 'Venue TBC'}`,
+      }))
+  }
+
+  function getDashboardAttentionItems() {
+    const conflictItems = getDashboardConflictItems().slice(0, 3).map(item => ({
+      key: `conflict-${item.key}`,
+      tone: 'danger',
+      title: `${item.resource?.name || 'Resource'} clash`,
+      detail: `${item.primaryName} / ${item.conflictName}`,
+    }))
+
+    const missingItems = getMissingInformationItems().slice(0, 3).map(item => ({
+      key: `missing-${item.id}`,
+      tone: 'warning',
+      title: item.title,
+      detail: item.status || 'Missing information',
+    }))
+
+    return [...conflictItems, ...missingItems].slice(0, 5)
+  }
+
+  function getResourceUtilisationPercent(category) {
+    const activeResources = getResourceCalendarsForCategory(category).filter(resource => resource.active !== false).length
+    if (!activeResources) return 0
+    return Math.min(100, Math.round((getLiveResourceBookingCount(category) / activeResources) * 100))
+  }
+
+  function getDashboardReadyItems() {
+    return readyCrewSheets.slice(0, 4).map(eventRecord => ({
+      key: eventRecord.id,
+      title: eventRecord.show_name || 'Untitled project',
+      detail: eventRecord.venue || 'Venue TBC',
+    }))
+  }
+
   function renderResourceCategorySummary(category, title, emptyText) {
     const resources = getResourceCalendarsForCategory(category)
     const liveBookings = getResourceCategoryLiveBookings(category)
@@ -3284,8 +3366,16 @@ function AdminPage() {
   }
 
   function renderCrewSheetGroup(title, records, className, emptyText) {
+    const groupId = className === 'readyCrewSheetGroup'
+      ? 'projects-ready-list'
+      : className === 'inProgressCrewSheetGroup'
+        ? 'projects-active-list'
+        : className === 'completeCrewSheetGroup'
+          ? 'projects-completed-list'
+          : undefined
+
     return (
-      <div className={`crewSheetStatusGroup ${className}`}>
+      <div id={groupId} className={`crewSheetStatusGroup ${className}`}>
         <div className="crewSheetGroupHeader">
           <strong>{title}</strong>
           <span>{records.length}</span>
@@ -3350,82 +3440,138 @@ function AdminPage() {
 
       {activePortalTab === 'dashboard' && (
         <>
-      <section className="eventCard adminOverviewDashboard">
-        <div>
-          <p className="eyebrowDark">Home</p>
-          <h2>Operations Dashboard</h2>
-          <p>Live overview of projects, movements, resources and items that need attention.</p>
-        </div>
-
-        <div className="adminOverviewGrid dashboardCardGrid">
-          <button type="button" className="dashboardMetricCard projectMetric clickableDashboardCard" onClick={() => goToPortalSection('operations_calendar', 'operations-calendar-main')}>
-            <span className="dashboardMetricIcon">●</span>
-            <strong>{activeCrewSheets.length}</strong>
-            <span>Active Projects</span>
-            <small>Open calendar</small>
-          </button>
-          <button type="button" className="dashboardMetricCard movementMetric clickableDashboardCard" onClick={() => goToPortalSection('staff', 'staff-directory-section', { staffGroup: 'staff' })}>
-            <span className="dashboardMetricIcon">●</span>
-            <strong>{getLiveResourceBookingCount('crew') + getLiveResourceBookingCount('freelancers')}</strong>
-            <span>Crew Movements</span>
-            <small>Open staff</small>
-          </button>
-          <button type="button" className="dashboardMetricCard staffMetric clickableDashboardCard" onClick={() => goToPortalSection('staff', 'staff-directory-section')}>
-            <span className="dashboardMetricIcon">●</span>
-            <strong>{staffMembers.filter(member => member.active !== false).length}</strong>
-            <span>Staff Assigned</span>
-            <small>Open staff</small>
-          </button>
-          <button type="button" className="dashboardMetricCard holidayMetric clickableDashboardCard" onClick={() => goToPortalSection('staff', 'staff-leave-section')}>
-            <span className="dashboardMetricIcon">●</span>
-            <strong>0</strong>
-            <span>Holiday / Leave</span>
-            <small>Open leave</small>
-          </button>
-          <button type="button" className="dashboardMetricCard vehicleMetric clickableDashboardCard" onClick={() => goToPortalSection('operations_calendar', 'resource-section-vehicles', { resourceGroup: 'vehicles' })}>
-            <span className="dashboardMetricIcon">●</span>
-            <strong>{getLiveResourceBookingCount('vehicles')}</strong>
-            <span>Vehicles Out</span>
-            <small>Open vehicles</small>
-          </button>
-          <button type="button" className="dashboardMetricCard trailerMetric clickableDashboardCard" onClick={() => goToPortalSection('operations_calendar', 'resource-section-led_trailers', { resourceGroup: 'led_trailers' })}>
-            <span className="dashboardMetricIcon">●</span>
-            <strong>{getLiveResourceBookingCount('led_trailers')}</strong>
-            <span>LED Trailers Out</span>
-            <small>Open trailers</small>
-          </button>
-          <button type="button" className="dashboardMetricCard dryHireMetric clickableDashboardCard" onClick={() => goToPortalSection('operations_calendar', 'resource-section-dry_hire', { resourceGroup: 'dry_hire' })}>
-            <span className="dashboardMetricIcon">●</span>
-            <strong>{getLiveResourceBookingCount('dry_hire')}</strong>
-            <span>Dry Hire Jobs</span>
-            <small>Open dry hire</small>
-          </button>
-          <button type="button" className="dashboardMetricCard completedMetric clickableDashboardCard" onClick={() => goToPortalSection('reports', 'completed-projects-report')}>
-            <span className="dashboardMetricIcon">●</span>
-            <strong>{completedCrewSheets.length}</strong>
-            <span>Completed Projects</span>
-            <small>Open completed</small>
-          </button>
-          <button type="button" className={getDashboardConflictCount() ? 'dashboardMetricCard warningMetric activeWarningMetric clickableDashboardCard' : 'dashboardMetricCard warningMetric clickableDashboardCard'} onClick={() => goToPortalSection('reports', 'issues-warnings-report')}>
-            <span className="dashboardMetricIcon">●</span>
-            <strong>{getDashboardConflictCount()}</strong>
-            <span>Conflict Warnings</span>
-            <small>Open issues</small>
-          </button>
-          <button type="button" className={inProgressCrewSheets.length ? 'dashboardMetricCard missingMetric activeWarningMetric clickableDashboardCard' : 'dashboardMetricCard missingMetric clickableDashboardCard'} onClick={() => goToPortalSection('reports', 'issues-warnings-report')}>
-            <span className="dashboardMetricIcon">●</span>
-            <strong>{inProgressCrewSheets.length}</strong>
-            <span>Missing Information</span>
-            <small>Open issues</small>
-          </button>
-        </div>
-
-        {readyCrewSheets.length > 0 && (
-          <div className="readyNotificationBox">
-            <strong>{readyCrewSheets.length} crew sheet{readyCrewSheets.length === 1 ? '' : 's'} ready to go</strong>
-            <p>{readyCrewSheets.map(eventRecord => eventRecord.show_name).join(', ')} {readyCrewSheets.length === 1 ? 'is' : 'are'} marked 100% ready to go.</p>
+      <section className="eventCard adminOverviewDashboard dashboardControlRoom">
+        <div className="dashboardControlHeader">
+          <div>
+            <p className="eyebrowDark">Home</p>
+            <h2>Operations Dashboard</h2>
+            <p>At-a-glance control centre for today, the next seven days and items needing attention.</p>
           </div>
-        )}
+          <div className="dashboardDatePill">
+            {new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+          </div>
+        </div>
+
+        <div className="dashboardStatusStrip">
+          <button type="button" className="statusStripItem projectMetric" onClick={() => goToPortalSection('projects', 'projects-active-list')}>
+            <span>Active Projects</span>
+            <strong>{activeCrewSheets.length}</strong>
+          </button>
+          <button type="button" className="statusStripItem movementMetric" onClick={() => goToPortalSection('staff', 'staff-directory-section', { staffGroup: 'staff' })}>
+            <span>Crew Today</span>
+            <strong>{getLiveResourceBookingCount('crew') + getLiveResourceBookingCount('freelancers')}</strong>
+          </button>
+          <button type="button" className="statusStripItem vehicleMetric" onClick={() => goToPortalSection('operations_calendar', 'resource-section-vehicles', { resourceGroup: 'vehicles' })}>
+            <span>Vehicles Out</span>
+            <strong>{getLiveResourceBookingCount('vehicles')}</strong>
+          </button>
+          <button type="button" className="statusStripItem trailerMetric" onClick={() => goToPortalSection('operations_calendar', 'resource-section-led_trailers', { resourceGroup: 'led_trailers' })}>
+            <span>Trailers Out</span>
+            <strong>{getLiveResourceBookingCount('led_trailers')}</strong>
+          </button>
+          <button type="button" className={getDashboardConflictCount() ? 'statusStripItem warningMetric statusStripDanger' : 'statusStripItem warningMetric'} onClick={() => goToPortalSection('reports', 'issues-warnings-report')}>
+            <span>Warnings</span>
+            <strong>{getDashboardConflictCount() + inProgressCrewSheets.length}</strong>
+          </button>
+        </div>
+
+        <div className="dashboardControlGrid">
+          <section className="dashboardControlPanel todayOpsPanel">
+            <div className="dashboardPanelHeader">
+              <div>
+                <p className="eyebrowDark">Live</p>
+                <h3>Today</h3>
+              </div>
+              <button type="button" onClick={() => goToPortalSection('operations_calendar', 'operations-calendar-main')}>Calendar</button>
+            </div>
+            <div className="dashboardCompactList">
+              {getTodayOperationItems().length ? getTodayOperationItems().map(item => (
+                <button type="button" key={item.key} className={`dashboardCompactItem ${item.tone || ''}`} onClick={item.action}>
+                  <span>{item.time}</span>
+                  <strong>{item.title}</strong>
+                  <small>{item.detail}</small>
+                </button>
+              )) : <p className="dashboardEmptyLine">No live operations showing for today.</p>}
+            </div>
+          </section>
+
+          <section className={getDashboardAttentionItems().length ? 'dashboardControlPanel attentionPanel hasAttention' : 'dashboardControlPanel attentionPanel'}>
+            <div className="dashboardPanelHeader">
+              <div>
+                <p className="eyebrowDark">Priority</p>
+                <h3>Needs Attention</h3>
+              </div>
+              <button type="button" onClick={() => goToPortalSection('reports', 'issues-warnings-report')}>Issues</button>
+            </div>
+            <div className="dashboardCompactList">
+              {getDashboardAttentionItems().length ? getDashboardAttentionItems().map(item => (
+                <button type="button" key={item.key} className={`dashboardCompactItem ${item.tone}`} onClick={() => goToPortalSection('reports', 'issues-warnings-report')}>
+                  <span>{item.tone === 'danger' ? 'Conflict' : 'Missing'}</span>
+                  <strong>{item.title}</strong>
+                  <small>{item.detail}</small>
+                </button>
+              )) : <p className="dashboardGoodLine">No conflicts or missing information showing.</p>}
+            </div>
+          </section>
+
+          <section className="dashboardControlPanel nextProjectsPanel">
+            <div className="dashboardPanelHeader">
+              <div>
+                <p className="eyebrowDark">Upcoming</p>
+                <h3>Next 7 Days</h3>
+              </div>
+              <button type="button" onClick={() => goToPortalSection('projects', 'projects-active-list')}>Projects</button>
+            </div>
+            <div className="dashboardCompactList">
+              {getNextSevenDayProjects().length ? getNextSevenDayProjects().map(item => (
+                <button type="button" key={item.key} className="dashboardCompactItem project" onClick={() => goToPortalSection('projects', 'projects-active-list')}>
+                  <span>Project</span>
+                  <strong>{item.title}</strong>
+                  <small>{item.detail}</small>
+                </button>
+              )) : <p className="dashboardEmptyLine">No projects scheduled in the next 7 days.</p>}
+            </div>
+          </section>
+
+          <section className="dashboardControlPanel resourceSnapshotPanel">
+            <div className="dashboardPanelHeader">
+              <div>
+                <p className="eyebrowDark">Resources</p>
+                <h3>Status</h3>
+              </div>
+              <button type="button" onClick={() => goToPortalSection('operations_calendar', 'operations-resources-hub')}>Resources</button>
+            </div>
+            <div className="dashboardUtilisationList">
+              <button type="button" onClick={() => goToPortalSection('staff', 'staff-directory-section')}>
+                <span>Crew</span><strong>{getResourceUtilisationPercent('crew')}%</strong><i><em style={{ width: `${getResourceUtilisationPercent('crew')}%` }}></em></i>
+              </button>
+              <button type="button" onClick={() => goToPortalSection('operations_calendar', 'resource-section-vehicles', { resourceGroup: 'vehicles' })}>
+                <span>Vehicles</span><strong>{getResourceUtilisationPercent('vehicles')}%</strong><i><em style={{ width: `${getResourceUtilisationPercent('vehicles')}%` }}></em></i>
+              </button>
+              <button type="button" onClick={() => goToPortalSection('operations_calendar', 'resource-section-led_trailers', { resourceGroup: 'led_trailers' })}>
+                <span>Trailers</span><strong>{getResourceUtilisationPercent('led_trailers')}%</strong><i><em style={{ width: `${getResourceUtilisationPercent('led_trailers')}%` }}></em></i>
+              </button>
+              <button type="button" onClick={() => goToPortalSection('operations_calendar', 'resource-section-dry_hire', { resourceGroup: 'dry_hire' })}>
+                <span>Dry Hire</span><strong>{getResourceUtilisationPercent('dry_hire')}%</strong><i><em style={{ width: `${getResourceUtilisationPercent('dry_hire')}%` }}></em></i>
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <div className="dashboardBottomRail">
+          <button type="button" onClick={() => goToPortalSection('projects', 'projects-create-section')}>
+            <strong>+ Create Project</strong>
+            <span>Start a new crew sheet</span>
+          </button>
+          <button type="button" onClick={() => goToPortalSection('projects', 'projects-ready-list')}>
+            <strong>{readyCrewSheets.length} Ready</strong>
+            <span>Ready to go projects</span>
+          </button>
+          <button type="button" onClick={() => goToPortalSection('reports', 'completed-projects-report')}>
+            <strong>{completedCrewSheets.length} Complete</strong>
+            <span>Completed projects</span>
+          </button>
+        </div>
       </section>
 
       {message && <p className="adminMessage adminHomeMessage">{message}</p>}
@@ -3449,7 +3595,7 @@ function AdminPage() {
             </div>
           </section>
 
-      <section className="eventCard collapsibleCreateCard">
+      <section className="eventCard collapsibleCreateCard" id="projects-create-section">
         <button
           type="button"
           className={showCreateCrewSheet ? 'collapsibleCreateHeader active' : 'collapsibleCreateHeader'}
