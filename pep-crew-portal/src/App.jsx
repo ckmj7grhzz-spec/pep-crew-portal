@@ -816,7 +816,7 @@ function AdminPage() {
   const [showExistingCrewSheets, setShowExistingCrewSheets] = useState(() => readStoredValue('pep.showExistingCrewSheets', true))
   const [activePortalTab, setActivePortalTab] = useState(() => {
     const storedTab = readStoredValue('pep.activePortalTab', 'dashboard')
-    return storedTab === 'crew_sheets' ? 'dashboard' : storedTab
+    return storedTab === 'crew_sheets' ? 'projects' : storedTab
   })
   const [crewSheetSearch, setCrewSheetSearch] = useState('')
   const [calendarView, setCalendarView] = useState(() => readStoredValue('pep.calendarView', 'month'))
@@ -3320,6 +3320,13 @@ function AdminPage() {
         </button>
         <button
           type="button"
+          className={activePortalTab === 'projects' ? 'active' : ''}
+          onClick={() => changePortalTab('projects')}
+        >
+          Projects
+        </button>
+        <button
+          type="button"
           className={activePortalTab === 'staff' ? 'active' : ''}
           onClick={() => changePortalTab('staff')}
         >
@@ -3423,6 +3430,25 @@ function AdminPage() {
 
       {message && <p className="adminMessage adminHomeMessage">{message}</p>}
 
+        </>
+      )}
+
+
+      {activePortalTab === 'projects' && (
+        <>
+          <section className="eventCard projectsIntroCard">
+            <div>
+              <p className="eyebrowDark">Projects</p>
+              <h2>Project Management</h2>
+              <p>Create projects, manage existing crew sheets and separate active, ready and completed jobs from the live operations dashboard.</p>
+            </div>
+            <div className="projectSummaryGrid">
+              <div><strong>{activeCrewSheets.length}</strong><span>Active Projects</span></div>
+              <div><strong>{readyCrewSheets.length}</strong><span>Ready To Go</span></div>
+              <div><strong>{completedCrewSheets.length}</strong><span>Completed</span></div>
+            </div>
+          </section>
+
       <section className="eventCard collapsibleCreateCard">
         <button
           type="button"
@@ -3430,8 +3456,8 @@ function AdminPage() {
           onClick={toggleCreateCrewSheet}
         >
           <span>
-            <strong>Create New Crew Sheet</strong>
-            <small>Add a new event and create its public crew sheet.</small>
+            <strong>Create New Project</strong>
+            <small>Add a new project and create its public project.</small>
           </span>
           <ChevronDown className={showCreateCrewSheet ? 'chevron open' : 'chevron'} />
         </button>
@@ -3532,7 +3558,7 @@ function AdminPage() {
               </label>
 
               <button className="primaryButton" type="submit">
-                <Plus size={18} /> Create Crew Sheet
+                <Plus size={18} /> Create Project
               </button>
             </form>
           </div>
@@ -3546,11 +3572,11 @@ function AdminPage() {
           onClick={toggleExistingCrewSheets}
         >
           <span>
-            <strong>Existing Crew Sheets</strong>
+            <strong>Projects</strong>
             <small>
               {crewSheetSearchTerm
-                ? `${filteredCrewSheets.length} of ${events.length} crew sheet${events.length === 1 ? '' : 's'} shown`
-                : `${events.length} crew sheet${events.length === 1 ? '' : 's'} across ready, active and completed shows.`}
+                ? `${filteredCrewSheets.length} of ${events.length} project${events.length === 1 ? '' : 's'} shown`
+                : `${events.length} project${events.length === 1 ? '' : 's'} across ready, active and completed shows.`}
             </small>
           </span>
           <ChevronDown className={showExistingCrewSheets ? 'chevron open' : 'chevron'} />
@@ -3560,7 +3586,7 @@ function AdminPage() {
           <div className="collapsibleExistingBody">
             <div className="crewSheetSearchBox">
               <label>
-                Search Crew Sheets
+                Search Projects
                 <input
                   value={crewSheetSearch}
                   onChange={e => setCrewSheetSearch(e.target.value)}
@@ -3579,15 +3605,15 @@ function AdminPage() {
             ) : events.length ? (
               filteredCrewSheets.length ? (
                 <div className="crewSheetGroupedList">
-                  {renderCrewSheetGroup('Ready To Go', filteredReadyCrewSheets, 'readyCrewSheetGroup', 'No matching crew sheets are marked ready.')}
-                  {renderCrewSheetGroup('In Progress', filteredInProgressCrewSheets, 'inProgressCrewSheetGroup', 'No matching crew sheets are currently in progress.')}
+                  {renderCrewSheetGroup('Ready To Go', filteredReadyCrewSheets, 'readyCrewSheetGroup', 'No matching projects are marked ready.')}
+                  {renderCrewSheetGroup('In Progress', filteredInProgressCrewSheets, 'inProgressCrewSheetGroup', 'No matching projects are currently in progress.')}
                   {renderCrewSheetGroup('Show Complete', filteredCompletedCrewSheets, 'completeCrewSheetGroup', 'No matching completed shows found.')}
                 </div>
               ) : (
-                <Empty text="No crew sheets match your search." />
+                <Empty text="No projects match your search." />
               )
             ) : (
-              <Empty text="No crew sheets created yet." />
+              <Empty text="No projects created yet." />
             )}
           </div>
         )}
