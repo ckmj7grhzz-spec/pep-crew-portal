@@ -742,13 +742,21 @@ function AdminShell({ children }) {
   return (
     <>
       <header className="pepAppHeader">
-        <div className="pepAppHeaderBrand">
+        <button
+          type="button"
+          className="pepAppHeaderBrand pepAppHeaderHomeButton"
+          onClick={() => {
+            writeStoredValue('pep.activePortalTab', 'dashboard')
+            window.location.href = '/admin'
+          }}
+          aria-label="Return to dashboard home"
+        >
           <img src={pepLogo} alt="Premium Event Productions" className="pepAppHeaderLogo" />
           <div>
             <strong>Premium Event Productions</strong>
             <span>PEP Admin</span>
           </div>
-        </div>
+        </button>
         <button type="button" className="pepAppLogoutButton" onClick={logout}>
           <LogOut size={16} /> Logout
         </button>
@@ -809,7 +817,7 @@ function AdminPage() {
   const [message, setMessage] = useState('')
   const [showCreateCrewSheet, setShowCreateCrewSheet] = useState(() => readStoredValue('pep.showCreateCrewSheet', false))
   const [showExistingCrewSheets, setShowExistingCrewSheets] = useState(() => readStoredValue('pep.showExistingCrewSheets', true))
-  const [activePortalTab, setActivePortalTab] = useState(() => readStoredValue('pep.activePortalTab', 'crew_sheets'))
+  const [activePortalTab, setActivePortalTab] = useState(() => readStoredValue('pep.activePortalTab', 'dashboard'))
   const [crewSheetSearch, setCrewSheetSearch] = useState('')
   const [calendarView, setCalendarView] = useState(() => readStoredValue('pep.calendarView', 'month'))
   const [calendarFocusDate, setCalendarFocusDate] = useState(() => readStoredValue('pep.calendarFocusDate', formatCalendarDateInput(new Date())))
@@ -3142,15 +3150,156 @@ function AdminPage() {
     )
   }
 
+  function getDashboardResourceBookings(categoryKeys = []) {
+    const today = new Date()
+    return (resourceBookings || [])
+      .filter(booking => booking.active !== false)
+      .map(booking => ({
+        ...booking,
+        resource_calendar: booking.resource_calendar || getResourceCalendarById(booking.resource_calendar_id),
+      }))
+      .filter(booking => categoryKeys.includes(booking.resource_calendar?.category))
+      .filter(booking => eventOverlapsDate(booking, today))
+  }
+
+  function getDashboardConflictCount() {
+    const bookings = (resourceBookings || [])
+      .filter(booking => booking.active !== false && booking.resource_calendar_id && booking.start_date)
+
+    const conflictKeys = new Set()
+
+    bookings.forEach((booking, index) => {
+      bookings.slice(index + 1).forEach(otherBooking => {
+        if (String(booking.resource_calendar_id) !== String(otherBooking.resource_calendar_id)) return
+        if (booking.event_id && otherBooking.event_id && String(booking.event_id) === String(otherBooking.event_id)) return
+        if (!rangesOverlap(booking.start_date, booking.end_date || booking.start_date, otherBooking.start_date, otherBooking.end_date || otherBooking.start_date)) return
+        conflictKeys.add(`${booking.id}-${otherBooking.id}`)
+      })
+    })
+
+    return conflictKeys.size
+  }
+
+  function renderDashboardHome() {
+    const today = new Date()
+    const todayProjects = events.filter(eventRecord => eventOverlapsDate(eventRecord, today))
+    const crewOutToday = getDashboardResourceBookings(['crew', 'freelancers'])
+    const vehiclesOutToday = getDashboardResourceBookings(['vehicles'])
+    const trailersOutToday = getDashboardResourceBookings(['led_trailers'])
+    const dryHireToday = getDashboardResourceBookings(['dry_hire'])
+    const roomsOutToday = getDashboardResourceBookings(['rooms'])
+    const peopleUnavailable = staffMembers.filter(member => member.active === false)
+    const conflictCount = getDashboardConflictCount()
+    const sevenDaysFromNow = addCalendarDays(today, 7)
+    const upcomingProjects = events
+      .filter(eventRecord => eventOverlapsRange(eventRecord, today, sevenDaysFromNow))
+      .sort((a, b) => String(a.start_date || '').localeCompare(String(b.start_date || '')))
+      .slice(0, 6)
+
+    return (
+      <>
+        <section className="eventCard opsHomeHero">
+          <div>
+            <p className="eyebrowDark">Home</p>
+            <h2>Operations Dashboard</h2>
+            <p>Live overview of projects, crew movements, resources, vehicles and operational warnings.</p>
+          </div>
+          <div className="opsHomeDateCard">
+            <span>Today</span>
+            <strong>{formatDate(formatCalendarDateInput(today))}</strong>
+          </div>
+        </section>
+
+        {message && <p className="adminMessage adminHomeMessage">{message}</p>}
+
+        <section className="opsDashboardGrid">
+          <button type="button" className="opsDashboardCard" onClick={() => changePortalTab('operations_calendar')}>
+            <span>Active Projects</span>
+            <strong>{activeCrewSheets.length}</strong>
+            <small>{todayProjects.length} live today</small>
+          </button>
+          <button type="button" className="opsDashboardCard" onClick={() => changePortalTab('operations_calendar')}>
+            <span>Crew Movements</span>
+            <strong>{crewOutToday.length}</strong>
+            <small>Booked crew/freelancers today</small>
+          </button>
+          <button type="button" className="opsDashboardCard" onClick={() => changePortalTab('staff')}>
+            <span>People Off / Unavailable</span>
+            <strong>{peopleUnavailable.length}</strong>
+            <small>Marked inactive for now</small>
+          </button>
+          <button type="button" className="opsDashboardCard" onClick={() => changePortalTab('operations_calendar')}>
+            <span>Vehicles Out</span>
+            <strong>{vehiclesOutToday.length}</strong>
+            <small>Vehicle resources booked today</small>
+          </button>
+          <button type="button" className="opsDashboardCard" onClick={() => changePortalTab('operations_calendar')}>
+            <span>LED Trailers Out</span>
+            <strong>{trailersOutToday.length}</strong>
+            <small>Trailer resources booked today</small>
+          </button>
+          <button type="button" className="opsDashboardCard" onClick={() => changePortalTab('reports')}>
+            <span>Warnings</span>
+            <strong>{conflictCount}</strong>
+            <small>Potential resource conflicts</small>
+          </button>
+        </section>
+
+        <section className="dashboardTwoColumnGrid">
+          <div className="eventCard dashboardPanelCard">
+            <div className="dashboardPanelHeader">
+              <div>
+                <p className="eyebrowDark">Next 7 Days</p>
+                <h3>Upcoming Projects</h3>
+              </div>
+              <button type="button" className="secondaryButton" onClick={() => changePortalTab('operations_calendar')}>Open Calendar</button>
+            </div>
+            {upcomingProjects.length ? (
+              <div className="dashboardActivityList">
+                {upcomingProjects.map(eventRecord => (
+                  <button type="button" key={eventRecord.id} onClick={() => openCalendarEventDetails(eventRecord)}>
+                    <strong>{eventRecord.show_name}</strong>
+                    <span>{formatDate(eventRecord.start_date)}{eventRecord.end_date && eventRecord.end_date !== eventRecord.start_date ? ` → ${formatDate(eventRecord.end_date)}` : ''}</span>
+                    <small>{eventRecord.venue || 'Venue TBC'}</small>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <Empty text="No projects in the next 7 days." />
+            )}
+          </div>
+
+          <div className="eventCard dashboardPanelCard">
+            <div className="dashboardPanelHeader">
+              <div>
+                <p className="eyebrowDark">Resource Overview</p>
+                <h3>Out Today</h3>
+              </div>
+              <button type="button" className="secondaryButton" onClick={() => changePortalTab('operations_calendar')}>Manage</button>
+            </div>
+            <div className="dashboardResourceSummary">
+              <div><strong>{crewOutToday.length}</strong><span>Crew / freelancers</span></div>
+              <div><strong>{vehiclesOutToday.length}</strong><span>Vehicles</span></div>
+              <div><strong>{trailersOutToday.length}</strong><span>LED trailers</span></div>
+              <div><strong>{dryHireToday.length}</strong><span>Dry hires</span></div>
+              <div><strong>{roomsOutToday.length}</strong><span>Rooms</span></div>
+              <div><strong>{readyCrewSheets.length}</strong><span>Ready sheets</span></div>
+            </div>
+          </div>
+        </section>
+      </>
+    )
+  }
+
   return (
     <main className="page adminPortalPage">
       <nav className="portalTopTabs" aria-label="PEP portal sections">
         <button
           type="button"
-          className={activePortalTab === 'crew_sheets' ? 'active' : ''}
-          onClick={() => changePortalTab('crew_sheets')}
+          className={activePortalTab === 'dashboard' ? 'active' : ''}
+          onClick={() => changePortalTab('dashboard')}
         >
-          Crew Sheets
+          Dashboard
         </button>
         <button
           type="button"
@@ -3168,19 +3317,21 @@ function AdminPage() {
         </button>
         <button
           type="button"
-          className={activePortalTab === 'settings' ? 'active' : ''}
-          onClick={() => changePortalTab('settings')}
-        >
-          Settings
-        </button>
-        <button
-          type="button"
           className={activePortalTab === 'reports' ? 'active' : ''}
           onClick={() => changePortalTab('reports')}
         >
           Reports
         </button>
+        <button
+          type="button"
+          className={activePortalTab === 'settings' ? 'active' : ''}
+          onClick={() => changePortalTab('settings')}
+        >
+          Settings
+        </button>
       </nav>
+
+      {activePortalTab === 'dashboard' && renderDashboardHome()}
 
       {activePortalTab === 'crew_sheets' && (
         <>
