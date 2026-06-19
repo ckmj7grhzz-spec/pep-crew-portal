@@ -12,8 +12,6 @@
   --pep-text: #0f172a;
   --pep-muted: #64748b;
   --pep-soft: #f8fafc;
-  --pep-subcard: #f8fafc;
-  --pep-subcard-alt: rgba(15, 23, 42, 0.04);
   --pep-blue: #1d4ed8;
   --red-bg: #fef2f2;
   --red-border: #fca5a5;
@@ -6448,207 +6446,133 @@ button.calendarEventListItem {
 }
 
 
-/* Dashboard / portal navigation refresh */
-.pepAppHeaderHomeButton {
-  appearance: none;
+/* Dashboard coloured metric cards */
+:root {
+  --dashboard-projects: #16a34a;
+  --dashboard-movement: #2563eb;
+  --dashboard-staff: #ea580c;
+  --dashboard-holiday: #9333ea;
+  --dashboard-vehicles: #64748b;
+  --dashboard-trailers: #d97706;
+  --dashboard-dryhire: #0891b2;
+  --dashboard-reports: #4f46e5;
+  --dashboard-completed: #111827;
+  --dashboard-warning: #dc2626;
+}
+
+.pepHomeButton {
   border: 0;
   background: transparent;
-  color: inherit;
-  font: inherit;
   text-align: left;
+  cursor: pointer;
   padding: 0;
-  cursor: pointer;
 }
 
-.pepAppHeaderHomeButton:hover {
-  opacity: 0.9;
+.pepHomeButton:hover strong,
+.pepHomeButton:hover span {
+  text-decoration: underline;
 }
 
-.opsHomeHero {
-  display: flex;
-  justify-content: space-between;
-  align-items: stretch;
-  gap: 20px;
+.dashboardCardGrid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.adminOverviewGrid .dashboardMetricCard {
+  position: relative;
+  overflow: hidden;
   background: #ffffff;
-}
-
-.opsHomeHero h2 {
-  font-size: 42px;
-  margin: 0 0 8px;
-}
-
-.opsHomeDateCard {
-  min-width: 260px;
-  background: #0f172a;
-  color: #ffffff;
-  border-radius: 18px;
-  padding: 20px;
-  display: grid;
-  align-content: center;
-  gap: 6px;
-}
-
-.opsHomeDateCard span {
-  color: rgba(255,255,255,0.72);
-  font-size: 12px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.opsHomeDateCard strong {
-  font-size: 20px;
-  line-height: 1.35;
-}
-
-.opsDashboardGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin: 22px 0;
-}
-
-.opsDashboardCard {
   border: 1px solid var(--pep-border);
-  background: #ffffff;
-  border-radius: 18px;
-  padding: 22px;
-  text-align: left;
-  display: grid;
-  gap: 8px;
-  cursor: pointer;
-  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  border-top: 6px solid var(--metric-colour, var(--pep-green));
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
-.opsDashboardCard:hover {
+.adminOverviewGrid .dashboardMetricCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--metric-colour, var(--pep-green));
+  opacity: 0.045;
+  pointer-events: none;
+}
+
+.adminOverviewGrid .dashboardMetricCard:hover {
   transform: translateY(-2px);
-  border-color: rgba(22, 163, 74, 0.55);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.11);
 }
 
-.opsDashboardCard span {
-  color: var(--pep-muted);
-  font-size: 13px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.opsDashboardCard strong {
-  font-size: 42px;
-  line-height: 1;
-  color: var(--pep-text);
-}
-
-.opsDashboardCard small {
-  color: #475569;
-  font-weight: 800;
-}
-
-.dashboardTwoColumnGrid {
-  display: grid;
-  grid-template-columns: 1.25fr 1fr;
-  gap: 22px;
-}
-
-.dashboardPanelCard {
-  margin-top: 0;
-}
-
-.dashboardPanelHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-
-.dashboardPanelHeader h3 {
-  margin: 0;
-  font-size: 26px;
-}
-
-.dashboardActivityList {
-  display: grid;
-  gap: 12px;
-}
-
-.dashboardActivityList button {
-  width: 100%;
-  border: 1px solid var(--pep-border);
-  background: var(--pep-subcard);
-  border-radius: 14px;
-  padding: 16px;
-  text-align: left;
-  display: grid;
-  gap: 4px;
-  cursor: pointer;
-}
-
-.dashboardActivityList button:hover {
-  border-color: var(--pep-green);
-  background: #ffffff;
-}
-
-.dashboardActivityList strong {
-  font-size: 17px;
-}
-
-.dashboardActivityList span,
-.dashboardActivityList small {
-  color: #475569;
-  font-weight: 800;
-}
-
-.dashboardResourceSummary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.dashboardResourceSummary div {
-  background: var(--pep-subcard);
-  border: 1px solid var(--pep-border);
-  border-radius: 14px;
-  padding: 18px;
-  display: grid;
-  gap: 4px;
-}
-
-.dashboardResourceSummary strong {
-  font-size: 30px;
+.dashboardMetricCard .dashboardMetricIcon {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--metric-colour, var(--pep-green)) 14%, #ffffff);
+  color: var(--metric-colour, var(--pep-green));
+  border: 1px solid color-mix(in srgb, var(--metric-colour, var(--pep-green)) 28%, #ffffff);
+  font-size: 11px;
   line-height: 1;
 }
 
-.dashboardResourceSummary span {
-  color: var(--pep-muted);
-  font-weight: 900;
+.dashboardMetricCard strong,
+.dashboardMetricCard span {
+  position: relative;
+  z-index: 1;
 }
 
-@media (max-width: 1000px) {
-  .opsHomeHero,
-  .dashboardPanelHeader {
-    display: grid;
-  }
+.projectMetric { --metric-colour: var(--dashboard-projects); }
+.movementMetric { --metric-colour: var(--dashboard-movement); }
+.staffMetric { --metric-colour: var(--dashboard-staff); }
+.holidayMetric { --metric-colour: var(--dashboard-holiday); }
+.vehicleMetric { --metric-colour: var(--dashboard-vehicles); }
+.trailerMetric { --metric-colour: var(--dashboard-trailers); }
+.dryHireMetric { --metric-colour: var(--dashboard-dryhire); }
+.reportMetric { --metric-colour: var(--dashboard-reports); }
+.warningMetric,
+.missingMetric { --metric-colour: var(--dashboard-warning); }
 
-  .opsDashboardGrid,
-  .dashboardTwoColumnGrid {
-    grid-template-columns: 1fr;
-  }
+.adminOverviewGrid .completedMetric {
+  --metric-colour: var(--dashboard-completed);
+  background: #111827;
+  border-color: #111827;
+  border-top-color: #020617;
+  color: #ffffff;
+}
 
-  .opsHomeDateCard {
-    min-width: 0;
+.adminOverviewGrid .completedMetric::before {
+  opacity: 0;
+}
+
+.adminOverviewGrid .completedMetric strong,
+.adminOverviewGrid .completedMetric span {
+  color: #ffffff !important;
+}
+
+.adminOverviewGrid .completedMetric .dashboardMetricIcon {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.adminOverviewGrid .activeWarningMetric {
+  background: #fef2f2;
+  border-color: #fecaca;
+  border-top-color: var(--dashboard-warning);
+}
+
+.adminOverviewGrid .activeWarningMetric strong,
+.adminOverviewGrid .activeWarningMetric span {
+  color: #991b1b !important;
+}
+
+@media (max-width: 1200px) {
+  .dashboardCardGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 720px) {
-  .opsDashboardGrid,
-  .dashboardResourceSummary {
+  .dashboardCardGrid {
     grid-template-columns: 1fr;
-  }
-
-  .opsHomeHero h2 {
-    font-size: 32px;
   }
 }
