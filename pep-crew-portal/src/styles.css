@@ -6731,3 +6731,125 @@ button.calendarEventListItem {
     display: grid;
   }
 }
+
+/* Dashboard large action cards - clearer, easier to scan */
+.adminOverviewGrid.dashboardCardGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  gap: 22px;
+  align-items: stretch;
+}
+
+.adminOverviewGrid .dashboardMetricCard,
+.adminOverviewGrid button.dashboardMetricCard {
+  min-height: 170px;
+  padding: 26px 26px 24px;
+  border-radius: 22px;
+  display: grid !important;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto auto;
+  column-gap: 18px;
+  row-gap: 6px;
+  align-content: start;
+  align-items: center;
+  text-align: left;
+  border-top-width: 8px;
+}
+
+.dashboardMetricCard .dashboardMetricIcon {
+  width: 44px;
+  height: 44px;
+  grid-row: 1 / 4;
+  align-self: start;
+  margin-top: 2px;
+  font-size: 14px;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--metric-colour, var(--pep-green)) 18%, transparent);
+}
+
+.dashboardMetricCard strong {
+  display: block;
+  font-size: clamp(42px, 3.4vw, 64px) !important;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  color: var(--pep-text);
+}
+
+.dashboardMetricCard span:not(.dashboardMetricIcon) {
+  display: block;
+  font-size: 18px;
+  line-height: 1.15;
+  font-weight: 950;
+  color: #334155;
+  white-space: normal;
+}
+
+.clickableDashboardCard small {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 8px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--metric-colour, var(--pep-green)) 10%, #ffffff);
+  color: color-mix(in srgb, var(--metric-colour, var(--pep-green)) 75%, #0f172a);
+  border: 1px solid color-mix(in srgb, var(--metric-colour, var(--pep-green)) 18%, #ffffff);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.clickableDashboardCard small::after {
+  content: ' â†’';
+  margin-left: 4px;
+}
+
+.adminOverviewGrid .dashboardMetricCard:hover,
+.adminOverviewGrid .clickableDashboardCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.14);
+}
+
+.adminOverviewGrid .completedMetric span:not(.dashboardMetricIcon),
+.adminOverviewGrid .completedMetric strong {
+  color: #ffffff !important;
+}
+
+.adminOverviewGrid .completedMetric small {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.adminOverviewGrid .activeWarningMetric small {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.18);
+  color: #991b1b;
+}
+
+@media (max-width: 1400px) {
+  .adminOverviewGrid.dashboardCardGrid {
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .adminOverviewGrid.dashboardCardGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .adminOverviewGrid.dashboardCardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .adminOverviewGrid .dashboardMetricCard,
+  .adminOverviewGrid button.dashboardMetricCard {
+    min-height: 145px;
+    padding: 22px;
+  }
+
+  .dashboardMetricCard strong {
+    font-size: 44px !important;
+  }
+}
