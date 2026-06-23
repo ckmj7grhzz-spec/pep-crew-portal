@@ -1521,20 +1521,22 @@ function AdminPage() {
     e.preventDefault()
     setMessage('')
 
-    const cleanSlug = cleanRouteSlug(form.public_slug) || slugify(form.show_name)
-
-    if (!form.show_name || !cleanSlug) {
-      setMessage('Project name is required.')
+    if (!form.show_name || !form.public_slug) {
+      setMessage('Show name and public slug are required.')
       return
     }
 
     const eventPayload = {
       ...form,
-      public_slug: cleanSlug,
+      public_slug: cleanRouteSlug(form.public_slug) || slugify(form.show_name),
       share_enabled: form.share_enabled !== false,
     }
 
-    const { error } = await supabase.from('Events').insert([eventPayload])
+    const { data: createdEvent, error } = await supabase
+      .from('Events')
+      .insert([eventPayload])
+      .select('*')
+      .single()
 
     if (error) {
       setMessage(`Could not create project: ${error.message}`)
@@ -1543,9 +1545,10 @@ function AdminPage() {
 
     setMessage('Project created. Opening project...')
 
-    window.setTimeout(() => {
-      window.location.href = `/admin/event/${encodeURIComponent(cleanSlug)}`
-    }, 250)
+    const routeTarget = createdEvent || eventPayload
+    setTimeout(() => {
+      window.location.href = getEventAdminHref(routeTarget)
+    }, 350)
   }
 
   async function togglePublished(eventRecord) {
@@ -4258,6 +4261,9 @@ function EventManagerPage() {
     end_date: '',
     project_manager: '',
     crew_sheet_status: 'in_progress',
+    flights_not_required: false,
+    hotels_not_required: false,
+    transfers_not_required: false,
   })
 
   const [eventResourceBookingForm, setEventResourceBookingForm] = useState({
@@ -4397,6 +4403,9 @@ function EventManagerPage() {
       end_date: eventData.end_date || eventData.start_date || '',
       project_manager: eventData.project_manager || '',
       crew_sheet_status: eventData.crew_sheet_status || 'in_progress',
+      flights_not_required: eventData.flights_not_required === true,
+      hotels_not_required: eventData.hotels_not_required === true,
+      transfers_not_required: eventData.transfers_not_required === true,
     })
     setEventLocationForm({
       venue_address: eventData.venue_address || '',
@@ -4578,6 +4587,9 @@ function EventManagerPage() {
       end_date: eventDetailsForm.end_date || eventDetailsForm.start_date || null,
       project_manager: eventDetailsForm.project_manager,
       crew_sheet_status: eventDetailsForm.crew_sheet_status || 'in_progress',
+      flights_not_required: eventDetailsForm.flights_not_required === true,
+      hotels_not_required: eventDetailsForm.hotels_not_required === true,
+      transfers_not_required: eventDetailsForm.transfers_not_required === true,
     }
 
     const { error } = await supabase
@@ -5787,17 +5799,22 @@ function EventManagerPage() {
 
 
 
+  const flightsNotRequired = event?.flights_not_required === true
+  const hotelsNotRequired = event?.hotels_not_required === true
+  const transfersNotRequired = event?.transfers_not_required === true
+
   const crewNamesWithFlights = new Set(flights.map(flight => flight.crew_name).filter(Boolean))
   const crewNamesWithHotels = new Set(hotels.map(hotel => hotel.guest_name).filter(Boolean))
   const crewNamesWithTransfers = new Set(transfers.map(transfer => transfer.passenger || transfer.passengers).filter(Boolean))
 
-  const missingFlights = crew.filter(member => !crewNamesWithFlights.has(member.name))
-  const missingTransfers = crew.filter(member => !crewNamesWithTransfers.has(member.name))
+  const missingFlights = flightsNotRequired ? [] : crew.filter(member => !crewNamesWithFlights.has(member.name))
+  const missingHotels = hotelsNotRequired ? [] : crew.filter(member => !crewNamesWithHotels.has(member.name))
+  const missingTransfers = transfersNotRequired ? [] : crew.filter(member => !crewNamesWithTransfers.has(member.name))
 
   const crewMissingMobile = crew.filter(member => !String(member.mobile || '').trim())
   const crewMissingEmail = crew.filter(member => !String(member.email || '').trim())
 
-  const flightCriticalIssues = flights.flatMap(flight => {
+  const flightCriticalIssues = flightsNotRequired ? [] : flights.flatMap(flight => {
     const owner = flight.crew_name || flight.flight_number || 'Flight'
     const issues = []
 
@@ -5811,7 +5828,7 @@ function EventManagerPage() {
     return issues
   })
 
-  const transferCriticalIssues = transfers.flatMap(transfer => {
+  const transferCriticalIssues = transfersNotRequired ? [] : transfers.flatMap(transfer => {
     const owner = transfer.passenger || transfer.passengers || 'Transfer'
     const issues = []
 
@@ -5821,7 +5838,7 @@ function EventManagerPage() {
     return issues
   })
 
-  const transferWarningIssues = transfers.flatMap(transfer => {
+  const transferWarningIssues = transfersNotRequired ? [] : transfers.flatMap(transfer => {
     const owner = transfer.passenger || transfer.passengers || 'Transfer'
     const issues = []
 
@@ -5832,19 +5849,25 @@ function EventManagerPage() {
   })
 
   const readinessChecks = [
-    ...crew.map(member => ({
+    ...(!flightsNotRequired ? crew.map(member => ({
       type: 'Flight',
       name: member.name,
       issue: 'No flight assigned',
       complete: crewNamesWithFlights.has(member.name),
-    })),
-    ...crew.map(member => ({
+    })) : []),
+    ...(!hotelsNotRequired ? crew.map(member => ({
+      type: 'Hotel',
+      name: member.name,
+      issue: 'No hotel assigned',
+      complete: crewNamesWithHotels.has(member.name),
+    })) : []),
+    ...(!transfersNotRequired ? crew.map(member => ({
       type: 'Transfer',
       name: member.name,
       issue: 'No transfer assigned',
       complete: crewNamesWithTransfers.has(member.name),
-    })),
-    ...flights.flatMap(flight => [
+    })) : []),
+    ...(!flightsNotRequired ? flights.flatMap(flight => [
       {
         type: 'Flight Reference',
         name: flight.crew_name || flight.flight_number || 'Flight',
@@ -5863,8 +5886,8 @@ function EventManagerPage() {
         issue: 'Missing arrival time',
         complete: Boolean(String(flight.arrival_time || '').trim()),
       },
-    ]),
-    ...transfers.flatMap(transfer => [
+    ]) : []),
+    ...(!transfersNotRequired ? transfers.flatMap(transfer => [
       {
         type: 'Transfer Pickup',
         name: transfer.passenger || transfer.passengers || 'Transfer',
@@ -5877,7 +5900,7 @@ function EventManagerPage() {
         issue: 'Missing destination',
         complete: Boolean(String(transfer.destination || '').trim()),
       },
-    ]),
+    ]) : []),
   ]
 
   const completedChecks = readinessChecks.filter(check => check.complete).length
@@ -5903,14 +5926,15 @@ function EventManagerPage() {
       ? 'Needs attention'
       : 'High risk'
 
-  const flightCompletion = crew.length ? Math.round((crewNamesWithFlights.size / crew.length) * 100) : 100
-  const hotelCompletion = hotels.length ? 100 : 100
-  const transferCompletion = crew.length ? Math.round((crewNamesWithTransfers.size / crew.length) * 100) : 100
+  const flightCompletion = flightsNotRequired ? 100 : crew.length ? Math.round((crewNamesWithFlights.size / crew.length) * 100) : 100
+  const hotelCompletion = hotelsNotRequired ? 100 : crew.length ? Math.round((crewNamesWithHotels.size / crew.length) * 100) : 100
+  const transferCompletion = transfersNotRequired ? 100 : crew.length ? Math.round((crewNamesWithTransfers.size / crew.length) * 100) : 100
 
   const publicDocuments = documents.filter(document => document.is_public !== false)
 
   const readinessCriticalIssues = [
     ...missingFlights.map(member => `${member.name} has no flight assigned`),
+    ...missingHotels.map(member => `${member.name} has no hotel assigned`),
     ...missingTransfers.map(member => `${member.name} has no transfer assigned`),
     ...flightCriticalIssues,
     ...transferCriticalIssues,
@@ -5938,7 +5962,7 @@ function EventManagerPage() {
     ? `${readinessCriticalIssues.length} critical issue${readinessCriticalIssues.length === 1 ? '' : 's'} need attention before this event is ready.`
     : readinessWarningIssues.length
       ? `${readinessWarningIssues.length} warning${readinessWarningIssues.length === 1 ? '' : 's'} to review before crew deployment.`
-      : 'All core crew, flight and transfer checks are complete.'
+      : 'All active crew, service and logistics checks are complete.'
 
   const readiness2Sections = [
     {
@@ -5953,24 +5977,33 @@ function EventManagerPage() {
     },
     {
       title: 'Flights',
-      subtitle: `${crewNamesWithFlights.size}/${crew.length} crew booked`,
-      className: missingFlights.length || flightCriticalIssues.length ? 'statusRed' : 'statusGreen',
-      issues: [
+      subtitle: flightsNotRequired ? 'Not required for this project' : `${crewNamesWithFlights.size}/${crew.length} crew booked`,
+      className: flightsNotRequired ? 'statusGreen' : missingFlights.length || flightCriticalIssues.length ? 'statusRed' : 'statusGreen',
+      issues: flightsNotRequired ? [] : [
         ...missingFlights.map(member => `${member.name} has no flight assigned`),
         ...flightCriticalIssues,
       ],
-      completeText: 'All crew have usable flight records.',
+      completeText: flightsNotRequired ? 'Flights marked N/A for this project.' : 'All crew have usable flight records.',
+    },
+    {
+      title: 'Hotels',
+      subtitle: hotelsNotRequired ? 'Not required for this project' : `${crewNamesWithHotels.size}/${crew.length} crew covered`,
+      className: hotelsNotRequired ? 'statusGreen' : missingHotels.length ? 'statusRed' : 'statusGreen',
+      issues: hotelsNotRequired ? [] : [
+        ...missingHotels.map(member => `${member.name} has no hotel assigned`),
+      ],
+      completeText: hotelsNotRequired ? 'Hotels marked N/A for this project.' : 'All crew have hotel records.',
     },
     {
       title: 'Transfers',
-      subtitle: `${crewNamesWithTransfers.size}/${crew.length} crew covered`,
-      className: missingTransfers.length || transferCriticalIssues.length ? 'statusRed' : transferWarningIssues.length ? 'statusOrange' : 'statusGreen',
-      issues: [
+      subtitle: transfersNotRequired ? 'Not required for this project' : `${crewNamesWithTransfers.size}/${crew.length} crew covered`,
+      className: transfersNotRequired ? 'statusGreen' : missingTransfers.length || transferCriticalIssues.length ? 'statusRed' : transferWarningIssues.length ? 'statusOrange' : 'statusGreen',
+      issues: transfersNotRequired ? [] : [
         ...missingTransfers.map(member => `${member.name} has no transfer assigned`),
         ...transferCriticalIssues,
         ...transferWarningIssues,
       ],
-      completeText: 'All crew have transfer records.',
+      completeText: transfersNotRequired ? 'Transfers marked N/A for this project.' : 'All crew have transfer records.',
     },
     {
       title: 'Documents',
@@ -6164,6 +6197,24 @@ function EventManagerPage() {
                   <option value="show_complete">Show Complete</option>
                 </select>
               </label>
+
+              <div className="serviceNaPanel">
+                <strong>Services Not Required</strong>
+                <p>Use these when a project does not need a service so readiness and warning checks do not create false flags.</p>
+                <label className="checkboxRow serviceNaToggle">
+                  <input type="checkbox" checked={eventDetailsForm.flights_not_required} onChange={e => updateEventDetailsField('flights_not_required', e.target.checked)} />
+                  Flights N/A
+                </label>
+                <label className="checkboxRow serviceNaToggle">
+                  <input type="checkbox" checked={eventDetailsForm.hotels_not_required} onChange={e => updateEventDetailsField('hotels_not_required', e.target.checked)} />
+                  Hotels N/A
+                </label>
+                <label className="checkboxRow serviceNaToggle">
+                  <input type="checkbox" checked={eventDetailsForm.transfers_not_required} onChange={e => updateEventDetailsField('transfers_not_required', e.target.checked)} />
+                  Transfers N/A
+                </label>
+              </div>
+
               <button className="primaryButton" type="submit">Save Live Details</button>
             </form>
           </section>
