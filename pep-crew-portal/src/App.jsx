@@ -7293,7 +7293,6 @@ function EventManagerPage() {
           </form>
         )}
       </section>
-      </section>
 
       <section className="eventCard">
         <h2>Hotels</h2>
