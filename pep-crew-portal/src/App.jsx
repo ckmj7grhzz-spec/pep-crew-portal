@@ -4348,6 +4348,20 @@ function EventManagerPage() {
     notes: '',
   })
 
+  const [bulkHotelForm, setBulkHotelForm] = useState({
+    apply_to: 'missing_required',
+    hotel_name: '',
+    address: '',
+    maps_url: '',
+    what3words: '',
+    check_in: '',
+    check_out: '',
+    booking_reference: '',
+    hotel_contact: '',
+    notes: '',
+    overwrite_existing: false,
+  })
+
   const [transferForm, setTransferForm] = useState({
     passenger: '',
     transfer_type: '',
@@ -4532,6 +4546,30 @@ function EventManagerPage() {
 
   function updateHotelField(field, value) {
     setHotelForm({ ...hotelForm, [field]: value })
+  }
+
+
+  function updateBulkHotelField(field, value) {
+    setBulkHotelForm(current => ({
+      ...current,
+      [field]: value,
+    }))
+  }
+
+  function resetBulkHotelForm() {
+    setBulkHotelForm({
+      apply_to: 'missing_required',
+      hotel_name: '',
+      address: '',
+      maps_url: '',
+      what3words: '',
+      check_in: '',
+      check_out: '',
+      booking_reference: '',
+      hotel_contact: '',
+      notes: '',
+      overwrite_existing: false,
+    })
   }
 
   function updateTransferField(field, value) {
@@ -5556,6 +5594,108 @@ function EventManagerPage() {
 
     resetHotelForm()
     setMessage(editingHotelId ? 'Hotel booking updated.' : 'Hotel booking added.')
+    await loadEventManager()
+  }
+
+
+  async function saveBulkHotel(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!event) return
+
+    if (!bulkHotelForm.hotel_name.trim()) {
+      setMessage('Hotel name is required for bulk assignment.')
+      return
+    }
+
+    const existingHotelByGuest = new Map(
+      hotels
+        .filter(hotel => hotel.guest_name)
+        .map(hotel => [normalisePersonName(hotel.guest_name), hotel])
+    )
+
+    let targetCrew = []
+
+    if (bulkHotelForm.apply_to === 'all_crew') {
+      targetCrew = combinedCrewRows
+    } else if (bulkHotelForm.apply_to === 'all_required') {
+      targetCrew = crewRequiringHotels
+    } else {
+      targetCrew = crewRequiringHotels.filter(member => !existingHotelByGuest.has(normalisePersonName(member.name)))
+    }
+
+    const uniqueTargets = []
+    const seenTargets = new Set()
+
+    targetCrew.forEach(member => {
+      const key = normalisePersonName(member.name)
+      if (!key || seenTargets.has(key)) return
+      seenTargets.add(key)
+      uniqueTargets.push(member)
+    })
+
+    if (!uniqueTargets.length) {
+      setMessage('No crew members need a hotel assignment for this selection.')
+      return
+    }
+
+    const rowsToInsert = []
+    const rowsToUpdate = []
+
+    uniqueTargets.forEach(member => {
+      const existingHotel = existingHotelByGuest.get(normalisePersonName(member.name))
+
+      const hotelPayload = {
+        event_id: event.id,
+        guest_name: member.name,
+        hotel_name: bulkHotelForm.hotel_name.trim(),
+        address: bulkHotelForm.address || '',
+        maps_url: bulkHotelForm.maps_url || '',
+        what3words: bulkHotelForm.what3words || '',
+        check_in: bulkHotelForm.check_in || null,
+        check_out: bulkHotelForm.check_out || null,
+        room_number: existingHotel?.room_number || '',
+        booking_reference: bulkHotelForm.booking_reference || '',
+        hotel_contact: bulkHotelForm.hotel_contact || '',
+        notes: bulkHotelForm.notes || '',
+      }
+
+      if (existingHotel?.id) {
+        if (bulkHotelForm.overwrite_existing) {
+          rowsToUpdate.push({ id: existingHotel.id, payload: hotelPayload })
+        }
+        return
+      }
+
+      rowsToInsert.push(hotelPayload)
+    })
+
+    if (!rowsToInsert.length && !rowsToUpdate.length) {
+      setMessage('All selected crew already have hotel records. Enable overwrite to replace them.')
+      return
+    }
+
+    if (rowsToInsert.length) {
+      const { error } = await supabase.from('hotels').insert(rowsToInsert)
+
+      if (error) {
+        setMessage(`Could not bulk assign hotels: ${error.message}`)
+        return
+      }
+    }
+
+    for (const row of rowsToUpdate) {
+      const { error } = await supabase.from('hotels').update(row.payload).eq('id', row.id)
+
+      if (error) {
+        setMessage(`Could not update existing hotel record: ${error.message}`)
+        return
+      }
+    }
+
+    resetBulkHotelForm()
+    setMessage(`Hotel assigned to ${rowsToInsert.length + rowsToUpdate.length} crew member${rowsToInsert.length + rowsToUpdate.length === 1 ? '' : 's'}.`)
     await loadEventManager()
   }
 
@@ -6821,6 +6961,91 @@ function EventManagerPage() {
           Upload Hotels Excel
           <input type="file" accept=".xlsx,.xls,.csv,text/csv" onChange={importHotelsFile} />
         </label>
+      </section>
+
+      <section className="eventCard bulkAssignCard">
+        <div className="bulkAssignHeader">
+          <div>
+            <p className="eyebrowDark">Bulk Assignment</p>
+            <h2>Apply Hotel to Crew</h2>
+            <p>Use this when multiple crew are staying at the same hotel. Crew marked as hotel not required are skipped by default.</p>
+          </div>
+          <span className="bulkAssignBadge">Fast fill</span>
+        </div>
+
+        <form onSubmit={saveBulkHotel} className="adminForm bulkAssignForm">
+          <label>
+            Apply To
+            <select value={bulkHotelForm.apply_to} onChange={e => updateBulkHotelField('apply_to', e.target.value)}>
+              <option value="missing_required">Crew requiring hotel with no hotel assigned</option>
+              <option value="all_required">All crew requiring hotel</option>
+              <option value="all_crew">All crew on this project</option>
+            </select>
+          </label>
+
+          <label>
+            Hotel Name
+            <input value={bulkHotelForm.hotel_name} onChange={e => updateBulkHotelField('hotel_name', e.target.value)} placeholder="Premier Inn NEC" />
+          </label>
+
+          <label>
+            Address
+            <input value={bulkHotelForm.address} onChange={e => updateBulkHotelField('address', e.target.value)} placeholder="Hotel address" />
+          </label>
+
+          <label>
+            Google Maps URL
+            <input value={bulkHotelForm.maps_url} onChange={e => updateBulkHotelField('maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+          </label>
+
+          <label>
+            What3Words
+            <input value={bulkHotelForm.what3words} onChange={e => updateBulkHotelField('what3words', e.target.value)} placeholder="///filled.count.soap" />
+          </label>
+
+          <label>
+            Check In
+            <input type="date" value={bulkHotelForm.check_in} onChange={e => updateBulkHotelField('check_in', e.target.value)} />
+          </label>
+
+          <label>
+            Check Out
+            <input type="date" value={bulkHotelForm.check_out} onChange={e => updateBulkHotelField('check_out', e.target.value)} />
+          </label>
+
+          <label>
+            Booking Reference
+            <input value={bulkHotelForm.booking_reference} onChange={e => updateBulkHotelField('booking_reference', e.target.value)} placeholder="Optional shared reference" />
+          </label>
+
+          <label>
+            Hotel Contact
+            <input value={bulkHotelForm.hotel_contact} onChange={e => updateBulkHotelField('hotel_contact', e.target.value)} placeholder="Optional" />
+          </label>
+
+          <label>
+            Notes
+            <input value={bulkHotelForm.notes} onChange={e => updateBulkHotelField('notes', e.target.value)} placeholder="Optional" />
+          </label>
+
+          <label className="checkboxRow bulkOverwriteToggle">
+            <input
+              type="checkbox"
+              checked={bulkHotelForm.overwrite_existing}
+              onChange={e => updateBulkHotelField('overwrite_existing', e.target.checked)}
+            />
+            Overwrite existing hotel records for selected crew
+          </label>
+
+          <div className="bulkAssignActions">
+            <button className="primaryButton" type="submit">
+              <Plus size={18} /> Apply Hotel to Crew
+            </button>
+            <button className="secondaryButton" type="button" onClick={resetBulkHotelForm}>
+              Clear Bulk Form
+            </button>
+          </div>
+        </form>
       </section>
 
       <section className="eventCard" id="hotel-form">
