@@ -1572,14 +1572,16 @@ function AdminPage() {
     e.preventDefault()
     setMessage('')
 
-    if (!form.show_name || !form.public_slug) {
+    const cleanSlug = cleanRouteSlug(form.public_slug) || slugify(form.show_name)
+
+    if (!form.show_name || !cleanSlug) {
       setMessage('Show name and public slug are required.')
       return
     }
 
     const eventPayload = {
       ...form,
-      public_slug: cleanRouteSlug(form.public_slug) || slugify(form.show_name),
+      public_slug: cleanSlug,
       share_enabled: form.share_enabled !== false,
     }
 
@@ -1594,34 +1596,9 @@ function AdminPage() {
 
     setMessage('Project created. Opening project...')
 
-    const adminHref = getEventAdminHref(eventPayload)
-    window.setTimeout(() => {
-      window.location.assign(adminHref)
-    }, 300)
-
-    setForm({
-      show_name: '',
-      venue: '',
-      start_date: '',
-      end_date: '',
-      project_manager: '',
-      project_manager_phone: '',
-      project_manager_email: '',
-      operations_contact_name: '',
-      operations_contact_phone: '',
-      emergency_contact_number: '',
-      crew_sheet_status: 'draft',
-      public_slug: '',
-      share_enabled: true,
-      current_rms_id: '',
-      venue_address: '',
-      venue_maps_url: '',
-      venue_what3words: '',
-      venue_access_notes: '',
-      loading_bay_notes: '',
-    })
-
-    loadEvents()
+    // Do not reset the form or reload the project list before navigation.
+    // Redirect using the slug we just inserted, which avoids relying on Supabase returning the new row.
+    window.location.href = `/admin/event/${encodeURIComponent(cleanSlug)}`
   }
 
   async function togglePublished(eventRecord) {
