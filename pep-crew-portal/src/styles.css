@@ -7651,3 +7651,116 @@ button.calendarEventListItem {
     width: fit-content;
   }
 }
+
+/* Hotel assignment single/bulk mode */
+.hotelAssignmentCard {
+  border-left: 5px solid var(--pep-green);
+}
+
+.assignmentModeToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--pep-soft);
+  border: 1px solid var(--pep-border);
+  border-radius: 999px;
+  padding: 6px;
+  flex-shrink: 0;
+}
+
+.assignmentModeToggle button {
+  border: 0;
+  background: transparent;
+  color: var(--pep-muted);
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.assignmentModeToggle button.active {
+  background: var(--pep-green);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.18);
+}
+
+.fullWidthFormItem {
+  grid-column: 1 / -1;
+}
+
+.crewSelectionPanel {
+  background: var(--pep-soft);
+  border: 1px solid var(--pep-border);
+  border-radius: 16px;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.crewSelectionPanel > strong {
+  font-size: 16px;
+}
+
+.crewSelectionPanel p {
+  margin: 0 !important;
+  color: var(--pep-muted) !important;
+  font-weight: 700;
+}
+
+.crewSelectionGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crewSelectionGrid label {
+  background: #ffffff;
+  border: 1px solid var(--pep-border);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px !important;
+  cursor: pointer;
+}
+
+.crewSelectionGrid label.selected {
+  background: var(--green-bg);
+  border-color: var(--green-border);
+}
+
+.crewSelectionGrid input {
+  width: auto !important;
+  min-height: auto !important;
+  margin-top: 3px;
+}
+
+.crewSelectionGrid span {
+  display: grid;
+  gap: 3px;
+}
+
+.crewSelectionGrid small {
+  color: var(--pep-muted);
+  font-weight: 800;
+}
+
+@media (max-width: 1000px) {
+  .crewSelectionGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .assignmentModeToggle {
+    width: 100%;
+  }
+
+  .assignmentModeToggle button {
+    flex: 1;
+  }
+
+  .crewSelectionGrid {
+    grid-template-columns: 1fr;
+  }
+}
