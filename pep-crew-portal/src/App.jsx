@@ -1583,11 +1583,9 @@ function AdminPage() {
       share_enabled: form.share_enabled !== false,
     }
 
-    const { data: createdEvent, error } = await supabase
+    const { error } = await supabase
       .from('Events')
       .insert([eventPayload])
-      .select('*')
-      .single()
 
     if (error) {
       setMessage(`Could not create project: ${error.message}`)
@@ -1596,9 +1594,10 @@ function AdminPage() {
 
     setMessage('Project created. Opening project...')
 
-    setTimeout(() => {
-      window.location.href = getEventAdminHref(createdEvent || eventPayload)
-    }, 350)
+    const adminHref = getEventAdminHref(eventPayload)
+    window.setTimeout(() => {
+      window.location.assign(adminHref)
+    }, 300)
 
     setForm({
       show_name: '',
