@@ -7359,182 +7359,32 @@ button.calendarEventListItem {
   }
 }
 
-/* Staff Availability V3 */
-.staffAvailabilityBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 28px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 900;
+/* Service N/A controls */
+.serviceNaPanel {
+  grid-column: 1 / -1;
+  background: #f8fafc;
   border: 1px solid var(--pep-border);
-}
-
-.staffAvailability-available {
-  color: var(--green-text);
-  background: var(--green-bg);
-  border-color: var(--green-border);
-}
-
-.staffAvailability-holiday {
-  color: #6b21a8;
-  background: #faf5ff;
-  border-color: #d8b4fe;
-}
-
-.staffAvailability-sick {
-  color: var(--red-text);
-  background: var(--red-bg);
-  border-color: var(--red-border);
-}
-
-.staffAvailability-training {
-  color: #1d4ed8;
-  background: #eff6ff;
-  border-color: #bfdbfe;
-}
-
-.staffAvailability-unavailable {
-  color: #111827;
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-}
-
-.staffAvailabilityCard-holiday {
-  background: linear-gradient(90deg, #faf5ff 0, #ffffff 14%);
-}
-
-.staffAvailabilityCard-sick {
-  background: linear-gradient(90deg, #fef2f2 0, #ffffff 14%);
-}
-
-.staffAvailabilityCard-training {
-  background: linear-gradient(90deg, #eff6ff 0, #ffffff 14%);
-}
-
-.staffAvailabilityCard-unavailable {
-  background: linear-gradient(90deg, #f1f5f9 0, #ffffff 14%);
-}
-
-.statusStripItem.availableMetric {
-  border-color: #86efac;
-  background: #f0fdf4;
-}
-
-.statusStripItem.availableMetric strong,
-.statusStripItem.availableMetric span {
-  color: var(--green-text);
-}
-
-.statusStripItem.holidayMetric {
-  border-color: #d8b4fe;
-  background: #faf5ff;
-}
-
-.statusStripItem.holidayMetric strong,
-.statusStripItem.holidayMetric span {
-  color: #6b21a8;
-}
-
-.staffAvailabilitySummaryGrid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.staffAvailabilitySummaryGrid > div {
-  min-height: 96px;
-}
-
-.availabilitySummaryAvailable {
-  background: var(--green-bg) !important;
-  border-color: var(--green-border) !important;
-}
-
-.availabilitySummaryAvailable strong,
-.availabilitySummaryAvailable span {
-  color: var(--green-text) !important;
-}
-
-.availabilitySummaryHoliday {
-  background: #faf5ff !important;
-  border-color: #d8b4fe !important;
-}
-
-.availabilitySummaryHoliday strong,
-.availabilitySummaryHoliday span {
-  color: #6b21a8 !important;
-}
-
-.availabilitySummarySick {
-  background: var(--red-bg) !important;
-  border-color: var(--red-border) !important;
-}
-
-.availabilitySummarySick strong,
-.availabilitySummarySick span {
-  color: var(--red-text) !important;
-}
-
-.availabilitySummaryTraining {
-  background: #eff6ff !important;
-  border-color: #bfdbfe !important;
-}
-
-.availabilitySummaryTraining strong,
-.availabilitySummaryTraining span {
-  color: #1d4ed8 !important;
-}
-
-.availabilitySummaryUnavailable {
-  background: #f1f5f9 !important;
-  border-color: #cbd5e1 !important;
-}
-
-.availabilitySummaryUnavailable strong,
-.availabilitySummaryUnavailable span {
-  color: #111827 !important;
-}
-
-.staffAvailabilityPanels {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-  margin-top: 20px;
-}
-
-.staffAvailabilityPanel {
-  border: 1px solid var(--pep-border);
-  background: var(--pep-soft);
   border-radius: 16px;
-  padding: 18px;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
 }
 
-.staffAvailabilityPanel h3 {
-  margin: 0 0 14px;
+.serviceNaPanel strong {
+  font-size: 16px;
 }
 
-.staffAvailabilityMiniRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
+.serviceNaPanel p {
+  margin: 0 !important;
+  color: var(--pep-muted) !important;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.serviceNaToggle {
   background: #ffffff;
   border: 1px solid var(--pep-border);
   border-radius: 12px;
   padding: 12px 14px;
-  margin-bottom: 10px;
-}
-
-.staffAvailabilityMiniRow span {
-  color: var(--pep-muted);
-  font-weight: 800;
-  text-align: right;
-}
-
-@media (max-width: 900px) {
-  .staffAvailabilitySummaryGrid,
-  .staffAvailabilityPanels {
-    grid-template-columns: 1fr;
-  }
+  font-weight: 900 !important;
 }
