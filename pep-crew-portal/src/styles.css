@@ -7359,32 +7359,116 @@ button.calendarEventListItem {
   }
 }
 
-/* Service N/A controls */
+
+/* Service N/A controls - polished to match admin cards */
 .serviceNaPanel {
   grid-column: 1 / -1;
+  background: #ffffff;
+  border: 1px solid var(--pep-border);
+  border-radius: 18px;
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.05);
+}
+
+.serviceNaHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--pep-border);
+}
+
+.serviceNaHeader h3 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--pep-text);
+}
+
+.serviceNaHint {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 999px;
   background: #f8fafc;
   border: 1px solid var(--pep-border);
-  border-radius: 16px;
-  padding: 16px;
+  color: var(--pep-muted);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.serviceNaToggleGrid {
   display: grid;
-  gap: 10px;
-}
-
-.serviceNaPanel strong {
-  font-size: 16px;
-}
-
-.serviceNaPanel p {
-  margin: 0 !important;
-  color: var(--pep-muted) !important;
-  font-size: 14px;
-  font-weight: 700;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .serviceNaToggle {
-  background: #ffffff;
+  position: relative;
+  display: grid !important;
+  gap: 6px !important;
+  cursor: pointer;
+  background: #f8fafc;
   border: 1px solid var(--pep-border);
-  border-radius: 12px;
-  padding: 12px 14px;
-  font-weight: 900 !important;
+  border-radius: 16px;
+  padding: 16px 16px 16px 48px;
+  transition: all 0.18s ease;
+  min-height: 86px;
+}
+
+.serviceNaToggle:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.serviceNaToggle input {
+  position: absolute;
+  left: 16px;
+  top: 18px;
+  width: 20px !important;
+  height: 20px;
+  min-height: 20px !important;
+  accent-color: var(--pep-green);
+}
+
+.serviceNaToggle span {
+  color: var(--pep-text);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.serviceNaToggle small {
+  color: var(--pep-muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.serviceNaToggle.active {
+  background: var(--green-bg);
+  border-color: var(--green-border);
+}
+
+.serviceNaToggle.active span,
+.serviceNaToggle.active small {
+  color: var(--green-text);
+}
+
+@media (max-width: 900px) {
+  .serviceNaToggleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .serviceNaHeader {
+    display: grid;
+  }
+
+  .serviceNaHint {
+    justify-content: center;
+    width: fit-content;
+  }
 }
