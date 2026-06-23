@@ -4317,6 +4317,9 @@ function EventManagerPage() {
     hotel: '',
     room_number: '',
     notes: '',
+    flight_required: true,
+    hotel_required: true,
+    transfer_required: true,
   })
 
   const [flightForm, setFlightForm] = useState({
@@ -4915,6 +4918,9 @@ function EventManagerPage() {
       hotel: '',
       room_number: '',
       notes: '',
+      flight_required: true,
+      hotel_required: true,
+      transfer_required: true,
     })
   }
 
@@ -4930,6 +4936,9 @@ function EventManagerPage() {
       hotel: member.hotel || '',
       room_number: member.room_number || '',
       notes: member.notes || '',
+      flight_required: member.flight_required !== false,
+      hotel_required: member.hotel_required !== false,
+      transfer_required: member.transfer_required !== false,
     })
     setTimeout(() => {
       const form = document.getElementById('crew-form')
@@ -5807,9 +5816,13 @@ function EventManagerPage() {
   const crewNamesWithHotels = new Set(hotels.map(hotel => hotel.guest_name).filter(Boolean))
   const crewNamesWithTransfers = new Set(transfers.map(transfer => transfer.passenger || transfer.passengers).filter(Boolean))
 
-  const missingFlights = flightsNotRequired ? [] : crew.filter(member => !crewNamesWithFlights.has(member.name))
-  const missingHotels = hotelsNotRequired ? [] : crew.filter(member => !crewNamesWithHotels.has(member.name))
-  const missingTransfers = transfersNotRequired ? [] : crew.filter(member => !crewNamesWithTransfers.has(member.name))
+  const crewRequiringFlights = flightsNotRequired ? [] : crew.filter(member => member.flight_required !== false)
+  const crewRequiringHotels = hotelsNotRequired ? [] : crew.filter(member => member.hotel_required !== false)
+  const crewRequiringTransfers = transfersNotRequired ? [] : crew.filter(member => member.transfer_required !== false)
+
+  const missingFlights = flightsNotRequired ? [] : crewRequiringFlights.filter(member => !crewNamesWithFlights.has(member.name))
+  const missingHotels = hotelsNotRequired ? [] : crewRequiringHotels.filter(member => !crewNamesWithHotels.has(member.name))
+  const missingTransfers = transfersNotRequired ? [] : crewRequiringTransfers.filter(member => !crewNamesWithTransfers.has(member.name))
 
   const crewMissingMobile = crew.filter(member => !String(member.mobile || '').trim())
   const crewMissingEmail = crew.filter(member => !String(member.email || '').trim())
@@ -5849,19 +5862,19 @@ function EventManagerPage() {
   })
 
   const readinessChecks = [
-    ...(!flightsNotRequired ? crew.map(member => ({
+    ...(!flightsNotRequired ? crewRequiringFlights.map(member => ({
       type: 'Flight',
       name: member.name,
       issue: 'No flight assigned',
       complete: crewNamesWithFlights.has(member.name),
     })) : []),
-    ...(!hotelsNotRequired ? crew.map(member => ({
+    ...(!hotelsNotRequired ? crewRequiringHotels.map(member => ({
       type: 'Hotel',
       name: member.name,
       issue: 'No hotel assigned',
       complete: crewNamesWithHotels.has(member.name),
     })) : []),
-    ...(!transfersNotRequired ? crew.map(member => ({
+    ...(!transfersNotRequired ? crewRequiringTransfers.map(member => ({
       type: 'Transfer',
       name: member.name,
       issue: 'No transfer assigned',
@@ -5926,9 +5939,9 @@ function EventManagerPage() {
       ? 'Needs attention'
       : 'High risk'
 
-  const flightCompletion = flightsNotRequired ? 100 : crew.length ? Math.round((crewNamesWithFlights.size / crew.length) * 100) : 100
-  const hotelCompletion = hotelsNotRequired ? 100 : crew.length ? Math.round((crewNamesWithHotels.size / crew.length) * 100) : 100
-  const transferCompletion = transfersNotRequired ? 100 : crew.length ? Math.round((crewNamesWithTransfers.size / crew.length) * 100) : 100
+  const flightCompletion = flightsNotRequired ? 100 : crewRequiringFlights.length ? Math.round((crewRequiringFlights.filter(member => crewNamesWithFlights.has(member.name)).length / crewRequiringFlights.length) * 100) : 100
+  const hotelCompletion = hotelsNotRequired ? 100 : crewRequiringHotels.length ? Math.round((crewRequiringHotels.filter(member => crewNamesWithHotels.has(member.name)).length / crewRequiringHotels.length) * 100) : 100
+  const transferCompletion = transfersNotRequired ? 100 : crewRequiringTransfers.length ? Math.round((crewRequiringTransfers.filter(member => crewNamesWithTransfers.has(member.name)).length / crewRequiringTransfers.length) * 100) : 100
 
   const publicDocuments = documents.filter(document => document.is_public !== false)
 
@@ -5977,7 +5990,7 @@ function EventManagerPage() {
     },
     {
       title: 'Flights',
-      subtitle: flightsNotRequired ? 'Not required for this project' : `${crewNamesWithFlights.size}/${crew.length} crew booked`,
+      subtitle: flightsNotRequired ? 'Not required for this project' : `${crewRequiringFlights.filter(member => crewNamesWithFlights.has(member.name)).length}/${crewRequiringFlights.length} required crew booked`,
       className: flightsNotRequired ? 'statusGreen' : missingFlights.length || flightCriticalIssues.length ? 'statusRed' : 'statusGreen',
       issues: flightsNotRequired ? [] : [
         ...missingFlights.map(member => `${member.name} has no flight assigned`),
@@ -5987,7 +6000,7 @@ function EventManagerPage() {
     },
     {
       title: 'Hotels',
-      subtitle: hotelsNotRequired ? 'Not required for this project' : `${crewNamesWithHotels.size}/${crew.length} crew covered`,
+      subtitle: hotelsNotRequired ? 'Not required for this project' : `${crewRequiringHotels.filter(member => crewNamesWithHotels.has(member.name)).length}/${crewRequiringHotels.length} required crew covered`,
       className: hotelsNotRequired ? 'statusGreen' : missingHotels.length ? 'statusRed' : 'statusGreen',
       issues: hotelsNotRequired ? [] : [
         ...missingHotels.map(member => `${member.name} has no hotel assigned`),
@@ -5996,7 +6009,7 @@ function EventManagerPage() {
     },
     {
       title: 'Transfers',
-      subtitle: transfersNotRequired ? 'Not required for this project' : `${crewNamesWithTransfers.size}/${crew.length} crew covered`,
+      subtitle: transfersNotRequired ? 'Not required for this project' : `${crewRequiringTransfers.filter(member => crewNamesWithTransfers.has(member.name)).length}/${crewRequiringTransfers.length} required crew covered`,
       className: transfersNotRequired ? 'statusGreen' : missingTransfers.length || transferCriticalIssues.length ? 'statusRed' : transferWarningIssues.length ? 'statusOrange' : 'statusGreen',
       issues: transfersNotRequired ? [] : [
         ...missingTransfers.map(member => `${member.name} has no transfer assigned`),
@@ -6570,6 +6583,31 @@ function EventManagerPage() {
             <input value={crewForm.notes} onChange={e => updateCrewField('notes', e.target.value)} placeholder="Optional" />
           </label>
 
+          <div className="crewServiceRequirements">
+            <div className="crewServiceRequirementsHeader">
+              <strong>Service Requirements</strong>
+              <small>Turn off anything this individual does not need for this project.</small>
+            </div>
+
+            <label className={crewForm.flight_required ? 'crewServiceToggle active' : 'crewServiceToggle'}>
+              <input type="checkbox" checked={crewForm.flight_required} onChange={e => updateCrewField('flight_required', e.target.checked)} />
+              <span>Flights</span>
+              <small>{crewForm.flight_required ? 'Required' : 'Not required'}</small>
+            </label>
+
+            <label className={crewForm.hotel_required ? 'crewServiceToggle active' : 'crewServiceToggle'}>
+              <input type="checkbox" checked={crewForm.hotel_required} onChange={e => updateCrewField('hotel_required', e.target.checked)} />
+              <span>Hotel</span>
+              <small>{crewForm.hotel_required ? 'Required' : 'Not required'}</small>
+            </label>
+
+            <label className={crewForm.transfer_required ? 'crewServiceToggle active' : 'crewServiceToggle'}>
+              <input type="checkbox" checked={crewForm.transfer_required} onChange={e => updateCrewField('transfer_required', e.target.checked)} />
+              <span>Transfer</span>
+              <small>{crewForm.transfer_required ? 'Required' : 'Not required'}</small>
+            </label>
+          </div>
+
           <button className="primaryButton" type="submit">
             <Plus size={18} /> {editingCrewId ? 'Update Crew Member' : 'Add Crew Member'}
           </button>
@@ -6597,6 +6635,11 @@ function EventManagerPage() {
                   <small>{member.mobile} {member.email && `| ${member.email}`}</small>
                   <br />
                   <small>{member.hotel} {member.room_number && `Room ${member.room_number}`}</small>
+                  <div className="crewServiceBadges">
+                    <span className={member.flight_required === false ? 'serviceBadge muted' : 'serviceBadge'}>Flights {member.flight_required === false ? 'N/A' : 'Required'}</span>
+                    <span className={member.hotel_required === false ? 'serviceBadge muted' : 'serviceBadge'}>Hotel {member.hotel_required === false ? 'N/A' : 'Required'}</span>
+                    <span className={member.transfer_required === false ? 'serviceBadge muted' : 'serviceBadge'}>Transfer {member.transfer_required === false ? 'N/A' : 'Required'}</span>
+                  </div>
                   {member.notes && <p>{member.notes}</p>}
                 </div>
 
