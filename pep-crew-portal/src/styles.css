@@ -7472,3 +7472,112 @@ button.calendarEventListItem {
     width: fit-content;
   }
 }
+
+/* Crew member service requirements */
+.crewServiceRequirements {
+  grid-column: 1 / -1;
+  background: var(--pep-soft);
+  border: 1px solid var(--pep-border);
+  border-radius: 16px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.crewServiceRequirementsHeader {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.crewServiceRequirementsHeader strong {
+  color: var(--pep-text);
+  font-size: 15px;
+}
+
+.crewServiceRequirementsHeader small {
+  color: var(--pep-muted);
+  font-weight: 800;
+}
+
+.crewServiceToggle {
+  background: #ffffff;
+  border: 1px solid var(--pep-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: grid !important;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "input title"
+    "input meta";
+  gap: 2px 10px !important;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.crewServiceToggle:hover {
+  border-color: #bbf7d0;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.crewServiceToggle.active {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.crewServiceToggle input {
+  grid-area: input;
+  width: 18px !important;
+  min-height: 18px !important;
+  accent-color: var(--pep-green);
+}
+
+.crewServiceToggle span {
+  grid-area: title;
+  font-weight: 900;
+  color: var(--pep-text);
+}
+
+.crewServiceToggle small {
+  grid-area: meta;
+  color: var(--pep-muted);
+  font-weight: 800;
+}
+
+.crewServiceToggle.active small {
+  color: var(--green-text);
+}
+
+.crewServiceBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 0;
+}
+
+.serviceBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: var(--green-text);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.serviceBadge.muted {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+@media (max-width: 820px) {
+  .crewServiceRequirements {
+    grid-template-columns: 1fr;
+  }
+}
