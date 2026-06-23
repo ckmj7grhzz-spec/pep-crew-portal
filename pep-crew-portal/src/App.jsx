@@ -4287,6 +4287,7 @@ function EventManagerPage() {
   const [crew, setCrew] = useState([])
   const [flights, setFlights] = useState([])
   const [hotels, setHotels] = useState([])
+  const [hotelDirectory, setHotelDirectory] = useState([])
   const [transfers, setTransfers] = useState([])
   const [scheduleItems, setScheduleItems] = useState([])
   const [documents, setDocuments] = useState([])
@@ -4304,6 +4305,7 @@ function EventManagerPage() {
   const [editingCrewId, setEditingCrewId] = useState(null)
   const [editingFlightId, setEditingFlightId] = useState(null)
   const [editingHotelId, setEditingHotelId] = useState(null)
+  const [hotelAssignmentMode, setHotelAssignmentMode] = useState('single')
   const [editingTransferId, setEditingTransferId] = useState(null)
   const [editingScheduleId, setEditingScheduleId] = useState(null)
   const [editingDocumentId, setEditingDocumentId] = useState(null)
@@ -4350,6 +4352,9 @@ function EventManagerPage() {
 
   const [bulkHotelForm, setBulkHotelForm] = useState({
     apply_to: 'missing_required',
+    selected_crew: [],
+    directory_id: '',
+    save_to_directory: false,
     hotel_name: '',
     address: '',
     maps_url: '',
@@ -4465,6 +4470,13 @@ function EventManagerPage() {
     if (hotelError) setMessage(`Could not load hotels: ${hotelError.message}`)
     else setHotels(hotelData || [])
 
+    const { data: hotelDirectoryData, error: hotelDirectoryError } = await supabase
+      .from('hotel_directory')
+      .select('*')
+      .order('hotel_name', { ascending: true })
+
+    if (!hotelDirectoryError) setHotelDirectory(hotelDirectoryData || [])
+
     const { data: transferData, error: transferError } = await supabase
       .from('transfers')
       .select('*')
@@ -4550,15 +4562,96 @@ function EventManagerPage() {
 
 
   function updateBulkHotelField(field, value) {
+    setBulkHotelForm(current => {
+      if (field === 'apply_to') {
+        return {
+          ...current,
+          apply_to: value,
+          selected_crew: value === 'selected_crew' ? current.selected_crew : [],
+        }
+      }
+
+      return {
+        ...current,
+        [field]: value,
+      }
+    })
+  }
+
+  function applyHotelDirectoryToBulk(directoryId) {
+    const selectedHotel = hotelDirectory.find(item => String(item.id) === String(directoryId))
+
     setBulkHotelForm(current => ({
       ...current,
-      [field]: value,
+      directory_id: directoryId,
+      hotel_name: selectedHotel?.hotel_name || current.hotel_name,
+      address: selectedHotel?.address || current.address,
+      maps_url: selectedHotel?.maps_url || current.maps_url,
+      what3words: selectedHotel?.what3words || current.what3words,
+      hotel_contact: selectedHotel?.hotel_contact || current.hotel_contact,
+      notes: selectedHotel?.notes || current.notes,
     }))
+  }
+
+  function applyHotelDirectoryToSingle(directoryId) {
+    const selectedHotel = hotelDirectory.find(item => String(item.id) === String(directoryId))
+    if (!selectedHotel) return
+
+    setHotelForm(current => ({
+      ...current,
+      hotel_name: selectedHotel.hotel_name || current.hotel_name,
+      address: selectedHotel.address || current.address,
+      maps_url: selectedHotel.maps_url || current.maps_url,
+      what3words: selectedHotel.what3words || current.what3words,
+      hotel_contact: selectedHotel.hotel_contact || current.hotel_contact,
+      notes: current.notes || selectedHotel.notes || '',
+    }))
+  }
+
+  function toggleBulkHotelCrew(crewName) {
+    setBulkHotelForm(current => {
+      const exists = current.selected_crew.includes(crewName)
+      return {
+        ...current,
+        selected_crew: exists
+          ? current.selected_crew.filter(name => name !== crewName)
+          : [...current.selected_crew, crewName],
+      }
+    })
+  }
+
+  async function saveBulkHotelToDirectory() {
+    if (!bulkHotelForm.hotel_name.trim()) return
+
+    const payload = {
+      hotel_name: bulkHotelForm.hotel_name.trim(),
+      address: bulkHotelForm.address || '',
+      maps_url: bulkHotelForm.maps_url || '',
+      what3words: bulkHotelForm.what3words || '',
+      hotel_contact: bulkHotelForm.hotel_contact || '',
+      notes: bulkHotelForm.notes || '',
+    }
+
+    const { error } = await supabase
+      .from('hotel_directory')
+      .upsert([payload], { onConflict: 'hotel_name' })
+
+    if (!error) {
+      const { data } = await supabase
+        .from('hotel_directory')
+        .select('*')
+        .order('hotel_name', { ascending: true })
+
+      setHotelDirectory(data || [])
+    }
   }
 
   function resetBulkHotelForm() {
     setBulkHotelForm({
       apply_to: 'missing_required',
+      selected_crew: [],
+      directory_id: '',
+      save_to_directory: false,
       hotel_name: '',
       address: '',
       maps_url: '',
@@ -4834,6 +4927,7 @@ function EventManagerPage() {
 
   function startEditHotel(hotel) {
     setActiveTab('hotels')
+    setHotelAssignmentMode('single')
     setEditingHotelId(hotel.id)
     setHotelForm({
       guest_name: hotel.guest_name || '',
@@ -5621,6 +5715,9 @@ function EventManagerPage() {
       targetCrew = combinedCrewRows
     } else if (bulkHotelForm.apply_to === 'all_required') {
       targetCrew = crewRequiringHotels
+    } else if (bulkHotelForm.apply_to === 'selected_crew') {
+      const selectedNames = new Set(bulkHotelForm.selected_crew.map(normalisePersonName))
+      targetCrew = combinedCrewRows.filter(member => selectedNames.has(normalisePersonName(member.name)))
     } else {
       targetCrew = crewRequiringHotels.filter(member => !existingHotelByGuest.has(normalisePersonName(member.name)))
     }
@@ -5693,6 +5790,8 @@ function EventManagerPage() {
         return
       }
     }
+
+    if (bulkHotelForm.save_to_directory) await saveBulkHotelToDirectory()
 
     resetBulkHotelForm()
     setMessage(`Hotel assigned to ${rowsToInsert.length + rowsToUpdate.length} crew member${rowsToInsert.length + rowsToUpdate.length === 1 ? '' : 's'}.`)
@@ -6963,167 +7062,237 @@ function EventManagerPage() {
         </label>
       </section>
 
-      <section className="eventCard bulkAssignCard">
+      <section className="eventCard hotelAssignmentCard" id="hotel-form">
         <div className="bulkAssignHeader">
           <div>
-            <p className="eyebrowDark">Bulk Assignment</p>
-            <h2>Apply Hotel to Crew</h2>
-            <p>Use this when multiple crew are staying at the same hotel. Crew marked as hotel not required are skipped by default.</p>
+            <p className="eyebrowDark">Hotel Assignment</p>
+            <h2>{editingHotelId ? 'Edit Hotel Booking' : 'Add / Apply Hotel'}</h2>
+            <p>Assign one guest manually or apply the same hotel to multiple crew from one place.</p>
           </div>
-          <span className="bulkAssignBadge">Fast fill</span>
+          <div className="assignmentModeToggle">
+            <button
+              type="button"
+              className={hotelAssignmentMode === 'single' ? 'active' : ''}
+              onClick={() => setHotelAssignmentMode('single')}
+            >
+              Single Guest
+            </button>
+            <button
+              type="button"
+              className={hotelAssignmentMode === 'bulk' ? 'active' : ''}
+              onClick={() => setHotelAssignmentMode('bulk')}
+            >
+              Bulk Apply
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={saveBulkHotel} className="adminForm bulkAssignForm">
-          <label>
-            Apply To
-            <select value={bulkHotelForm.apply_to} onChange={e => updateBulkHotelField('apply_to', e.target.value)}>
-              <option value="missing_required">Crew requiring hotel with no hotel assigned</option>
-              <option value="all_required">All crew requiring hotel</option>
-              <option value="all_crew">All crew on this project</option>
-            </select>
-          </label>
+        {hotelAssignmentMode === 'bulk' ? (
+          <form onSubmit={saveBulkHotel} className="adminForm bulkAssignForm">
+            <label>
+              Hotel Directory
+              <select value={bulkHotelForm.directory_id} onChange={e => applyHotelDirectoryToBulk(e.target.value)}>
+                <option value="">Select saved hotel or enter new details</option>
+                {hotelDirectory.map(hotel => (
+                  <option key={hotel.id} value={hotel.id}>{hotel.hotel_name}</option>
+                ))}
+              </select>
+            </label>
 
-          <label>
-            Hotel Name
-            <input value={bulkHotelForm.hotel_name} onChange={e => updateBulkHotelField('hotel_name', e.target.value)} placeholder="Premier Inn NEC" />
-          </label>
+            <label>
+              Apply To
+              <select value={bulkHotelForm.apply_to} onChange={e => updateBulkHotelField('apply_to', e.target.value)}>
+                <option value="missing_required">Crew requiring hotel with no hotel assigned</option>
+                <option value="all_required">All crew requiring hotel</option>
+                <option value="selected_crew">Selected crew only</option>
+                <option value="all_crew">All crew on this project</option>
+              </select>
+            </label>
 
-          <label>
-            Address
-            <input value={bulkHotelForm.address} onChange={e => updateBulkHotelField('address', e.target.value)} placeholder="Hotel address" />
-          </label>
+            {bulkHotelForm.apply_to === 'selected_crew' && (
+              <div className="crewSelectionPanel fullWidthFormItem">
+                <strong>Select Crew</strong>
+                <p>Choose exactly who should receive this hotel booking.</p>
+                <div className="crewSelectionGrid">
+                  {combinedCrewRows.map(member => {
+                    const hasHotel = hotels.some(hotel => normalisePersonName(hotel.guest_name) === normalisePersonName(member.name))
+                    const notRequired = member.hotel_required === false
+                    return (
+                      <label key={member.id} className={bulkHotelForm.selected_crew.includes(member.name) ? 'selected' : ''}>
+                        <input
+                          type="checkbox"
+                          checked={bulkHotelForm.selected_crew.includes(member.name)}
+                          onChange={() => toggleBulkHotelCrew(member.name)}
+                        />
+                        <span>
+                          <strong>{member.name}</strong>
+                          <small>{notRequired ? 'Hotel not required' : hasHotel ? 'Hotel already assigned' : 'Needs hotel'}</small>
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
-          <label>
-            Google Maps URL
-            <input value={bulkHotelForm.maps_url} onChange={e => updateBulkHotelField('maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
-          </label>
+            <label>
+              Hotel Name
+              <input value={bulkHotelForm.hotel_name} onChange={e => updateBulkHotelField('hotel_name', e.target.value)} placeholder="Premier Inn NEC" />
+            </label>
 
-          <label>
-            What3Words
-            <input value={bulkHotelForm.what3words} onChange={e => updateBulkHotelField('what3words', e.target.value)} placeholder="///filled.count.soap" />
-          </label>
+            <label>
+              Address
+              <input value={bulkHotelForm.address} onChange={e => updateBulkHotelField('address', e.target.value)} placeholder="Hotel address" />
+            </label>
 
-          <label>
-            Check In
-            <input type="date" value={bulkHotelForm.check_in} onChange={e => updateBulkHotelField('check_in', e.target.value)} />
-          </label>
+            <label>
+              Google Maps URL
+              <input value={bulkHotelForm.maps_url} onChange={e => updateBulkHotelField('maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+            </label>
 
-          <label>
-            Check Out
-            <input type="date" value={bulkHotelForm.check_out} onChange={e => updateBulkHotelField('check_out', e.target.value)} />
-          </label>
+            <label>
+              What3Words
+              <input value={bulkHotelForm.what3words} onChange={e => updateBulkHotelField('what3words', e.target.value)} placeholder="///filled.count.soap" />
+            </label>
 
-          <label>
-            Booking Reference
-            <input value={bulkHotelForm.booking_reference} onChange={e => updateBulkHotelField('booking_reference', e.target.value)} placeholder="Optional shared reference" />
-          </label>
+            <label>
+              Check In
+              <input type="date" value={bulkHotelForm.check_in} onChange={e => updateBulkHotelField('check_in', e.target.value)} />
+            </label>
 
-          <label>
-            Hotel Contact
-            <input value={bulkHotelForm.hotel_contact} onChange={e => updateBulkHotelField('hotel_contact', e.target.value)} placeholder="Optional" />
-          </label>
+            <label>
+              Check Out
+              <input type="date" value={bulkHotelForm.check_out} onChange={e => updateBulkHotelField('check_out', e.target.value)} />
+            </label>
 
-          <label>
-            Notes
-            <input value={bulkHotelForm.notes} onChange={e => updateBulkHotelField('notes', e.target.value)} placeholder="Optional" />
-          </label>
+            <label>
+              Booking Reference
+              <input value={bulkHotelForm.booking_reference} onChange={e => updateBulkHotelField('booking_reference', e.target.value)} placeholder="Optional shared reference" />
+            </label>
 
-          <label className="checkboxRow bulkOverwriteToggle">
-            <input
-              type="checkbox"
-              checked={bulkHotelForm.overwrite_existing}
-              onChange={e => updateBulkHotelField('overwrite_existing', e.target.checked)}
-            />
-            Overwrite existing hotel records for selected crew
-          </label>
+            <label>
+              Hotel Contact
+              <input value={bulkHotelForm.hotel_contact} onChange={e => updateBulkHotelField('hotel_contact', e.target.value)} placeholder="Optional" />
+            </label>
 
-          <div className="bulkAssignActions">
+            <label>
+              Notes
+              <input value={bulkHotelForm.notes} onChange={e => updateBulkHotelField('notes', e.target.value)} placeholder="Optional" />
+            </label>
+
+            <label className="checkboxRow bulkOverwriteToggle">
+              <input
+                type="checkbox"
+                checked={bulkHotelForm.overwrite_existing}
+                onChange={e => updateBulkHotelField('overwrite_existing', e.target.checked)}
+              />
+              Overwrite existing hotel records for selected crew
+            </label>
+
+            <label className="checkboxRow bulkOverwriteToggle">
+              <input
+                type="checkbox"
+                checked={bulkHotelForm.save_to_directory}
+                onChange={e => updateBulkHotelField('save_to_directory', e.target.checked)}
+              />
+              Save this hotel to the directory
+            </label>
+
+            <div className="bulkAssignActions fullWidthFormItem">
+              <button className="primaryButton" type="submit">
+                <Plus size={18} /> Apply Hotel
+              </button>
+              <button className="secondaryButton" type="button" onClick={resetBulkHotelForm}>
+                Clear Bulk Form
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={saveHotel} className="adminForm">
+            {editingHotelId && <p className="editNotice fullWidthFormItem">Editing: {hotelForm.guest_name} {hotelForm.hotel_name && `- ${hotelForm.hotel_name}`}</p>}
+
+            <label>
+              Hotel Directory
+              <select value="" onChange={e => applyHotelDirectoryToSingle(e.target.value)}>
+                <option value="">Select saved hotel or enter new details</option>
+                {hotelDirectory.map(hotel => (
+                  <option key={hotel.id} value={hotel.id}>{hotel.hotel_name}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Guest
+              <select value={hotelForm.guest_name} onChange={e => updateHotelField('guest_name', e.target.value)}>
+                <option value="">Select guest</option>
+                {combinedCrewRows.map(member => (
+                  <option key={member.id} value={member.name}>{member.name}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Hotel Name
+              <input value={hotelForm.hotel_name} onChange={e => updateHotelField('hotel_name', e.target.value)} placeholder="AC Bella Sky Copenhagen" />
+            </label>
+
+            <label>
+              Address
+              <input value={hotelForm.address} onChange={e => updateHotelField('address', e.target.value)} placeholder="Center Blvd. 5, Copenhagen" />
+            </label>
+
+            <label>
+              Google Maps URL
+              <input value={hotelForm.maps_url} onChange={e => updateHotelField('maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+            </label>
+
+            <label>
+              What3Words
+              <input value={hotelForm.what3words} onChange={e => updateHotelField('what3words', e.target.value)} placeholder="///filled.count.soap" />
+            </label>
+
+            <label>
+              Check In
+              <input type="date" value={hotelForm.check_in} onChange={e => updateHotelField('check_in', e.target.value)} />
+            </label>
+
+            <label>
+              Check Out
+              <input type="date" value={hotelForm.check_out} onChange={e => updateHotelField('check_out', e.target.value)} />
+            </label>
+
+            <label>
+              Room Number
+              <input value={hotelForm.room_number} onChange={e => updateHotelField('room_number', e.target.value)} placeholder="1205" />
+            </label>
+
+            <label>
+              Booking Reference
+              <input value={hotelForm.booking_reference} onChange={e => updateHotelField('booking_reference', e.target.value)} placeholder="HOTEL123" />
+            </label>
+
+            <label>
+              Hotel Contact
+              <input value={hotelForm.hotel_contact} onChange={e => updateHotelField('hotel_contact', e.target.value)} placeholder="+45..." />
+            </label>
+
+            <label>
+              Notes
+              <input value={hotelForm.notes} onChange={e => updateHotelField('notes', e.target.value)} placeholder="Optional" />
+            </label>
+
             <button className="primaryButton" type="submit">
-              <Plus size={18} /> Apply Hotel to Crew
+              <Plus size={18} /> {editingHotelId ? 'Update Hotel' : 'Add Hotel'}
             </button>
-            <button className="secondaryButton" type="button" onClick={resetBulkHotelForm}>
-              Clear Bulk Form
-            </button>
-          </div>
-        </form>
+
+            {editingHotelId && (
+              <button className="secondaryButton" type="button" onClick={resetHotelForm}>
+                Cancel Edit
+              </button>
+            )}
+          </form>
+        )}
       </section>
-
-      <section className="eventCard" id="hotel-form">
-        <h2>{editingHotelId ? 'Edit Hotel' : 'Add Hotel'}</h2>
-        {editingHotelId && <p className="editNotice">Editing: {hotelForm.guest_name} {hotelForm.hotel_name && `- ${hotelForm.hotel_name}`}</p>}
-        <p>Assign each hotel booking to an existing crew member.</p>
-
-        <form onSubmit={saveHotel} className="adminForm">
-          <label>
-            Guest
-            <select value={hotelForm.guest_name} onChange={e => updateHotelField('guest_name', e.target.value)}>
-              <option value="">Select guest</option>
-              {combinedCrewRows.map(member => (
-                <option key={member.id} value={member.name}>{member.name}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Hotel Name
-            <input value={hotelForm.hotel_name} onChange={e => updateHotelField('hotel_name', e.target.value)} placeholder="AC Bella Sky Copenhagen" />
-          </label>
-
-          <label>
-            Address
-            <input value={hotelForm.address} onChange={e => updateHotelField('address', e.target.value)} placeholder="Center Blvd. 5, Copenhagen" />
-          </label>
-
-          <label>
-            Google Maps URL
-            <input value={hotelForm.maps_url} onChange={e => updateHotelField('maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
-          </label>
-
-          <label>
-            What3Words
-            <input value={hotelForm.what3words} onChange={e => updateHotelField('what3words', e.target.value)} placeholder="///filled.count.soap" />
-          </label>
-
-          <label>
-            Check In
-            <input type="date" value={hotelForm.check_in} onChange={e => updateHotelField('check_in', e.target.value)} />
-          </label>
-
-          <label>
-            Check Out
-            <input type="date" value={hotelForm.check_out} onChange={e => updateHotelField('check_out', e.target.value)} />
-          </label>
-
-          <label>
-            Room Number
-            <input value={hotelForm.room_number} onChange={e => updateHotelField('room_number', e.target.value)} placeholder="1205" />
-          </label>
-
-          <label>
-            Booking Reference
-            <input value={hotelForm.booking_reference} onChange={e => updateHotelField('booking_reference', e.target.value)} placeholder="HOTEL123" />
-          </label>
-
-          <label>
-            Hotel Contact
-            <input value={hotelForm.hotel_contact} onChange={e => updateHotelField('hotel_contact', e.target.value)} placeholder="+45..." />
-          </label>
-
-          <label>
-            Notes
-            <input value={hotelForm.notes} onChange={e => updateHotelField('notes', e.target.value)} placeholder="Optional" />
-          </label>
-
-          <button className="primaryButton" type="submit">
-            <Plus size={18} /> {editingHotelId ? 'Update Hotel' : 'Add Hotel'}
-          </button>
-
-          {editingHotelId && (
-            <button className="secondaryButton" type="button" onClick={resetHotelForm}>
-              Cancel Edit
-            </button>
-          )}
-        </form>
       </section>
 
       <section className="eventCard">
