@@ -6199,20 +6199,33 @@ function EventManagerPage() {
               </label>
 
               <div className="serviceNaPanel">
-                <strong>Services Not Required</strong>
-                <p>Use these when a project does not need a service so readiness and warning checks do not create false flags.</p>
-                <label className="checkboxRow serviceNaToggle">
-                  <input type="checkbox" checked={eventDetailsForm.flights_not_required} onChange={e => updateEventDetailsField('flights_not_required', e.target.checked)} />
-                  Flights N/A
-                </label>
-                <label className="checkboxRow serviceNaToggle">
-                  <input type="checkbox" checked={eventDetailsForm.hotels_not_required} onChange={e => updateEventDetailsField('hotels_not_required', e.target.checked)} />
-                  Hotels N/A
-                </label>
-                <label className="checkboxRow serviceNaToggle">
-                  <input type="checkbox" checked={eventDetailsForm.transfers_not_required} onChange={e => updateEventDetailsField('transfers_not_required', e.target.checked)} />
-                  Transfers N/A
-                </label>
+                <div className="serviceNaHeader">
+                  <div>
+                    <p className="eyebrowDark">Readiness Controls</p>
+                    <h3>Services Not Required</h3>
+                  </div>
+                  <span className="serviceNaHint">Stops false readiness flags</span>
+                </div>
+
+                <div className="serviceNaToggleGrid">
+                  <label className={eventDetailsForm.flights_not_required ? 'serviceNaToggle active' : 'serviceNaToggle'}>
+                    <input type="checkbox" checked={eventDetailsForm.flights_not_required} onChange={e => updateEventDetailsField('flights_not_required', e.target.checked)} />
+                    <span>Flights</span>
+                    <small>{eventDetailsForm.flights_not_required ? 'Not required' : 'Required'}</small>
+                  </label>
+
+                  <label className={eventDetailsForm.hotels_not_required ? 'serviceNaToggle active' : 'serviceNaToggle'}>
+                    <input type="checkbox" checked={eventDetailsForm.hotels_not_required} onChange={e => updateEventDetailsField('hotels_not_required', e.target.checked)} />
+                    <span>Hotels</span>
+                    <small>{eventDetailsForm.hotels_not_required ? 'Not required' : 'Required'}</small>
+                  </label>
+
+                  <label className={eventDetailsForm.transfers_not_required ? 'serviceNaToggle active' : 'serviceNaToggle'}>
+                    <input type="checkbox" checked={eventDetailsForm.transfers_not_required} onChange={e => updateEventDetailsField('transfers_not_required', e.target.checked)} />
+                    <span>Transfers</span>
+                    <small>{eventDetailsForm.transfers_not_required ? 'Not required' : 'Required'}</small>
+                  </label>
+                </div>
               </div>
 
               <button className="primaryButton" type="submit">Save Live Details</button>
