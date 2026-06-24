@@ -7764,3 +7764,39 @@ button.calendarEventListItem {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Transfer assignment and reusable location directory */
+.transferAssignmentCard {
+  border-left: 5px solid #1d4ed8;
+}
+
+.directoryPairGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.directoryMiniCard {
+  background: var(--pep-soft);
+  border: 1px solid var(--pep-border);
+  border-radius: 16px;
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.directoryMiniCard > strong {
+  font-size: 16px;
+  color: var(--pep-text);
+}
+
+.directoryMiniCard label {
+  font-size: 14px;
+}
+
+@media (max-width: 900px) {
+  .directoryPairGrid {
+    grid-template-columns: 1fr;
+  }
+}
