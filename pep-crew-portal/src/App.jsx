@@ -4288,6 +4288,7 @@ function EventManagerPage() {
   const [flights, setFlights] = useState([])
   const [hotels, setHotels] = useState([])
   const [hotelDirectory, setHotelDirectory] = useState([])
+  const [locationDirectory, setLocationDirectory] = useState([])
   const [transfers, setTransfers] = useState([])
   const [scheduleItems, setScheduleItems] = useState([])
   const [documents, setDocuments] = useState([])
@@ -4306,6 +4307,7 @@ function EventManagerPage() {
   const [editingFlightId, setEditingFlightId] = useState(null)
   const [editingHotelId, setEditingHotelId] = useState(null)
   const [hotelAssignmentMode, setHotelAssignmentMode] = useState('single')
+  const [transferAssignmentMode, setTransferAssignmentMode] = useState('single')
   const [editingTransferId, setEditingTransferId] = useState(null)
   const [editingScheduleId, setEditingScheduleId] = useState(null)
   const [editingDocumentId, setEditingDocumentId] = useState(null)
@@ -4382,6 +4384,31 @@ function EventManagerPage() {
     driver_phone: '',
     vehicle: '',
     notes: '',
+  })
+
+  const [bulkTransferForm, setBulkTransferForm] = useState({
+    apply_to: 'missing_required',
+    selected_crew: [],
+    pickup_directory_id: '',
+    destination_directory_id: '',
+    transfer_type: '',
+    pickup_location: '',
+    pickup_maps_url: '',
+    pickup_what3words: '',
+    pickup_location_type: 'airport',
+    destination: '',
+    destination_maps_url: '',
+    destination_what3words: '',
+    destination_location_type: 'dropoff',
+    date: '',
+    time: '',
+    driver_name: '',
+    driver_phone: '',
+    vehicle: '',
+    notes: '',
+    overwrite_existing: false,
+    save_pickup_to_directory: false,
+    save_destination_to_directory: false,
   })
 
   const [scheduleForm, setScheduleForm] = useState({
@@ -4476,6 +4503,13 @@ function EventManagerPage() {
       .order('hotel_name', { ascending: true })
 
     if (!hotelDirectoryError) setHotelDirectory(hotelDirectoryData || [])
+
+    const { data: locationDirectoryData, error: locationDirectoryError } = await supabase
+      .from('location_directory')
+      .select('*')
+      .order('name', { ascending: true })
+
+    if (!locationDirectoryError) setLocationDirectory(locationDirectoryData || [])
 
     const { data: transferData, error: transferError } = await supabase
       .from('transfers')
@@ -4667,6 +4701,140 @@ function EventManagerPage() {
 
   function updateTransferField(field, value) {
     setTransferForm({ ...transferForm, [field]: value })
+  }
+
+  function updateBulkTransferField(field, value) {
+    setBulkTransferForm(current => {
+      if (field === 'apply_to') {
+        return {
+          ...current,
+          apply_to: value,
+          selected_crew: value === 'selected_crew' ? current.selected_crew : [],
+        }
+      }
+
+      return {
+        ...current,
+        [field]: value,
+      }
+    })
+  }
+
+  function getLocationDirectoryById(directoryId) {
+    return locationDirectory.find(item => String(item.id) === String(directoryId))
+  }
+
+  function applyLocationDirectoryToTransfer(target, directoryId, mode = 'single') {
+    const selectedLocation = getLocationDirectoryById(directoryId)
+    if (!selectedLocation && !directoryId) return
+
+    if (mode === 'bulk') {
+      setBulkTransferForm(current => {
+        if (target === 'pickup') {
+          return {
+            ...current,
+            pickup_directory_id: directoryId,
+            pickup_location: selectedLocation?.name || current.pickup_location,
+            pickup_maps_url: selectedLocation?.maps_url || current.pickup_maps_url,
+            pickup_what3words: selectedLocation?.what3words || current.pickup_what3words,
+            pickup_location_type: selectedLocation?.location_type || current.pickup_location_type,
+          }
+        }
+
+        return {
+          ...current,
+          destination_directory_id: directoryId,
+          destination: selectedLocation?.name || current.destination,
+          destination_maps_url: selectedLocation?.maps_url || current.destination_maps_url,
+          destination_what3words: selectedLocation?.what3words || current.destination_what3words,
+          destination_location_type: selectedLocation?.location_type || current.destination_location_type,
+        }
+      })
+      return
+    }
+
+    setTransferForm(current => {
+      if (target === 'pickup') {
+        return {
+          ...current,
+          pickup_location: selectedLocation?.name || current.pickup_location,
+          pickup_maps_url: selectedLocation?.maps_url || current.pickup_maps_url,
+          pickup_what3words: selectedLocation?.what3words || current.pickup_what3words,
+        }
+      }
+
+      return {
+        ...current,
+        destination: selectedLocation?.name || current.destination,
+        destination_maps_url: selectedLocation?.maps_url || current.destination_maps_url,
+        destination_what3words: selectedLocation?.what3words || current.destination_what3words,
+      }
+    })
+  }
+
+  function toggleBulkTransferCrew(crewName) {
+    setBulkTransferForm(current => {
+      const exists = current.selected_crew.includes(crewName)
+      return {
+        ...current,
+        selected_crew: exists
+          ? current.selected_crew.filter(name => name !== crewName)
+          : [...current.selected_crew, crewName],
+      }
+    })
+  }
+
+  async function saveLocationToDirectory({ name, maps_url, what3words, location_type, notes = '' }) {
+    const cleanName = String(name || '').trim()
+    if (!cleanName) return
+
+    const payload = {
+      name: cleanName,
+      location_type: location_type || 'other',
+      maps_url: maps_url || '',
+      what3words: what3words || '',
+      notes: notes || '',
+    }
+
+    const { error } = await supabase
+      .from('location_directory')
+      .upsert([payload], { onConflict: 'name' })
+
+    if (!error) {
+      const { data } = await supabase
+        .from('location_directory')
+        .select('*')
+        .order('name', { ascending: true })
+
+      setLocationDirectory(data || [])
+    }
+  }
+
+  function resetBulkTransferForm() {
+    setBulkTransferForm({
+      apply_to: 'missing_required',
+      selected_crew: [],
+      pickup_directory_id: '',
+      destination_directory_id: '',
+      transfer_type: '',
+      pickup_location: '',
+      pickup_maps_url: '',
+      pickup_what3words: '',
+      pickup_location_type: 'airport',
+      destination: '',
+      destination_maps_url: '',
+      destination_what3words: '',
+      destination_location_type: 'dropoff',
+      date: '',
+      time: '',
+      driver_name: '',
+      driver_phone: '',
+      vehicle: '',
+      notes: '',
+      overwrite_existing: false,
+      save_pickup_to_directory: false,
+      save_destination_to_directory: false,
+    })
   }
 
   function updateScheduleField(field, value) {
@@ -4946,6 +5114,7 @@ function EventManagerPage() {
   }
 
   function resetTransferForm() {
+    setTransferAssignmentMode('single')
     setEditingTransferId(null)
     setTransferForm({
       passenger: '',
@@ -4967,6 +5136,7 @@ function EventManagerPage() {
 
   function startEditTransfer(transfer) {
     setActiveTab('transfers')
+    setTransferAssignmentMode('single')
     setEditingTransferId(transfer.id)
     setTransferForm({
       passenger: transfer.passenger || transfer.passengers || '',
@@ -5808,6 +5978,138 @@ function EventManagerPage() {
 
     setMessage('Hotel booking deleted.')
     loadEventManager()
+  }
+
+  async function saveBulkTransfer(e) {
+    e.preventDefault()
+    setMessage('')
+
+    if (!event) return
+
+    if (!bulkTransferForm.pickup_location.trim()) {
+      setMessage('Pickup location is required for group transfers.')
+      return
+    }
+
+    if (!bulkTransferForm.destination.trim()) {
+      setMessage('Destination is required for group transfers.')
+      return
+    }
+
+    const existingTransferByPassenger = new Map(
+      transfers
+        .filter(transfer => transfer.passenger || transfer.passengers)
+        .map(transfer => [normalisePersonName(transfer.passenger || transfer.passengers), transfer])
+    )
+
+    let targetCrew = []
+
+    if (bulkTransferForm.apply_to === 'all_crew') {
+      targetCrew = combinedCrewRows
+    } else if (bulkTransferForm.apply_to === 'all_required') {
+      targetCrew = crewRequiringTransfers
+    } else if (bulkTransferForm.apply_to === 'selected_crew') {
+      const selectedNames = new Set(bulkTransferForm.selected_crew.map(normalisePersonName))
+      targetCrew = combinedCrewRows.filter(member => selectedNames.has(normalisePersonName(member.name)))
+    } else {
+      targetCrew = crewRequiringTransfers.filter(member => !existingTransferByPassenger.has(normalisePersonName(member.name)))
+    }
+
+    const uniqueTargets = []
+    const seenTargets = new Set()
+
+    targetCrew.forEach(member => {
+      const key = normalisePersonName(member.name)
+      if (!key || seenTargets.has(key)) return
+      seenTargets.add(key)
+      uniqueTargets.push(member)
+    })
+
+    if (!uniqueTargets.length) {
+      setMessage('No crew members need a transfer assignment for this selection.')
+      return
+    }
+
+    const rowsToInsert = []
+    const rowsToUpdate = []
+
+    uniqueTargets.forEach(member => {
+      const existingTransfer = existingTransferByPassenger.get(normalisePersonName(member.name))
+
+      const transferPayload = {
+        event_id: event.id,
+        passenger: member.name,
+        transfer_type: bulkTransferForm.transfer_type || '',
+        pickup_location: bulkTransferForm.pickup_location.trim(),
+        pickup_maps_url: bulkTransferForm.pickup_maps_url || '',
+        pickup_what3words: bulkTransferForm.pickup_what3words || '',
+        destination: bulkTransferForm.destination.trim(),
+        destination_maps_url: bulkTransferForm.destination_maps_url || '',
+        destination_what3words: bulkTransferForm.destination_what3words || '',
+        date: bulkTransferForm.date || null,
+        time: bulkTransferForm.time || null,
+        driver_name: bulkTransferForm.driver_name || '',
+        driver_phone: bulkTransferForm.driver_phone || '',
+        vehicle: bulkTransferForm.vehicle || '',
+        notes: bulkTransferForm.notes || '',
+      }
+
+      if (existingTransfer?.id) {
+        if (bulkTransferForm.overwrite_existing) {
+          rowsToUpdate.push({ id: existingTransfer.id, payload: transferPayload })
+        }
+        return
+      }
+
+      rowsToInsert.push(transferPayload)
+    })
+
+    if (!rowsToInsert.length && !rowsToUpdate.length) {
+      setMessage('All selected crew already have transfer records. Enable overwrite to replace them.')
+      return
+    }
+
+    if (rowsToInsert.length) {
+      const { error } = await supabase.from('transfers').insert(rowsToInsert)
+
+      if (error) {
+        setMessage(`Could not bulk assign transfers: ${error.message}`)
+        return
+      }
+    }
+
+    for (const row of rowsToUpdate) {
+      const { error } = await supabase.from('transfers').update(row.payload).eq('id', row.id)
+
+      if (error) {
+        setMessage(`Could not update existing transfer record: ${error.message}`)
+        return
+      }
+    }
+
+    if (bulkTransferForm.save_pickup_to_directory) {
+      await saveLocationToDirectory({
+        name: bulkTransferForm.pickup_location,
+        maps_url: bulkTransferForm.pickup_maps_url,
+        what3words: bulkTransferForm.pickup_what3words,
+        location_type: bulkTransferForm.pickup_location_type,
+        notes: bulkTransferForm.notes,
+      })
+    }
+
+    if (bulkTransferForm.save_destination_to_directory) {
+      await saveLocationToDirectory({
+        name: bulkTransferForm.destination,
+        maps_url: bulkTransferForm.destination_maps_url,
+        what3words: bulkTransferForm.destination_what3words,
+        location_type: bulkTransferForm.destination_location_type,
+        notes: bulkTransferForm.notes,
+      })
+    }
+
+    resetBulkTransferForm()
+    setMessage(`Transfer assigned to ${rowsToInsert.length + rowsToUpdate.length} crew member${rowsToInsert.length + rowsToUpdate.length === 1 ? '' : 's'}.`)
+    await loadEventManager()
   }
 
   async function saveTransfer(e) {
@@ -7369,97 +7671,330 @@ function EventManagerPage() {
         </label>
       </section>
 
-      <section className="eventCard" id="transfer-form">
-        <h2>{editingTransferId ? 'Edit Transfer' : 'Add Transfer'}</h2>
-        {editingTransferId && <p className="editNotice">Editing: {transferForm.passenger} {transferForm.transfer_type && `- ${transferForm.transfer_type}`}</p>}
-        <p>Add airport transfers, taxis, hotel shuttles or venue transport.</p>
-
-        <form onSubmit={saveTransfer} className="adminForm">
-          <label>
-            Passenger
-            <select value={transferForm.passenger} onChange={e => updateTransferField('passenger', e.target.value)}>
-              <option value="">Select passenger</option>
-              {crew.map(member => (
-                <option key={member.id} value={member.name}>{member.name}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Transfer Type
-            <input value={transferForm.transfer_type} onChange={e => updateTransferField('transfer_type', e.target.value)} placeholder="Airport Transfer" />
-          </label>
-
-          <label>
-            Pickup Location
-            <input value={transferForm.pickup_location} onChange={e => updateTransferField('pickup_location', e.target.value)} placeholder="Copenhagen Airport" />
-          </label>
-
-          <label>
-            Pickup Google Maps URL
-            <input value={transferForm.pickup_maps_url} onChange={e => updateTransferField('pickup_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
-          </label>
-
-          <label>
-            Pickup What3Words
-            <input value={transferForm.pickup_what3words} onChange={e => updateTransferField('pickup_what3words', e.target.value)} placeholder="///filled.count.soap" />
-          </label>
-
-          <label>
-            Destination
-            <input value={transferForm.destination} onChange={e => updateTransferField('destination', e.target.value)} placeholder="AC Bella Sky Copenhagen" />
-          </label>
-
-          <label>
-            Destination Google Maps URL
-            <input value={transferForm.destination_maps_url} onChange={e => updateTransferField('destination_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
-          </label>
-
-          <label>
-            Destination What3Words
-            <input value={transferForm.destination_what3words} onChange={e => updateTransferField('destination_what3words', e.target.value)} placeholder="///filled.count.soap" />
-          </label>
-
-          <label>
-            Date
-            <input type="date" value={transferForm.date} onChange={e => updateTransferField('date', e.target.value)} />
-          </label>
-
-          <label>
-            Time
-            <input type="time" value={transferForm.time} onChange={e => updateTransferField('time', e.target.value)} />
-          </label>
-
-          <label>
-            Driver Name
-            <input value={transferForm.driver_name} onChange={e => updateTransferField('driver_name', e.target.value)} placeholder="Peter Jensen" />
-          </label>
-
-          <label>
-            Driver Phone
-            <input value={transferForm.driver_phone} onChange={e => updateTransferField('driver_phone', e.target.value)} placeholder="+45..." />
-          </label>
-
-          <label>
-            Vehicle
-            <input value={transferForm.vehicle} onChange={e => updateTransferField('vehicle', e.target.value)} placeholder="Mercedes V-Class" />
-          </label>
-
-          <label>
-            Notes
-            <input value={transferForm.notes} onChange={e => updateTransferField('notes', e.target.value)} placeholder="Meet driver at arrivals" />
-          </label>
-
-          <button className="primaryButton" type="submit">
-            <Plus size={18} /> {editingTransferId ? 'Update Transfer' : 'Add Transfer'}
-          </button>
-
-          {editingTransferId && (
-            <button className="secondaryButton" type="button" onClick={resetTransferForm}>
-              Cancel Edit
+      <section className="eventCard transferAssignmentCard" id="transfer-form">
+        <div className="bulkAssignHeader">
+          <div>
+            <p className="eyebrowDark">Transfer Assignment</p>
+            <h2>{editingTransferId ? 'Edit Transfer' : 'Add / Apply Transfer'}</h2>
+            <p>Assign one passenger manually or apply the same pickup and destination to multiple crew.</p>
+          </div>
+          <div className="assignmentModeToggle">
+            <button
+              type="button"
+              className={transferAssignmentMode === 'single' ? 'active' : ''}
+              onClick={() => setTransferAssignmentMode('single')}
+            >
+              Single Passenger
             </button>
-          )}
-        </form>
+            <button
+              type="button"
+              className={transferAssignmentMode === 'bulk' ? 'active' : ''}
+              onClick={() => setTransferAssignmentMode('bulk')}
+            >
+              Bulk Apply
+            </button>
+          </div>
+        </div>
+
+        {transferAssignmentMode === 'bulk' ? (
+          <form onSubmit={saveBulkTransfer} className="adminForm bulkAssignForm">
+            <label>
+              Apply To
+              <select value={bulkTransferForm.apply_to} onChange={e => updateBulkTransferField('apply_to', e.target.value)}>
+                <option value="missing_required">Crew requiring transfer with no transfer assigned</option>
+                <option value="all_required">All crew requiring transfer</option>
+                <option value="selected_crew">Selected crew only</option>
+                <option value="all_crew">All crew on this project</option>
+              </select>
+            </label>
+
+            <label>
+              Transfer Type
+              <input value={bulkTransferForm.transfer_type} onChange={e => updateBulkTransferField('transfer_type', e.target.value)} placeholder="Airport Transfer" />
+            </label>
+
+            {bulkTransferForm.apply_to === 'selected_crew' && (
+              <div className="crewSelectionPanel fullWidthFormItem">
+                <strong>Select Crew</strong>
+                <p>Choose exactly who should receive this transfer booking.</p>
+                <div className="crewSelectionGrid">
+                  {combinedCrewRows.map(member => {
+                    const hasTransfer = transfers.some(transfer => normalisePersonName(transfer.passenger || transfer.passengers) === normalisePersonName(member.name))
+                    const notRequired = member.transfer_required === false
+                    return (
+                      <label key={member.id} className={bulkTransferForm.selected_crew.includes(member.name) ? 'selected' : ''}>
+                        <input
+                          type="checkbox"
+                          checked={bulkTransferForm.selected_crew.includes(member.name)}
+                          onChange={() => toggleBulkTransferCrew(member.name)}
+                        />
+                        <span>
+                          <strong>{member.name}</strong>
+                          <small>{notRequired ? 'Transfer not required' : hasTransfer ? 'Transfer already assigned' : 'Needs transfer'}</small>
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="directoryPairGrid fullWidthFormItem">
+              <div className="directoryMiniCard">
+                <strong>Pickup Point</strong>
+                <label>
+                  Pickup Directory
+                  <select value={bulkTransferForm.pickup_directory_id} onChange={e => applyLocationDirectoryToTransfer('pickup', e.target.value, 'bulk')}>
+                    <option value="">Select saved pickup / airport / venue</option>
+                    {locationDirectory.map(location => (
+                      <option key={location.id} value={location.id}>{location.name} {location.location_type ? `(${location.location_type})` : ''}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  Pickup Location
+                  <input value={bulkTransferForm.pickup_location} onChange={e => updateBulkTransferField('pickup_location', e.target.value)} placeholder="Copenhagen Airport" />
+                </label>
+
+                <label>
+                  Pickup Google Maps URL
+                  <input value={bulkTransferForm.pickup_maps_url} onChange={e => updateBulkTransferField('pickup_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+                </label>
+
+                <label>
+                  Pickup What3Words
+                  <input value={bulkTransferForm.pickup_what3words} onChange={e => updateBulkTransferField('pickup_what3words', e.target.value)} placeholder="///filled.count.soap" />
+                </label>
+
+                <label>
+                  Save As
+                  <select value={bulkTransferForm.pickup_location_type} onChange={e => updateBulkTransferField('pickup_location_type', e.target.value)}>
+                    <option value="airport">Airport</option>
+                    <option value="venue">Venue</option>
+                    <option value="hotel">Hotel</option>
+                    <option value="dropoff">Drop-off Point</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+
+                <label className="checkboxRow bulkOverwriteToggle">
+                  <input
+                    type="checkbox"
+                    checked={bulkTransferForm.save_pickup_to_directory}
+                    onChange={e => updateBulkTransferField('save_pickup_to_directory', e.target.checked)}
+                  />
+                  Save pickup to directory
+                </label>
+              </div>
+
+              <div className="directoryMiniCard">
+                <strong>Destination / Drop-off</strong>
+                <label>
+                  Destination Directory
+                  <select value={bulkTransferForm.destination_directory_id} onChange={e => applyLocationDirectoryToTransfer('destination', e.target.value, 'bulk')}>
+                    <option value="">Select saved destination / venue / hotel</option>
+                    {locationDirectory.map(location => (
+                      <option key={location.id} value={location.id}>{location.name} {location.location_type ? `(${location.location_type})` : ''}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  Destination
+                  <input value={bulkTransferForm.destination} onChange={e => updateBulkTransferField('destination', e.target.value)} placeholder="ExCeL London" />
+                </label>
+
+                <label>
+                  Destination Google Maps URL
+                  <input value={bulkTransferForm.destination_maps_url} onChange={e => updateBulkTransferField('destination_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+                </label>
+
+                <label>
+                  Destination What3Words
+                  <input value={bulkTransferForm.destination_what3words} onChange={e => updateBulkTransferField('destination_what3words', e.target.value)} placeholder="///filled.count.soap" />
+                </label>
+
+                <label>
+                  Save As
+                  <select value={bulkTransferForm.destination_location_type} onChange={e => updateBulkTransferField('destination_location_type', e.target.value)}>
+                    <option value="dropoff">Drop-off Point</option>
+                    <option value="venue">Venue</option>
+                    <option value="airport">Airport</option>
+                    <option value="hotel">Hotel</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+
+                <label className="checkboxRow bulkOverwriteToggle">
+                  <input
+                    type="checkbox"
+                    checked={bulkTransferForm.save_destination_to_directory}
+                    onChange={e => updateBulkTransferField('save_destination_to_directory', e.target.checked)}
+                  />
+                  Save destination to directory
+                </label>
+              </div>
+            </div>
+
+            <label>
+              Date
+              <input type="date" value={bulkTransferForm.date} onChange={e => updateBulkTransferField('date', e.target.value)} />
+            </label>
+
+            <label>
+              Time
+              <input type="time" value={bulkTransferForm.time} onChange={e => updateBulkTransferField('time', e.target.value)} />
+            </label>
+
+            <label>
+              Driver Name
+              <input value={bulkTransferForm.driver_name} onChange={e => updateBulkTransferField('driver_name', e.target.value)} placeholder="Driver name" />
+            </label>
+
+            <label>
+              Driver Phone
+              <input value={bulkTransferForm.driver_phone} onChange={e => updateBulkTransferField('driver_phone', e.target.value)} placeholder="+44..." />
+            </label>
+
+            <label>
+              Vehicle
+              <input value={bulkTransferForm.vehicle} onChange={e => updateBulkTransferField('vehicle', e.target.value)} placeholder="Mercedes V-Class / Coach / Taxi" />
+            </label>
+
+            <label>
+              Notes
+              <input value={bulkTransferForm.notes} onChange={e => updateBulkTransferField('notes', e.target.value)} placeholder="Meet driver at arrivals" />
+            </label>
+
+            <label className="checkboxRow bulkOverwriteToggle">
+              <input
+                type="checkbox"
+                checked={bulkTransferForm.overwrite_existing}
+                onChange={e => updateBulkTransferField('overwrite_existing', e.target.checked)}
+              />
+              Overwrite existing transfer records for selected crew
+            </label>
+
+            <div className="bulkAssignActions fullWidthFormItem">
+              <button className="primaryButton" type="submit">
+                <Plus size={18} /> Apply Transfer
+              </button>
+              <button className="secondaryButton" type="button" onClick={resetBulkTransferForm}>
+                Clear Bulk Form
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={saveTransfer} className="adminForm">
+            {editingTransferId && <p className="editNotice fullWidthFormItem">Editing: {transferForm.passenger} {transferForm.transfer_type && `- ${transferForm.transfer_type}`}</p>}
+
+            <label>
+              Passenger
+              <select value={transferForm.passenger} onChange={e => updateTransferField('passenger', e.target.value)}>
+                <option value="">Select passenger</option>
+                {combinedCrewRows.map(member => (
+                  <option key={member.id} value={member.name}>{member.name}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Transfer Type
+              <input value={transferForm.transfer_type} onChange={e => updateTransferField('transfer_type', e.target.value)} placeholder="Airport Transfer" />
+            </label>
+
+            <label>
+              Pickup Directory
+              <select value="" onChange={e => applyLocationDirectoryToTransfer('pickup', e.target.value, 'single')}>
+                <option value="">Select saved pickup / airport / venue</option>
+                {locationDirectory.map(location => (
+                  <option key={location.id} value={location.id}>{location.name} {location.location_type ? `(${location.location_type})` : ''}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Pickup Location
+              <input value={transferForm.pickup_location} onChange={e => updateTransferField('pickup_location', e.target.value)} placeholder="Copenhagen Airport" />
+            </label>
+
+            <label>
+              Pickup Google Maps URL
+              <input value={transferForm.pickup_maps_url} onChange={e => updateTransferField('pickup_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+            </label>
+
+            <label>
+              Pickup What3Words
+              <input value={transferForm.pickup_what3words} onChange={e => updateTransferField('pickup_what3words', e.target.value)} placeholder="///filled.count.soap" />
+            </label>
+
+            <label>
+              Destination Directory
+              <select value="" onChange={e => applyLocationDirectoryToTransfer('destination', e.target.value, 'single')}>
+                <option value="">Select saved destination / drop-off</option>
+                {locationDirectory.map(location => (
+                  <option key={location.id} value={location.id}>{location.name} {location.location_type ? `(${location.location_type})` : ''}</option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Destination
+              <input value={transferForm.destination} onChange={e => updateTransferField('destination', e.target.value)} placeholder="AC Bella Sky Copenhagen" />
+            </label>
+
+            <label>
+              Destination Google Maps URL
+              <input value={transferForm.destination_maps_url} onChange={e => updateTransferField('destination_maps_url', e.target.value)} placeholder="https://maps.google.com/..." />
+            </label>
+
+            <label>
+              Destination What3Words
+              <input value={transferForm.destination_what3words} onChange={e => updateTransferField('destination_what3words', e.target.value)} placeholder="///filled.count.soap" />
+            </label>
+
+            <label>
+              Date
+              <input type="date" value={transferForm.date} onChange={e => updateTransferField('date', e.target.value)} />
+            </label>
+
+            <label>
+              Time
+              <input type="time" value={transferForm.time} onChange={e => updateTransferField('time', e.target.value)} />
+            </label>
+
+            <label>
+              Driver Name
+              <input value={transferForm.driver_name} onChange={e => updateTransferField('driver_name', e.target.value)} placeholder="Peter Jensen" />
+            </label>
+
+            <label>
+              Driver Phone
+              <input value={transferForm.driver_phone} onChange={e => updateTransferField('driver_phone', e.target.value)} placeholder="+45..." />
+            </label>
+
+            <label>
+              Vehicle
+              <input value={transferForm.vehicle} onChange={e => updateTransferField('vehicle', e.target.value)} placeholder="Mercedes V-Class" />
+            </label>
+
+            <label>
+              Notes
+              <input value={transferForm.notes} onChange={e => updateTransferField('notes', e.target.value)} placeholder="Meet driver at arrivals" />
+            </label>
+
+            <button className="primaryButton" type="submit">
+              <Plus size={18} /> {editingTransferId ? 'Update Transfer' : 'Add Transfer'}
+            </button>
+
+            {editingTransferId && (
+              <button className="secondaryButton" type="button" onClick={resetTransferForm}>
+                Cancel Edit
+              </button>
+            )}
+          </form>
+        )}
       </section>
 
       <section className="eventCard">
