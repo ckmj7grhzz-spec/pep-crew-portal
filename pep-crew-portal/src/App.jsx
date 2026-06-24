@@ -808,6 +808,66 @@ const CALENDAR_COLOUR_LABELS = {
 
 const CALENDAR_CATEGORY_LABELS = CALENDAR_COLOUR_LABELS
 
+const SCHEDULE_DAY_TYPE_OPTIONS = [
+  { value: 'build', label: 'Build Day' },
+  { value: 'live', label: 'Live Day' },
+  { value: 'breakdown', label: 'Breakdown Day' },
+]
+
+function getScheduleDayTypeLabel(value) {
+  return SCHEDULE_DAY_TYPE_OPTIONS.find(option => option.value === value)?.label || 'Unassigned Day'
+}
+
+function getScheduleDayTypeClass(value) {
+  if (value === 'live') return 'scheduleDayBadge liveDayBadge'
+  if (value === 'breakdown') return 'scheduleDayBadge breakdownDayBadge'
+  return 'scheduleDayBadge buildDayBadge'
+}
+
+function getScheduleTimeOptions() {
+  const options = []
+
+  for (let i = 0; i < 96; i++) {
+    const totalMinutes = (12 * 60) + (i * 15)
+    const hours = Math.floor((totalMinutes % (24 * 60)) / 60)
+    const minutes = totalMinutes % 60
+    const value = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+    options.push(value)
+  }
+
+  return options
+}
+
+function getEventDateOptions(eventRecord) {
+  const start = parseCalendarDate(eventRecord?.start_date)
+  const end = parseCalendarDate(eventRecord?.end_date || eventRecord?.start_date) || start
+  if (!start || !end) return []
+
+  const dates = []
+  let cursor = startOfCalendarDay(start)
+  const finalDay = startOfCalendarDay(end)
+
+  while (cursor <= finalDay) {
+    dates.push(formatCalendarDateInput(cursor))
+    cursor = addCalendarDays(cursor, 1)
+  }
+
+  return dates
+}
+
+function splitAssignedCrewNames(value) {
+  return String(value || '')
+    .split(',')
+    .map(name => name.trim())
+    .filter(Boolean)
+}
+
+function chunkItems(items, size) {
+  const chunks = []
+  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size))
+  return chunks
+}
+
 function AdminPage() {
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -4291,6 +4351,7 @@ function EventManagerPage() {
   const [locationDirectory, setLocationDirectory] = useState([])
   const [transfers, setTransfers] = useState([])
   const [scheduleItems, setScheduleItems] = useState([])
+  const [eventDays, setEventDays] = useState([])
   const [documents, setDocuments] = useState([])
   const [resourceCalendars, setResourceCalendars] = useState([])
   const [resourceBookings, setResourceBookings] = useState([])
@@ -4413,9 +4474,10 @@ function EventManagerPage() {
 
   const [scheduleForm, setScheduleForm] = useState({
     activity: '',
+    day_type: 'build',
     date: '',
-    start_time: '',
-    end_time: '',
+    start_time: '12:00',
+    end_time: '12:15',
     location: '',
     assigned_crew: '',
     notes: '',
@@ -4529,6 +4591,18 @@ function EventManagerPage() {
 
     if (scheduleError) setMessage(`Could not load schedule: ${scheduleError.message}`)
     else setScheduleItems(scheduleData || [])
+
+    const { data: eventDayData, error: eventDayError } = await supabase
+      .from('event_days')
+      .select('*')
+      .eq('event_id', eventData.id)
+      .order('date', { ascending: true })
+
+    if (eventDayError) {
+      setEventDays([])
+    } else {
+      setEventDays(eventDayData || [])
+    }
 
     const { data: documentData, error: documentError } = await supabase
       .from('documents')
@@ -5161,9 +5235,10 @@ function EventManagerPage() {
     setEditingScheduleId(null)
     setScheduleForm({
       activity: '',
+      day_type: 'build',
       date: '',
-      start_time: '',
-      end_time: '',
+      start_time: '12:00',
+      end_time: '12:15',
       location: '',
       assigned_crew: '',
       notes: '',
@@ -5175,9 +5250,10 @@ function EventManagerPage() {
     setEditingScheduleId(item.id)
     setScheduleForm({
       activity: item.activity || '',
+      day_type: item.day_type || 'build',
       date: item.date || '',
-      start_time: item.start_time ? String(item.start_time).slice(0, 5) : '',
-      end_time: item.end_time ? String(item.end_time).slice(0, 5) : '',
+      start_time: item.start_time ? String(item.start_time).slice(0, 5) : '12:00',
+      end_time: item.end_time ? String(item.end_time).slice(0, 5) : '12:15',
       location: item.location || '',
       assigned_crew: item.assigned_crew || '',
       notes: item.notes || '',
@@ -6155,6 +6231,80 @@ function EventManagerPage() {
     loadEventManager()
   }
 
+  function getEventDayRecord(date) {
+    return eventDays.find(day => day.date === date) || null
+  }
+
+  function getCrewNamesForScheduling() {
+    return combinedCrewRows
+      .map(member => member.name)
+      .filter(Boolean)
+      .filter((name, index, allNames) => allNames.indexOf(name) === index)
+  }
+
+  async function saveEventDay(date, updates = {}) {
+    if (!event || !date) return
+
+    const existingDay = getEventDayRecord(date)
+    const payload = {
+      event_id: event.id,
+      date,
+      day_type: updates.day_type ?? existingDay?.day_type ?? 'build',
+      assigned_crew: updates.assigned_crew ?? existingDay?.assigned_crew ?? '',
+      notes: updates.notes ?? existingDay?.notes ?? '',
+    }
+
+    const { data, error } = await supabase
+      .from('event_days')
+      .upsert([payload], { onConflict: 'event_id,date' })
+      .select('*')
+      .maybeSingle()
+
+    if (error) {
+      setMessage(`Could not save project day: ${error.message}`)
+      return
+    }
+
+    const savedDay = data || payload
+    setEventDays(current => {
+      const withoutDay = current.filter(day => day.date !== date)
+      return [...withoutDay, savedDay].sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    })
+    setMessage('Project day saved.')
+  }
+
+  function toggleCrewForEventDay(date, crewName) {
+    const currentDay = getEventDayRecord(date)
+    const selectedNames = splitAssignedCrewNames(currentDay?.assigned_crew)
+    const nextNames = selectedNames.includes(crewName)
+      ? selectedNames.filter(name => name !== crewName)
+      : [...selectedNames, crewName]
+
+    saveEventDay(date, { assigned_crew: nextNames.join(', ') })
+  }
+
+  function assignAllCrewToEventDay(date) {
+    saveEventDay(date, { assigned_crew: getCrewNamesForScheduling().join(', ') })
+  }
+
+  function clearCrewFromEventDay(date) {
+    saveEventDay(date, { assigned_crew: '' })
+  }
+
+  function applySelectedDayCrewToSchedule() {
+    const selectedDay = getEventDayRecord(scheduleForm.date)
+    if (!selectedDay?.assigned_crew) {
+      setMessage('No crew assigned to that project day yet.')
+      return
+    }
+
+    setScheduleForm(current => ({
+      ...current,
+      assigned_crew: selectedDay.assigned_crew,
+      day_type: selectedDay.day_type || current.day_type || 'build',
+    }))
+  }
+
   async function saveScheduleItem(e) {
     e.preventDefault()
     setMessage('')
@@ -6168,8 +6318,9 @@ function EventManagerPage() {
     const cleanScheduleItem = {
       ...scheduleForm,
       event_id: event.id,
+      day_type: scheduleForm.day_type || 'build',
       date: scheduleForm.date || null,
-      start_time: scheduleForm.start_time || null,
+      start_time: scheduleForm.start_time || '12:00',
       end_time: scheduleForm.end_time || null,
     }
 
@@ -6580,6 +6731,8 @@ function EventManagerPage() {
 
   const assignedResources = getEventAssignedResources()
   const combinedCrewRows = mergeCrewRowsWithResourceBookings(crew, assignedResources, staffMembers)
+  const scheduleDateOptions = getEventDateOptions(event)
+  const scheduleTimeOptions = getScheduleTimeOptions()
   const filteredCrew = combinedCrewRows.filter(matchesSearch)
   const filteredFlights = flights.filter(matchesSearch)
   const filteredHotels = hotels.filter(matchesSearch)
@@ -8057,7 +8210,7 @@ function EventManagerPage() {
 
         <div className="csvTemplateBox">
           <strong>Accepted file:</strong>
-          <code>.xlsx sheet named Schedule, or .csv with activity,date,start_time,end_time,location,assigned_crew,notes</code>
+          <code>.xlsx sheet named Schedule, or .csv with activity,day_type,date,start_time,end_time,location,assigned_crew,notes</code>
         </div>
 
         <label className="fileUploadBox">
@@ -8066,10 +8219,82 @@ function EventManagerPage() {
         </label>
       </section>
 
+      <section className="eventCard scheduleDayPlannerCard">
+        <h2>Project Day Planner</h2>
+        <p>Define each date as a build day, live day or breakdown day, then assign the crew who are working that day. Days are grouped three across to keep the page compact.</p>
+
+        {scheduleDateOptions.length ? (
+          <div className="scheduleDayRows">
+            {chunkItems(scheduleDateOptions, 3).map((dateRow, rowIndex) => (
+              <div className="scheduleDayRowCard" key={`schedule-row-${rowIndex}`}>
+                <div className="scheduleDayGrid">
+                  {dateRow.map(date => {
+                    const dayRecord = getEventDayRecord(date)
+                    const assignedNames = splitAssignedCrewNames(dayRecord?.assigned_crew)
+                    const crewNames = getCrewNamesForScheduling()
+
+                    return (
+                      <div className="scheduleDayCard" key={date}>
+                        <div className="scheduleDayCardHeader">
+                          <div>
+                            <strong>{formatDate(date)}</strong>
+                            <span className={getScheduleDayTypeClass(dayRecord?.day_type || 'build')}>
+                              {getScheduleDayTypeLabel(dayRecord?.day_type || 'build')}
+                            </span>
+                          </div>
+                        </div>
+
+                        <label>
+                          Day Type
+                          <select value={dayRecord?.day_type || 'build'} onChange={e => saveEventDay(date, { day_type: e.target.value })}>
+                            {SCHEDULE_DAY_TYPE_OPTIONS.map(option => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <div className="scheduleCrewPicker">
+                          <div className="scheduleCrewPickerHeader">
+                            <strong>Assigned Crew</strong>
+                            <div>
+                              <button type="button" onClick={() => assignAllCrewToEventDay(date)}>All crew</button>
+                              <button type="button" onClick={() => clearCrewFromEventDay(date)}>Clear</button>
+                            </div>
+                          </div>
+
+                          {crewNames.length ? (
+                            <div className="scheduleCrewChips">
+                              {crewNames.map(name => (
+                                <button
+                                  type="button"
+                                  key={name}
+                                  className={assignedNames.includes(name) ? 'scheduleCrewChip selected' : 'scheduleCrewChip'}
+                                  onClick={() => toggleCrewForEventDay(date, name)}
+                                >
+                                  {name}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="empty">Add crew before assigning people to this day.</p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty text="Add project start and end dates first to define build, live and breakdown days." />
+        )}
+      </section>
+
       <section className="eventCard" id="schedule-form">
         <h2>{editingScheduleId ? 'Edit Schedule Item' : 'Add Schedule Item'}</h2>
         {editingScheduleId && <p className="editNotice">Editing: {scheduleForm.activity}</p>}
-        <p>Add crew calls, build timings, show timings, breaks and load-out information.</p>
+        <p>Add crew calls, build timings, show timings, breaks and load-out information against the days above.</p>
 
         <form onSubmit={saveScheduleItem} className="adminForm">
           <label>
@@ -8078,18 +8303,52 @@ function EventManagerPage() {
           </label>
 
           <label>
+            Day Type
+            <select value={scheduleForm.day_type} onChange={e => updateScheduleField('day_type', e.target.value)}>
+              {SCHEDULE_DAY_TYPE_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
             Date
-            <input type="date" value={scheduleForm.date} onChange={e => updateScheduleField('date', e.target.value)} />
+            <select value={scheduleForm.date} onChange={e => {
+              const selectedDay = getEventDayRecord(e.target.value)
+              setScheduleForm(current => ({
+                ...current,
+                date: e.target.value,
+                day_type: selectedDay?.day_type || current.day_type || 'build',
+              }))
+            }}>
+              <option value="">Select project date</option>
+              {scheduleDateOptions.map(date => {
+                const dayRecord = getEventDayRecord(date)
+                return (
+                  <option key={date} value={date}>
+                    {formatDate(date)} — {getScheduleDayTypeLabel(dayRecord?.day_type || 'build')}
+                  </option>
+                )
+              })}
+            </select>
           </label>
 
           <label>
             Start Time
-            <input type="time" value={scheduleForm.start_time} onChange={e => updateScheduleField('start_time', e.target.value)} />
+            <select value={scheduleForm.start_time} onChange={e => updateScheduleField('start_time', e.target.value)}>
+              {scheduleTimeOptions.map(time => (
+                <option key={time} value={time}>{time}</option>
+              ))}
+            </select>
           </label>
 
           <label>
             End Time
-            <input type="time" value={scheduleForm.end_time} onChange={e => updateScheduleField('end_time', e.target.value)} />
+            <select value={scheduleForm.end_time} onChange={e => updateScheduleField('end_time', e.target.value)}>
+              {scheduleTimeOptions.map(time => (
+                <option key={time} value={time}>{time}</option>
+              ))}
+            </select>
           </label>
 
           <label>
@@ -8101,6 +8360,10 @@ function EventManagerPage() {
             Assigned Crew
             <input value={scheduleForm.assigned_crew} onChange={e => updateScheduleField('assigned_crew', e.target.value)} placeholder="All Crew / LED Team / Video Team" />
           </label>
+
+          <button className="secondaryButton" type="button" onClick={applySelectedDayCrewToSchedule}>
+            Use Crew Assigned To This Day
+          </button>
 
           <label>
             Notes
@@ -8128,6 +8391,7 @@ function EventManagerPage() {
               <div className="adminListItem" key={item.id}>
                 <div>
                   <strong>{item.activity}</strong>
+                  <span className={getScheduleDayTypeClass(item.day_type || 'build')}>{getScheduleDayTypeLabel(item.day_type || 'build')}</span>
                   <p>{item.location}</p>
                   <small>
                     {formatDate(item.date)}
